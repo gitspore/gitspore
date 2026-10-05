@@ -19,6 +19,7 @@ We are in the research phase. Expect files to move and get renamed.
 - Write in English for now. Quoted German source material can stay German.
 - Markdown files, lowercase names with hyphens.
 - Add a section to an existing file before creating a new file. Create a folder only when there is content for it.
+- `concept/main.md` is the current concept. Read it first for any concept work.
 - Concept versions are whole files named `v<n>_<name>.md`. A new version gets a new file; old versions stay so we can compare. Loose ideas that are not a full version go in `concept/ideas.md`.
 - A research topic starts as a section in `research/questions.md` and moves to its own file once it outgrows the section.
 - When something gets decided, record it in `records/` and update the file it affects (scope, concept, questions).

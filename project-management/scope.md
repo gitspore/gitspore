@@ -4,6 +4,8 @@
 
 Presentation: 2026-11-04.
 
+> The backlog tickets (#2 to #11) point to a different plan than these notes: a local daemon with agents in worktrees instead of a GitHub visualization. See `concept/v2_agents-and-worktrees.md` and `research/questions.md`. Update this file once the team has decided.
+
 ## First scope idea
 
 Week 1.
