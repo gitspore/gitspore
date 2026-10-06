@@ -179,6 +179,75 @@ Cut first if time runs short: the theme switch (ship one theme), the geodesic do
 - Prefer procedural over hand-made. Only the beetle is a real asset.
 - The renders in `renders/` are our own work and can be committed and referenced in prompts.
 
+## Planter grid proposals (concept v3)
+
+Two directions for `concept/v3_planter-grid.md`, built as one live render: `renders/planter-grid.html`. Switches at the top select the style (cozy greenhouse or plant lab), the theme, and the branch graph overlay (G). Without `data-theme` the page follows the system setting. Screenshots: `planter-grid-cozy-day.jpg`, `-cozy-night.jpg`, `-lab-light.jpg`, `-lab-dark.jpg`.
+
+Both share the layout: 3D stage, branch graph as an absolute overlay on the stage's left (the camera shifts right while it is open), sidebar with vitality and pots, docked terminal under the stage. The render is interactive: click pots, drag seed packets onto the empty pot, answer, restart and merge from the terminal. The waiting agent wilts in real time: rim pulse, droop at 15 s, wilted at 60 s. Status colours and agent colours are CSS tokens; the 3D scene reads the same tokens.
+
+Agent colours: every agent has one colour from a fixed set of 8 per style and theme, picked with the swatches in the terminal header (taken colours are disabled). It shows as a thin band at the foot of the pot, a dot on the name tag, a square in the sidebar and terminal, and the branch colour in the graph. Status keeps the rim, the plant and the sidebar dot.
+
+Garden map: a blueprint pinned to the back wall (cozy) or a small plate on a stand at the front right of the bench (lab). It shows one circle per pot in its agent colour, dashed for the empty pot. Clicking it opens or closes the branch graph, like G and the toolbar button.
+
+The branch graph in the render is drawn by hand to look like `commit-graph` output. Branches use the agent colour; a small dot in the branch label shows status. With the real package, agent colours per branch need an adapter (it colours by lane index) and dark mode needs override CSS. Details in v3.
+
+### proposal-cozy-04: cozy greenhouse, day and night
+
+Terracotta pots on a wooden potting bench inside a white-framed greenhouse, foliage outside. Day is sunlit, night has string lights and glowing rims. Every status has its own colour.
+
+| Meaning | Day | Night |
+|---|---|---|
+| Working (sprout, watering can) | green `#4f9a45` | `#7cc96b` |
+| Waiting (rim pulse, wilt) | yellow `#d99a1e` | `#f5bd3c` |
+| Error (grey plant, red rim) | red `#c9442f` | `#ff6a50` |
+| Ready for review (bud) | teal `#2f9c8f` | `#4fd1bf` |
+| Merged (bloom) | pink `#c2458e` | `#ff6fc0` |
+| `main` in the graph | brown `#7b6a52` | `#b49a78` |
+| Agent colours (8) | `#3f5f8f` `#5f9cc0` `#8a73b8` `#82466f` `#3a3530` `#9a8a4e` `#5b6876` `#4d4a7a` | `#7d9fd0` `#8cc2e0` `#b39ee0` `#c27fae` `#e8dcc4` `#c9b77a` `#9aa8b6` `#8f8cc8` |
+| Interface | paper `#f6f2e7` on sage `#dfe3d6`, ink `#2e2a22`, Nunito + JetBrains Mono, round corners | `#1f1b16` on `#12110e`, ink `#f1e6d2` |
+| Matter | terracotta `#b8613a`, wood `#8d5c36`-`#9a6a42`, soil `#3b2a1e`, frame `#efe9dc` | same, frame `#6b6153` |
+| Light and post | sun 2.6, hemisphere 1.0, no Bloom | moon 0.55, three warm point lights, string of bulbs, Bloom 0.55 / threshold 0.8 |
+
+Character: friendly and readable at a glance, close to the brief's mockups. Five hues compete with the warm scene, so the status colours have to stay saturated.
+
+### proposal-lab-05: plant lab, light and dark
+
+Clay-02 carried over: off-white or charcoal clay, a ribbed glass vault, plants as clay stalks with bead tips. Colour only means something needs you (red) or an agent is working (amber); everything else is neutral.
+
+| Meaning | Light | Dark |
+|---|---|---|
+| Working (amber tips, drone) | amber `#d98a00` | `#ffa000` |
+| Waiting, error (red tips, stalks bend or collapse) | red `#e5261a` | `#ff4a3d` |
+| Ready for review (pod) | ink `#2b2825` | bone `#e9e4dc` |
+| Merged (open fins) | grey `#b9b3aa` | `#4a4744` |
+| `main` in the graph | `#8f8981` | `#6f6b66` |
+| Agent colours (8, greyed tones) | `#4f5d6b` `#7d90a5` `#6f8070` `#8a8466` `#8c7f9c` `#9a6f78` `#a89c88` `#3d3b39` | `#8a9aab` `#a6b8cc` `#a3b5a1` `#b5ae8e` `#b6a9c6` `#c79fa7` `#d8cdb9` `#cfd6d0` |
+| Interface | clay-02 frosted glass, ink `#141210`, IBM Plex Mono, uppercase labels | clay-02 smoked glass, ink `#eeebe5` |
+| Matter | clay-02 light tones | clay-02 tones darkened to `#1a1a1d`-`#34322f` (×0.035 was too dark for pots) |
+| Light and post | clay-02 light values, no Bloom | hemisphere 1.3, key 1.7, cool rim light from behind, Bloom 0.6 / threshold 0.82 |
+
+Waiting and error share red. They differ by shape (bent vs collapsed stalks) and by the sidebar marker (pulsing dot vs diamond). The agent colours are greyed so red stays the only strong colour.
+
+Character: calm, precise, a specimen under study. Red is rare, so a waiting agent stands out more than in cozy-04. Georgios's preference.
+
+### Scope
+
+Person-days for the scene and interface look, on top of the planter grid logic in the weekly plan. The team has about 60 person-days.
+
+| Work | cozy-04 | lab-05 |
+|---|---|---|
+| Environment (bench, greenhouse or vault, sky) | 1.5 | 1 |
+| Pots, five plant states, wilt stages | 2.5 | 2 (one stalk function covers all states) |
+| Watering can or drone, drops | 0.5 | 0.5 |
+| Light and dark theme | 1 (two light setups, string lights) | 0.5 (colour table swap, as in clay-02) |
+| Interface theme (sidebar, terminal, tags, packets) | 1 | 0.5 (clay-02 panels exist) |
+| Branch graph overlay, colour adapter, dark CSS | 1.5-2.5 | 1.5-2.5 |
+| Garden map object | 0.5 | 0.5 |
+| Agent colours (palette, band, tag dot, picker) | 0.5-1 | 0.5-1 |
+| **Total** | **9-10.5 days, ~16 %** | **7-8.5 days, ~13 %** |
+
+Both fit the 15-20 % aesthetics budget. Cut first: the second theme, foliage and shelf (cozy), the vault (lab), the drops.
+
 ## Earlier exploration
 
 Kept for context; superseded by the proposals above.
