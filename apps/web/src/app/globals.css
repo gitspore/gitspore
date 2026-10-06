@@ -1,12 +1,7 @@
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+@import "tailwindcss";
 
 html,
 body {
-  height: 100%;
-  overflow: hidden;
-  background: #0f172a;
+    height: 100%;
+    overflow: hidden;
 }
