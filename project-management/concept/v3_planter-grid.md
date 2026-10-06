@@ -1,6 +1,6 @@
 # v3: Planter grid
 
-2026-10-06. A proposal, not agreed yet. Background: `records/2026-10-06_planter-grid-proposal.md`. Visual directions: `research/inspiration/aesthetics.md` (cozy-04, lab-05). Live mockup: `research/inspiration/renders/planter-grid.html`.
+2026-10-06. A proposal, not agreed yet. Background: `records/2026-10-06_planter-grid-proposal.md`. Visual directions: `research/inspiration/aesthetics.md` (cozy-04, lab-05). Live mockup: `research/inspiration/renders/planter-grid.html`. App layout: `concept/v3_layout.html`.
 
 ## In one sentence
 
@@ -46,11 +46,14 @@ Each agent gets an ID colour, so you can tell them apart in the scene, the sideb
 The scene shows agents, not the repo. The repo lives in the **garden map**:
 
 - A small object in the scene: a plan pinned to the greenhouse wall (cozy) or a small floor-plan plate on the bench (lab). It shows one mark per pot in its ID colour and nothing else.
-- Click it, or press G, and the branch graph opens as a 2D overlay over the scene: `main` and every agent branch, last ~15 commits, each branch in its agent's colour.
-- Click a pot while the map is open and its branch is highlighted.
+- Click it, press G, or use the rail button, and the side panel opens on its **Branches** tab: `main` and every agent branch over the full panel height (about 28 commits), each branch in its agent's colour, with a status dot on its label. The tab replaces the earlier overlay over the scene, so the graph never covers the pots.
+- Click a pot while the tab is open and its branch is highlighted. Click a branch and its agent's terminal opens.
+- The side panel keeps one width (about 400 px) for all tabs, so switching tabs never moves the windows.
 - The graph comes from the `commit-graph` React package. We tested it with React 19 and Next 16; gotchas below.
 
 ## Next to the scene
+
+The full layout (windows, states, rules) is in `concept/v3_layout.html` and replaces the docked layout of the mockup.
 
 - The sidebar lists every agent with status, issue and waiting time. It works on its own if the 3D scene fails.
 - The terminal is docked under the scene and opens for the selected pot.
@@ -73,7 +76,7 @@ Developers who run three or more agents at once. Our hypothesis is that with git
 | Work on the look | Person-days |
 |---|---|
 | Scene, pots, plant states, light and dark theme | 5-7 (cozy-04 more, lab-05 less) |
-| Garden map object and branch graph overlay | 2-3 |
+| Garden map object and Branches tab | 2-3 |
 | Agent colours (palette, band, tag dot, graph) | 0.5-1 |
 | **Total** | **7.5-11, about 13-18 % of ~60 team days** |
 
