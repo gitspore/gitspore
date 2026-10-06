@@ -181,6 +181,7 @@ td.nw { white-space: nowrap; }
       <div><b>Every terminal is an agent</b>No plain shells for now. A shell tab inside an agent's window, in its worktree, is possible later without changing the model.</div>
       <div><b>A notification in the bottom right</b>Shows when another agent waits while you work in a terminal. Minimised chips sit bottom left, so the two never collide.</div>
       <div><b>The issue list is the MVP entry</b>3D seed packets are a goal, but nothing breaks without them. List rows and packets share one look.</div>
+      <div><b>The branch graph is a side panel tab</b>Agents · Issues · Branches, full height, one fixed panel width of about 400 px. No separate git window. Each branch label shows the agent colour and a status dot, because the tab hides the agents list.</div>
       <div><b>Priority flag dropped</b>The issue window has no priority action.</div>
       <div><b>Panels are solid or slightly transparent</b>Blur only if it measures fine over the moving scene. A shader version is later polish.</div>
     </div>
@@ -195,7 +196,7 @@ td.nw { white-space: nowrap; }
     <div class="tbl"><table>
       <thead><tr><th>Setting</th><th>Values</th><th>Changed by</th></tr></thead>
       <tbody>
-        <tr><td>Side panel</td><td>Agents tab · Issues tab · closed</td><td>Rail buttons, panel close button, entering focus mode</td></tr>
+        <tr><td>Side panel</td><td>Agents tab · Issues tab · Branches tab · closed. One fixed width (about 400 px) for all tabs.</td><td>Rail buttons (click the active one again to close), key <code>G</code>, garden map object, entering focus mode</td></tr>
         <tr><td>Main area mode</td><td><b>Scene mode</b>: windows sit in a band at the bottom, the scene shows above.<br><b>Focus mode</b>: windows cover the whole main area.</td><td>Maximise / restore button on any window, <i>Focus this</i>, rail button</td></tr>
         <tr><td>Open windows</td><td>An ordered list. Each window is visible or minimised (a chip in the tray).</td><td>Clicking a pot, an agent row, a chip or a notification; minimise and close buttons</td></tr>
       </tbody>
@@ -212,6 +213,7 @@ td.nw { white-space: nowrap; }
       <li><b>Entering focus mode closes the side panel.</b> The user can open it again; the windows shrink. Leaving focus mode restores the panel state from before.</li>
       <li><b>Closing a window doesn't stop the agent.</b> It only hides its terminal. Stopping an agent or freeing a pot is a separate action with a confirmation.</li>
       <li><b>Minimised terminals stay alive.</b> Their xterm instance keeps running, and the chip shows the agent's status.</li>
+      <li><b>The side panel has one width for all tabs</b>, about 400 px, enough for 7 lanes and commit messages. Switching tabs never moves the windows. The branch graph lives in this panel as the Branches tab, not as a window.</li>
       <li><b>The issue window is a sheet, not a tile.</b> It opens at the top of the main area, over the scene, and closes when the issue is planted or dismissed. It doesn't take part in tiling.</li>
       <li><b>Exactly one window has keyboard focus</b> and shows a strong border. App shortcuts only work while no terminal has focus.</li>
     </ol>
@@ -237,12 +239,12 @@ td.nw { white-space: nowrap; }
           4. Drag a row onto the table: next free pot<br>
           5. Drag a 3D seed packet onto a pot</td>
           <td>1–2 <span class="pill p-mvp">MVP</span><br>3–4 <span class="pill p-should">should</span><br>5 <span class="pill p-later">later</span></td><td><a href="#S10">S10</a> <a href="#S14">S14</a></td></tr>
-        <tr><td><b>Open an agent's terminal</b></td><td>Click its pot · click its name tag · click its row in the agents tab · click its chip in the tray · click the notification · keys <code>1</code>–<code>6</code> · click its branch in the git window</td><td>all <span class="pill p-mvp">MVP</span>, git <span class="pill p-should">should</span></td><td><a href="#S01">S01</a> <a href="#S13">S13</a></td></tr>
+        <tr><td><b>Open an agent's terminal</b></td><td>Click its pot · click its name tag · click its row in the agents tab · click its chip in the tray · click the notification · keys <code>1</code>–<code>6</code> · click its branch in the branches tab</td><td>all <span class="pill p-mvp">MVP</span>, branches <span class="pill p-should">should</span></td><td><a href="#S01">S01</a> <a href="#S13">S13</a></td></tr>
         <tr><td><b>Answer an agent</b></td><td>Type in its terminal. Answer buttons in the window header only if spike S3 shows that hooks give us the options.</td><td>terminal <span class="pill p-mvp">MVP</span><br>buttons open</td><td><a href="#S03">S03</a></td></tr>
         <tr><td><b>Read one terminal in full</b></td><td><i>Focus this</i> in the window header · double-click the pot · key <code>F</code></td><td><span class="pill p-mvp">MVP</span></td><td><a href="#S03">S03</a></td></tr>
         <tr><td><b>Back to the scene</b></td><td>Restore button · rail scene button · key <code>F</code> again</td><td><span class="pill p-mvp">MVP</span></td><td><a href="#S02">S02</a></td></tr>
         <tr><td><b>See two agents at once</b></td><td><i>Open beside</i> in the notification · open a second agent while one is visible</td><td><span class="pill p-should">should</span></td><td><a href="#S05">S05</a> <a href="#S13">S13</a></td></tr>
-        <tr><td><b>Open the branch graph</b></td><td>Rail git button · key <code>G</code> · click the garden map object in the scene</td><td>button, G <span class="pill p-should">should</span><br>map object <span class="pill p-should">should</span></td><td><a href="#S11">S11</a></td></tr>
+        <tr><td><b>Open the branch graph</b></td><td>Rail branches button · key <code>G</code> · click the garden map object in the scene. All three open the side panel on the Branches tab.</td><td>button, G <span class="pill p-should">should</span><br>map object <span class="pill p-should">should</span></td><td><a href="#S11">S11</a></td></tr>
         <tr><td><b>Restart, stop, free a pot</b></td><td><code>⋯</code> menu in the window header · <code>⋯</code> menu on the agent row. Stop and free ask for confirmation.</td><td><span class="pill p-mvp">MVP</span></td><td><a href="#S01">S01</a></td></tr>
         <tr><td><b>Notice a waiting agent</b></td><td>The plant wilts · red dot in the agents tab · red dot on its chip · badge on the rail agents button · bottom-right notification · count in the tab title and favicon · browser notification · sound</td><td>scene, list, chip, notification, title <span class="pill p-mvp">MVP</span><br>browser notification, sound <span class="pill p-should">should</span></td><td><a href="#S12">S12</a></td></tr>
         <tr><td><b>Leave a terminal with the keyboard</b></td><td>Click anywhere outside it · one key combination still to choose (<kbd>Esc</kbd> is taken: Claude Code uses it to interrupt the agent)</td><td><span class="pill p-mvp">MVP</span></td><td>all</td></tr>
@@ -268,26 +270,26 @@ td.nw { white-space: nowrap; }
         <tr><td class="nw"><code>ConnectionStatus</code></td><td>online · reconnecting · offline, from the store.</td><td><span class="pill p-mvp">MVP</span></td><td>#8, #18</td></tr>
         <tr><td class="nw"><code>SettingsMenu</code></td><td>Theme (light, dark, system), sound, browser notifications. shadcn <code>DropdownMenu</code>.</td><td><span class="pill p-mvp">MVP</span></td><td>#27</td></tr>
         <tr><td class="nw"><code>HelpPopover</code></td><td>How to read a plant (the legend), keyboard shortcuts.</td><td><span class="pill p-mvp">MVP</span></td><td>#23</td></tr>
-        <tr><td class="nw"><code>ToolRail</code></td><td>Buttons: agents tab, issues tab, git window, scene/focus. Badge with the number of waiting agents. shadcn <code>Button</code> + <code>Tooltip</code>.</td><td><span class="pill p-mvp">MVP</span></td><td>N1</td></tr>
+        <tr><td class="nw"><code>ToolRail</code></td><td>Buttons: agents tab, issues tab, branches tab, scene/focus. Badge with the number of waiting agents. shadcn <code>Button</code> + <code>Tooltip</code>.</td><td><span class="pill p-mvp">MVP</span></td><td>N1</td></tr>
         <tr><th colspan="4">Main area</th></tr>
         <tr><td class="nw"><code>WindowGrid</code></td><td>Calculates the tiles from mode, window list and screen width (rules R1–R6). Triggers <code>fit()</code> after each change.</td><td>1 window <span class="pill p-mvp">MVP</span><br>tiling <span class="pill p-should">should</span></td><td>N1, N6</td></tr>
-        <tr><td class="nw"><code>Window</code></td><td>Frame with header: agent colour, title, status, controls (minimise, focus this, maximise/restore, close), <code>⋯</code> menu. Kinds: terminal, git.</td><td><span class="pill p-mvp">MVP</span></td><td>N2</td></tr>
+        <tr><td class="nw"><code>Window</code></td><td>Frame with header: agent colour, title, status, controls (minimise, focus this, maximise/restore, close), <code>⋯</code> menu. Only terminals use it for now; a shell tab inside an agent window is possible later.</td><td><span class="pill p-mvp">MVP</span></td><td>N2</td></tr>
         <tr><td class="nw"><code>TerminalView</code></td><td>xterm.js with the fit addon, one per agent, kept alive while minimised.</td><td><span class="pill p-mvp">MVP</span></td><td>#11</td></tr>
         <tr><td class="nw"><code>WindowTabs</code></td><td>Tabs inside a tile when there is no room for another tile (R1, R2). shadcn <code>Tabs</code>.</td><td><span class="pill p-should">should</span></td><td>N6</td></tr>
         <tr><td class="nw"><code>IssueSheet</code></td><td>Issue title, body, labels, age. Buttons: Give to agent, Open on GitHub, Close.</td><td><span class="pill p-mvp">MVP</span></td><td>N3</td></tr>
-        <tr><td class="nw"><code>GitWindow</code></td><td><code>commit-graph</code> with the agent-colour adapter and dark CSS. Highlights the selected agent's branch.</td><td><span class="pill p-should">should</span></td><td>N7</td></tr>
         <tr><td class="nw"><code>MinimisedTray</code> + <code>WindowChip</code></td><td>Bottom-left chips: agent colour, number, status dot. Click restores.</td><td><span class="pill p-mvp">MVP</span></td><td>N1</td></tr>
         <tr><th colspan="4">Side panel</th></tr>
-        <tr><td class="nw"><code>SidePanel</code></td><td>Tabs <i>Agents</i> and <i>Issues</i>, close button.</td><td><span class="pill p-mvp">MVP</span></td><td>#18</td></tr>
+        <tr><td class="nw"><code>SidePanel</code></td><td>Tabs <i>Agents</i>, <i>Issues</i> and <i>Branches</i>, one fixed width of about 400 px, so switching tabs never moves the windows.</td><td><span class="pill p-mvp">MVP</span></td><td>#18</td></tr>
         <tr><td class="nw"><code>AgentRow</code></td><td>Status marker, agent colour, issue number and title, waiting time, <code>⋯</code> menu. Click opens the terminal.</td><td><span class="pill p-mvp">MVP</span></td><td>#18</td></tr>
         <tr><td class="nw"><code>IssueRow</code></td><td>Seed-packet look: crimped edge, seed mark, number, title, age. Click opens the sheet, drag plants. Planted issues stay, dimmed, with the pot's agent colour.</td><td><span class="pill p-mvp">MVP</span>, drag <span class="pill p-should">should</span></td><td>N3, N4</td></tr>
+        <tr><td class="nw"><code>BranchesTab</code></td><td><code>commit-graph</code> over the full panel height (about 28 commits), with the agent-colour adapter and dark CSS. Branch labels show the agent colour and a status dot. Highlights the selected agent's branch; clicking a branch opens its agent.</td><td><span class="pill p-should">should</span></td><td>N7</td></tr>
         <tr><td class="nw"><code>IssueSearch</code></td><td>Filter field over the issue list. shadcn <code>Command</code>.</td><td><span class="pill p-should">should</span></td><td>N3</td></tr>
         <tr><th colspan="4">Scene</th></tr>
         <tr><td class="nw"><code>SceneCanvas</code></td><td>Full-page canvas, loaded with <code>next/dynamic</code>, inside an error boundary (S16).</td><td><span class="pill p-mvp">MVP</span></td><td>#5</td></tr>
         <tr><td class="nw"><code>CameraRig</code></td><td>Frames the pots into the largest free rectangle of the main area with a camera view offset. No canvas resize.</td><td><span class="pill p-mvp">MVP</span></td><td>#5, #14</td></tr>
         <tr><td class="nw"><code>Bench</code>, <code>Pot</code>, <code>Plant</code>, <code>NameTag</code></td><td>Six fixed slots, plant states and wilt stages, hover and selected state, drop target.</td><td><span class="pill p-mvp">MVP</span></td><td>#5, #13→pots, #14</td></tr>
         <tr><td class="nw"><code>DropHandler</code></td><td>Takes HTML drag events over the canvas, raycasts to find the pot under the pointer.</td><td><span class="pill p-should">should</span></td><td>N4</td></tr>
-        <tr><td class="nw"><code>GardenMap</code></td><td>Object in the scene that opens the git window.</td><td><span class="pill p-should">should</span></td><td>N9</td></tr>
+        <tr><td class="nw"><code>GardenMap</code></td><td>Object in the scene that opens the Branches tab.</td><td><span class="pill p-should">should</span></td><td>N9</td></tr>
         <tr><td class="nw"><code>SeedPacket</code></td><td>3D packets for the first few issues, same look as the rows.</td><td><span class="pill p-later">later</span></td><td>N10</td></tr>
         <tr><th colspan="4">Attention and system</th></tr>
         <tr><td class="nw"><code>NotificationStack</code></td><td>Bottom-right cards for waiting agents. Stay until the agent no longer waits, never take keyboard focus. Buttons: Open, Open beside. shadcn <code>Sonner</code>.</td><td><span class="pill p-mvp">MVP</span></td><td>N5</td></tr>
@@ -305,7 +307,7 @@ td.nw { white-space: nowrap; }
     <h2>Limits</h2>
     <ul class="prose">
       <li><b>Screen width.</b> Minimum 1280 px. No phone or tablet layout. Below 1280 a message asks for a wider window.</li>
-      <li><b>Tiles.</b> On a 1440 × 900 laptop: two terminals side by side only with the side panel closed (about 670 px each). With the panel open (about 1050 px left) they stack. At most 4 visible terminal tiles; more become tabs.</li>
+      <li><b>Tiles.</b> On a 1440 × 900 laptop: two terminals side by side only with the side panel closed (about 670 px each). With the panel open (about 950 px left) they stack. At most 4 visible terminal tiles; more become tabs.</li>
       <li><b>Pots.</b> One repo, six pots, fixed slots (v3 scope).</li>
       <li><b>Camera framing.</b> The view offset can only frame the pots into a rectangle. When the free area is an L-shape, it uses the largest rectangle, so the pots get smaller.</li>
       <li><b>Animation.</b> Browsers animate changes of grid column and row sizes, but not of <code>grid-template-areas</code>. Smooth moves between states need the View Transitions API; check the Next.js docs in the repo before relying on it. xterm needs <code>fit()</code> when a transition ends, not on every frame.</li>
@@ -327,7 +329,7 @@ td.nw { white-space: nowrap; }
         <tr><td class="nw">#6 GS-05 Mock event server</td><td><span class="pill p-change">change</span></td><td>Six pots, a list of open issues, waiting transitions with timestamps, so the layout can be built before the daemon.</td></tr>
         <tr><td class="nw">#8 GS-07 Socket client and store</td><td><span class="pill p-change">change</span></td><td>Add a UI slice: side panel, main area mode, ordered window list (visible or minimised), focused window, selected agent. A list from day one, so tiling can be added later without a refactor.</td></tr>
         <tr><td class="nw">#11 GS-10 xterm terminal panel</td><td><span class="pill p-change">change</span></td><td>A window in the grid, not a drawer. Not closed by <kbd>Esc</kbd>. Disposed on close, kept alive when minimised. <code>fit()</code> after layout transitions.</td></tr>
-        <tr><td class="nw">#12 GS-11 Vine rendering</td><td><span class="pill p-gone">superseded</span></td><td>Under v3, branches show in the git window, not as vines.</td></tr>
+        <tr><td class="nw">#12 GS-11 Vine rendering</td><td><span class="pill p-gone">superseded</span></td><td>Under v3, branches show in the Branches tab of the side panel, not as vines.</td></tr>
         <tr><td class="nw">#13 GS-12 Gardener beetles</td><td><span class="pill p-gone">superseded</span></td><td>Pots and plants show the agents. The status list (working, waiting, error, done) carries over to the plant.</td></tr>
         <tr><td class="nw">#14 GS-13 Hover and click</td><td><span class="pill p-change">change</span></td><td>Hover and click on pots and name tags. "New shell on a branch" is out. Camera fly-to becomes framing by the camera rig.</td></tr>
         <tr><td class="nw">#16 GS-14 Agent spawning</td><td><span class="pill p-keep">keep</span></td><td>Input is an issue and a pot slot. Status from hooks stays as written.</td></tr>
@@ -351,7 +353,7 @@ td.nw { white-space: nowrap; }
         <tr><td>N4</td><td>Drag an issue row onto a pot or the table</td><td><span class="pill p-should">should</span></td><td>US-08</td></tr>
         <tr><td>N5</td><td>Attention: notification stack, tab title and favicon count, browser notification, sound</td><td><span class="pill p-mvp">MVP</span> / <span class="pill p-should">should</span></td><td>US-02, US-03</td></tr>
         <tr><td>N6</td><td>Tiling: 2–4 tiles, width and height rules, tabs fallback, <i>Open beside</i></td><td><span class="pill p-should">should</span></td><td>US-05</td></tr>
-        <tr><td>N7</td><td>Git window with <code>commit-graph</code>, colour adapter, dark CSS</td><td><span class="pill p-should">should</span></td><td>US-11</td></tr>
+        <tr><td>N7</td><td>Branches tab with <code>commit-graph</code>, colour adapter, dark CSS</td><td><span class="pill p-should">should</span></td><td>US-11</td></tr>
         <tr><td>N8</td><td>Agent colours: palette, band, tag dot, picker, colour in rows, chips, windows, graph</td><td><span class="pill p-should">should</span></td><td>US-10</td></tr>
         <tr><td>N9</td><td>Garden map object in the scene</td><td><span class="pill p-should">should</span></td><td>US-11</td></tr>
         <tr><td>N10</td><td>3D seed packets</td><td><span class="pill p-later">later</span></td><td>US-08, US-09</td></tr>
@@ -436,9 +438,27 @@ td.nw { white-space: nowrap; }
 
   function panel(p) {
     let o = r(238, 18, 78, 178, 'f-win', 2);
-    o += t(244, 26.5, 'Agents', p.tab === 'agents' ? 'b' : 'm') + t(268, 26.5, 'Issues', p.tab === 'issues' ? 'b' : 'm') + t(311, 26.5, '×', 'm', 'end');
-    o += `<line x1="${p.tab === 'agents' ? 244 : 268}" x2="${p.tab === 'agents' ? 261 : 284}" y1="28.5" y2="28.5" class="s-ink"/>`;
-    if (p.tab === 'agents') {
+    const TABS = [['agents', 'Agents', 242, 18], ['issues', 'Issues', 263, 18], ['branches', 'Branches', 284, 24]];
+    TABS.forEach(([k, label, x, w]) => {
+      o += t(x, 26.5, label, p.tab === k ? 'b' : 'm');
+      if (p.tab === k) o += `<line x1="${x}" x2="${x + w}" y1="28.5" y2="28.5" class="s-ink"/>`;
+    });
+    if (p.tab === 'branches') {
+      o += r(239, 31, 76, 164, 'f-git', 1);
+      const lanes = 6, lx = (l) => 244 + l * 3.2, rows = 28;
+      // lane lines: main (0) full height, agent lanes start at their fork row
+      for (let l = 0; l < lanes; l++) {
+        const top = 35, bottom = l === 0 ? 35 + (rows - 1) * 5.6 : 35 + (8 + l * 2.5) * 5.6;
+        o += `<line x1="${lx(l)}" x2="${lx(l)}" y1="${top}" y2="${bottom}" class="s-line" ${l === p.hl ? 'style="stroke:var(--wf-ink);stroke-width:1.2"' : ''}/>`;
+      }
+      for (let i = 0; i < rows; i++) {
+        const y = 35 + i * 5.6, lane = i < 16 ? (i * 5) % lanes : 0, on = lane === p.hl;
+        o += `<circle cx="${lx(lane)}" cy="${y}" r="1.25" class="${on ? 'f-ink' : lane === 0 ? 'f-ink' : 'f-dim'}"/>`;
+        o += r(267, y - 1, 18 + ((i * 13) % 11), 2, on ? 'f-ink' : 'f-dim', 1);
+        if (i < 5) o += r(298, y - 2.2, 15, 4.4, on ? 'f-win focus' : 'f-win', 1) + marker(AGENTS[i][0], 301, y, 1.1, false) + r(304, y - .7, 7, 1.4, 'f-dim', .5);
+      }
+      o += t(277, 192, 'main + 5 agent branches', 'm', 'middle');
+    } else if (p.tab === 'agents') {
       AGENTS.forEach(([s, name, time], i) => {
         const y = 33 + i * 14;
         o += r(242, y, 70, 11, i === p.sel ? 'f-win focus' : 'f-win', 1.5);
@@ -468,20 +488,10 @@ td.nw { white-space: nowrap; }
         tx += tw + 2;
       });
     } else {
-      o += w.kind === 'git' ? t(w.x + 4, w.y + 6.8, w.title, 'b') : r(w.x + 3, w.y + 3, 4, 4, 'f-ink', .6) + t(w.x + 9.5, w.y + 6.8, w.title, w.wait ? 'w' : '');
+      o += r(w.x + 3, w.y + 3, 4, 4, 'f-ink', .6) + t(w.x + 9.5, w.y + 6.8, w.title, w.wait ? 'w' : '');
     }
     o += t(w.x + w.w - 3, w.y + 6.8, '–  ◎  ▢  ×  ⋯', 'm', 'end');
     const bx = w.x + 5, by = w.y + 16, bw = w.w - 10;
-    if (w.kind === 'git') {
-      o += r(w.x + .6, w.y + 10, w.w - 1.2, w.h - 10.6, 'f-git');
-      const rows = Math.floor((w.h - 16) / 7);
-      for (let i = 0; i < rows; i++) {
-        const y = by + i * 7, lane = i % 3;
-        o += `<circle cx="${bx + 3 + lane * 5}" cy="${y}" r="1.5" class="${lane === 1 && w.hl ? 'f-wait' : 'f-ink'}"/>` + r(bx + 20, y - 1.2, bw * .45 - (i % 4) * 6, 2.4, 'f-dim', 1);
-      }
-      o += `<line x1="${bx + 3}" x2="${bx + 3}" y1="${by}" y2="${by + (rows - 1) * 7}" class="s-line"/>`;
-      return o;
-    }
     const lines = Math.max(1, Math.floor((w.h - 18) / 7));
     for (let i = 0; i < lines; i++) {
       const last = i === lines - 1;
@@ -607,13 +617,13 @@ td.nw { white-space: nowrap; }
       wins: [{ x: 20, y: 124, w: 214, h: 72, title: '#12 login-redirect · working' }],
       get: 'Click an issue row (or a seed packet, later).',
       see: 'Issue details over the top of the scene. Give to agent plants it in the next free pot.',
-      limit: 'One sheet at a time. It doesn’t tile (R9).' },
-    { id: 'S11', name: 'Git window', board: '–',
-      pots: { x: 20, y: 16, w: 296, h: 104 }, sel: 1, rail: ['G'],
-      wins: [{ x: 20, y: 124, w: 120, h: 72, kind: 'git', title: 'main + agent branches', hl: true }, { x: 144, y: 124, w: 172, h: 72, title: T15, wait: true, focus: true }],
-      get: 'Rail git button, key G, or the garden map object.',
-      see: 'Branch graph as a window. The selected pot’s branch is highlighted.',
-      limit: 'About 10 commits at band height. Maximise to see more.' },
+      limit: 'One sheet at a time. It doesn’t tile (R10).' },
+    { id: 'S11', name: 'Branches tab', board: '–',
+      pots: { x: 20, y: 16, w: 214, h: 104 }, sel: 1, rail: ['G'], panel: { tab: 'branches', hl: 2 },
+      wins: [{ x: 20, y: 124, w: 214, h: 72, title: T15, wait: true, focus: true }],
+      get: 'Rail branches button, key G, or the garden map object.',
+      see: 'main and every agent branch over the full panel height, about 28 commits. Each branch label has a status dot. The selected pot\u2019s branch is highlighted; clicking a branch opens its agent.',
+      limit: 'Agents list and graph are not visible together; the status dots on the labels make up for it. The panel keeps one width.' },
     { id: 'S12', name: 'Another agent waits while you focus', board: '–',
       rail: ['F'], badge: '1', wins: [{ x: 20, y: 18, w: 296, h: 178, title: '#12 login-redirect · working', focus: true }],
       toast: [220, 160],
