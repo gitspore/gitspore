@@ -14,8 +14,8 @@ Developers run several AI coding agents at once, each in its own git worktree. A
 
 A greenhouse table in 3D. Each pot is one agent. A plant that wilts is an agent that waits for you.
 
-1. Open GitHub issues lie at the front of the table as **seed packets**.
-2. Drag a packet into an empty **pot**. gitspore creates a worktree and a branch and starts Claude Code with the issue as its task.
+1. Open GitHub issues are listed as **seed packets** in the issues tab. Later they also lie on the table as 3D packets.
+2. Give an issue to an empty **pot** (button, click on the empty pot, or drag). gitspore creates a worktree and a branch and starts Claude Code with the issue as its task.
 3. The plant shows how the agent is doing. You see at a glance which one needs you.
 4. Click a pot to open the agent's real terminal and answer it.
 5. When the branch is merged, the plant blooms and the pot is free again.
@@ -34,10 +34,10 @@ Every visual element means exactly one thing.
 
 ## Agent colour
 
-Each agent gets an ID colour, so you can tell them apart in the scene, the sidebar, the terminal and the branch graph.
+Each agent gets an ID colour, so you can tell them apart in the scene, the agents tab, the terminal window and the Branches tab.
 
 - It stays small: a thin band at the foot of the pot and a dot on the name tag. The rim stays reserved for status.
-- The same colour marks the agent's row in the sidebar, its terminal tab and its branch in the graph.
+- The same colour marks the agent's row in the agents tab, its terminal window header, its chip when minimised and its branch in the Branches tab.
 - The user picks from a fixed set of 8 colours per visual style, not a free colour picker. We design that set as part of the art direction: muted, and clearly apart from the status colours, so a wilting plant still stands out.
 - gitspore assigns the next free colour on its own; the user can change it.
 
@@ -55,8 +55,11 @@ The scene shows agents, not the repo. The repo lives in the **garden map**:
 
 The full layout (windows, states, rules) is in `concept/v3_layout.html` and replaces the docked layout of the mockup.
 
-- The sidebar lists every agent with status, issue and waiting time. It works on its own if the 3D scene fails.
-- The terminal is docked under the scene and opens for the selected pot.
+- The scene fills the page. Everything else lies on top of it in a CSS grid with gaps: top bar, tool rail on the left, main area for terminal windows, side panel on the right.
+- The side panel has three tabs: **Agents** (every agent with status, issue and waiting time), **Issues** (open issues as seed packets) and **Branches** (the graph). It works on its own if the 3D scene fails.
+- Every terminal window belongs to one agent and opens when you click its pot or its row. Buttons, not dragging, set a window's size: minimise to a chip in the bottom-left tray, maximise to cover the scene, or *focus this* to show one terminal alone.
+- In scene mode terminals sit in a band under the scene. Up to four can tile side by side or stacked, as long as each keeps about 80 columns; more become tabs.
+- When an agent waits and its terminal is not in view, a notification appears in the bottom-right corner, and the tab title and favicon show the number of waiting agents.
 - Greenhouse vitality (should-have) is one value, 0-100 %, for how much agent time is lost to waiting.
 
 ## Who it is for and how we test it
@@ -65,13 +68,13 @@ Developers who run three or more agents at once. Our hypothesis is that with git
 
 ## Scope
 
-**Must-have.** seed packets from issues, drag to plant (fallback: click), worktree + branch + Claude Code start, agent status from Claude Code hooks, wilting, docked terminal, sidebar, merge detection with bloom and worktree cleanup, macOS and Windows, daemon only on localhost with a token.
+**Must-have.** issues tab with seed-packet rows, planting by button or by clicking an empty pot, worktree + branch + Claude Code start, agent status from Claude Code hooks, wilting, terminal windows (minimise, maximise, focus this), side panel with agents and issues, waiting notification with tab title and favicon count, merge detection with bloom and worktree cleanup, macOS and Windows, daemon only on localhost with a token.
 
-**Should-have.** garden map with branch graph, agent colours, replay, greenhouse vitality, sound cue and browser notification.
+**Should-have.** Branches tab and garden map, drag an issue onto a pot, tiling of 2-4 terminals, agent colours, replay, greenhouse vitality, sound cue and browser notification.
 
 **Out.** agents other than Claude Code, several repos, more than six agents, merge conflicts in the UI, resuming agents after a daemon restart, points and levels.
 
-**Later, if time.** more pots (up to 9, each in a fixed spot); a warning when two agents edit the same file.
+**Later, if time.** 3D seed packets on the table; a shell tab in an agent's worktree; more pots (up to 9, each in a fixed spot); a warning when two agents edit the same file.
 
 | Work on the look | Person-days |
 |---|---|
