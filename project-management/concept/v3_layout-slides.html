@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>gitspore v3 layout</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a fixed 1600×900 stage scaled to the window, one slide visible at a time. Lab-05 neutrals, red only for "needs you". */
+:root {
+  --bg: #e9e6e1; --stage: #f6f4f0; --ink: #141210; --muted: #6f6962; --line: #d8d3cb; --accent: #e5261a; --amber: #c97f00; --chip: #ece9e3;
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #08090c; --stage: #121317; --ink: #eeebe5; --muted: #9a958e; --line: #2c2c31; --accent: #ff4a3d; --amber: #ffa000; --chip: #1c1d22; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #08090c; --stage: #121317; --ink: #eeebe5; --muted: #9a958e; --line: #2c2c31; --accent: #ff4a3d; --amber: #ffa000; --chip: #1c1d22; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; overflow: hidden; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-sans); }
+#deck { position: fixed; inset: 0; display: grid; place-items: center; }
+#stage { width: 1600px; height: 900px; position: relative; transform-origin: center center; flex: none; }
+.slide { position: absolute; inset: 0; background: var(--stage); border-radius: 14px; padding: 64px 80px 70px; display: none; flex-direction: column; overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .12); }
+.slide.on { display: flex; }
+.eyebrow { font-family: var(--font-mono); font-size: 18px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--accent); font-weight: 600; }
+h1 { font-size: 76px; line-height: 1.05; font-weight: 600; letter-spacing: -.015em; margin: 18px 0 0; text-wrap: balance; }
+h2 { font-size: 46px; line-height: 1.12; font-weight: 600; letter-spacing: -.01em; margin: 10px 0 0; text-wrap: balance; }
+p, li { font-size: 25px; line-height: 1.45; }
+p { margin: 16px 0 0; max-width: 34em; }
+ul { margin: 18px 0 0; padding-left: 1.1em; }
+li { margin: 8px 0; }
+li::marker { color: var(--muted); }
+code { font-family: var(--font-mono); font-size: .86em; background: var(--chip); padding: 1px 6px; border-radius: 4px; }
+.mono { font-family: var(--font-mono); }
+.muted { color: var(--muted); }
+
+.row { display: grid; gap: 44px; flex: 1; min-height: 0; margin-top: 30px; }
+.row.shot-right { grid-template-columns: 430px minmax(0, 1fr); align-items: center; }
+.row.pair { grid-template-columns: 1fr 1fr; gap: 32px; align-items: center; }
+.row.quad { grid-template-columns: 1fr 1fr; grid-template-rows: auto auto; gap: 16px 28px; align-content: center; margin-top: 20px; }
+.side p, .side li { font-size: 23px; }
+.side ul { padding-left: 1em; }
+figure { margin: 0; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+figure img { display: block; width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--line); cursor: zoom-in; background: var(--chip); }
+.quad figure { gap: 6px; }
+.quad figure img { height: 262px; object-fit: cover; object-position: top; }
+figcaption { font-size: 20px; line-height: 1.4; color: var(--muted); }
+figcaption b { color: var(--ink); font-weight: 600; font-family: var(--font-mono); font-size: 17px; margin-right: 8px; }
+.sid { display: inline-block; font-family: var(--font-mono); font-size: 18px; font-weight: 600; color: var(--accent); border: 1.5px solid var(--accent); border-radius: 5px; padding: 1px 8px; margin-right: 12px; vertical-align: 6px; }
+
+.cols { display: grid; gap: 28px; margin-top: 40px; align-items: start; }
+.cols.c3 { grid-template-columns: repeat(3, 1fr); }
+.cols.c2 { grid-template-columns: 1fr 1fr; }
+.card { border: 1px solid var(--line); border-radius: 10px; padding: 22px 26px; background: color-mix(in srgb, var(--stage) 70%, var(--bg)); min-width: 0; }
+.card h3 { margin: 0 0 6px; font-family: var(--font-mono); font-size: 18px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; }
+.card li, .card p { font-size: 21px; line-height: 1.4; }
+.card ul { margin-top: 8px; }
+.card.mvp h3 { color: var(--ink); }
+.card.should h3 { color: var(--amber); }
+.card.later h3 { color: var(--muted); }
+
+.title-slide { flex-direction: row !important; gap: 56px; align-items: center; }
+.title-slide .txt { flex: 0 0 640px; }
+.title-slide img { flex: 1; min-width: 0; border-radius: 10px; border: 1px solid var(--line); box-shadow: 0 18px 50px rgba(0, 0, 0, .25); }
+.big-q { font-size: 34px; line-height: 1.35; margin-top: 26px; color: var(--muted); max-width: 18em; }
+
+.qlist { counter-reset: q; list-style: none; padding: 0; margin-top: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px 40px; }
+.qlist li { counter-increment: q; position: relative; padding-left: 56px; font-size: 24px; margin: 0; }
+.qlist li::before { content: counter(q); position: absolute; left: 0; top: 0; width: 38px; height: 38px; border-radius: 50%; border: 1.5px solid var(--ink); display: grid; place-items: center;
+  font-family: var(--font-mono); font-size: 18px; font-weight: 600; }
+
+.regions { display: grid; grid-template-columns: auto 1fr; gap: 10px 18px; margin-top: 8px; font-size: 22px; align-items: baseline; }
+.regions span:nth-child(odd) { font-family: var(--font-mono); font-size: 16px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+
+.foot { position: absolute; left: 80px; right: 80px; bottom: 26px; display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 15px; color: var(--muted); letter-spacing: .04em; }
+
+#nav { position: fixed; right: 16px; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 6px; align-items: center; z-index: 5; opacity: .35; transition: opacity .2s; }
+#nav:hover, #nav:focus-within { opacity: 1; }
+#nav button { font: 500 13px var(--font-mono); color: var(--ink); background: var(--stage); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+#nav button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#count { font: 500 13px var(--font-mono); color: var(--muted); padding: 0 6px; font-variant-numeric: tabular-nums; }
+#bar { position: fixed; left: 0; top: 0; height: 3px; background: var(--accent); transition: width .25s; z-index: 5; }
+
+#zoom { position: fixed; inset: 0; z-index: 9; background: rgba(0, 0, 0, .82); display: grid; place-items: center; padding: 16px; cursor: zoom-out; }
+#zoom[hidden] { display: none; }
+#zoom img { max-width: 100%; max-height: 100%; border-radius: 6px; }
+@media (prefers-reduced-motion: reduce) { #bar { transition: none; } }
+</style>
+</head>
+<body>
+
+<div id="bar"></div>
+<div id="deck"><div id="stage">
+
+<section class="slide title-slide" aria-label="Title">
+  <div class="txt">
+    <div class="eyebrow">gitspore · concept v3 · <b>layout</b></div>
+    <h1>Every agent in one place, and it tells you when it waits.</h1>
+    <p class="big-q">The scene fills the page. Terminals, issues and branches sit on top of it, placed by buttons.</p>
+    <p class="muted mono" style="font-size:18px;margin-top:40px">Draft 2026-10-06 · not agreed yet<br>Spec: concept/v3_layout.html · Prototype: renders/planter-grid-layout.html</p>
+  </div>
+  <img src="v3_layout-slides/cozy-night-s01.jpg" alt="The app in the cozy night style: greenhouse table with pots, terminal at the bottom, agents panel on the right">
+</section>
+
+<section class="slide" aria-label="The layout">
+  <div class="eyebrow">The layout</div>
+  <h2>Six regions on top of a full-page scene</h2>
+  <div class="row shot-right">
+    <div class="side">
+      <div class="regions">
+        <span>Top bar</span><span>repo, focused agent, online status, settings, help</span>
+        <span>Rail</span><span>agents, issues, branches, scene/focus</span>
+        <span>Main</span><span>the scene, with terminal windows in a band below it</span>
+        <span>Panel</span><span>Agents · Issues · Branches, one fixed width</span>
+        <span>Tray</span><span>minimised terminals, bottom left</span>
+        <span>Notices</span><span>waiting agents, bottom right</span>
+      </div>
+    </div>
+    <figure><img src="v3_layout-slides/s01.jpg" alt="Default state: scene, one terminal, agents panel"><figcaption><b>S01</b>Default: scene with one terminal</figcaption></figure>
+  </div>
+</section>
+
+<section class="slide" aria-label="The rules">
+  <div class="eyebrow">The rules</div>
+  <h2>Three settings make every state</h2>
+  <div class="cols c3">
+    <div class="card"><h3>Side panel</h3><ul><li>Agents, Issues, Branches, or closed</li><li>One width (~400 px) for all tabs, so windows never jump</li></ul></div>
+    <div class="card"><h3>Main area mode</h3><ul><li><b>Scene mode</b>: terminals in a band, scene above</li><li><b>Focus mode</b>: terminals cover the scene, panel closes</li></ul></div>
+    <div class="card"><h3>Open windows</h3><ul><li>Each is visible or a chip in the tray</li><li>Tiles by count: 1, 2, 2+1, 2×2</li><li>A terminal tile keeps ~80 columns: too narrow, it stacks; no room to stack, it becomes a tab</li></ul></div>
+  </div>
+  <p class="muted" style="font-size:22px;margin-top:24px">Also: closing a window never stops the agent · Esc belongs to the terminal (Claude Code uses it to interrupt) · shortcuts only work outside the terminal</p>
+</section>
+
+<section class="slide" aria-label="Scene only">
+  <div class="eyebrow">States · watching</div>
+  <h2><span class="sid">S02</span>Scene only: the plants do the talking</h2>
+  <div class="row shot-right">
+    <div class="side"><ul>
+      <li>Panel closed, terminal minimised to a chip</li>
+      <li>The pots get the most room</li>
+      <li>#15 waits and its terminal isn't visible, so a notice appears bottom right</li>
+    </ul></div>
+    <figure><img src="v3_layout-slides/s02.jpg" alt="Scene only with a minimised terminal chip and a notification"><figcaption><b>S02</b>Scene only, with a chip and a waiting notice</figcaption></figure>
+  </div>
+</section>
+
+<section class="slide" aria-label="Focus">
+  <div class="eyebrow">States · focus</div>
+  <h2>Focus: one terminal gets the space</h2>
+  <div class="row pair">
+    <figure><img src="v3_layout-slides/s03.jpg" alt="Focus mode with one terminal"><figcaption><b>S03</b>Maximise or "focus this". The side panel closes.</figcaption></figure>
+    <figure><img src="v3_layout-slides/s04.jpg" alt="Focus mode with the panel open"><figcaption><b>S04</b>Open the panel again and the terminal makes room. Leaving focus restores the panel.</figcaption></figure>
+  </div>
+</section>
+
+<section class="slide" aria-label="Two terminals">
+  <div class="eyebrow">States · tiling</div>
+  <h2>Two terminals: side by side only if both stay readable</h2>
+  <div class="row pair">
+    <figure><img src="v3_layout-slides/s05.jpg" alt="Two terminals side by side"><figcaption><b>S05</b>Panel closed: two tiles of about 670 px each.</figcaption></figure>
+    <figure><img src="v3_layout-slides/s06.jpg" alt="Two terminals as tabs"><figcaption><b>S06</b>Panel open: tiles would drop below ~650 px and the band can't stack, so the second terminal becomes a tab.</figcaption></figure>
+  </div>
+</section>
+
+<section class="slide" aria-label="Three terminals">
+  <div class="eyebrow">States · tiling</div>
+  <h2>In focus mode the tiles can stack</h2>
+  <div class="row pair">
+    <figure><img src="v3_layout-slides/s07.jpg" alt="Three terminals tiled two plus one"><figcaption><b>S07</b>Three terminals: two on top, one across. Four is the maximum.</figcaption></figure>
+    <figure><img src="v3_layout-slides/s08.jpg" alt="Two terminals stacked with the panel open"><figcaption><b>S08</b>Panel open: no room side by side, so they stack.</figcaption></figure>
+  </div>
+</section>
+
+<section class="slide" aria-label="Notifications">
+  <div class="eyebrow">States · attention</div>
+  <h2>Another agent waits while you read</h2>
+  <div class="row pair">
+    <figure><img src="v3_layout-slides/s12.jpg" alt="A notification in the corner while one terminal is focused"><figcaption><b>S12</b>Notice bottom right, badge on the rail, count in the tab title. Your keyboard stays in #12.</figcaption></figure>
+    <figure><img src="v3_layout-slides/s13.jpg" alt="Both terminals side by side after Open beside"><figcaption><b>S13</b>"Open beside" puts #15 next to the terminal you were reading.</figcaption></figure>
+  </div>
+</section>
+
+<section class="slide" aria-label="Issues">
+  <div class="eyebrow">States · start work</div>
+  <h2>Issues look like seed packets</h2>
+  <div class="row pair">
+    <figure><img src="v3_layout-slides/s09.jpg" alt="Issues tab with packet-style rows"><figcaption><b>S09</b>Issues tab: crimped edge, seed mark, number, title, age. Planted ones stay, dimmed.</figcaption></figure>
+    <figure><img src="v3_layout-slides/s10.jpg" alt="Issue sheet over the scene"><figcaption><b>S10</b>Click an issue: the sheet opens. "Give to agent" plants it in the next free pot.</figcaption></figure>
+  </div>
+</section>
+
+<section class="slide" aria-label="Drag">
+  <div class="eyebrow">States · start work</div>
+  <h2><span class="sid">S14</span>Or drag it onto a pot</h2>
+  <div class="row shot-right">
+    <div class="side"><ul>
+      <li>Drag a row onto an empty pot; it gets a ring</li>
+      <li>Drop on the table: next free pot</li>
+      <li>Drop on a taken pot: nothing happens</li>
+      <li class="muted">Should-have. The button path is the MVP.</li>
+    </ul></div>
+    <figure><img src="v3_layout-slides/s14.jpg" alt="Dragging an issue over the empty pot, which shows a ring"><figcaption><b>S14</b>The empty pot at the front right shows the drop ring</figcaption></figure>
+  </div>
+</section>
+
+<section class="slide" aria-label="Branches">
+  <div class="eyebrow">States · overview</div>
+  <h2>Branches live in the side panel</h2>
+  <div class="row pair">
+    <figure><img src="v3_layout-slides/s11.jpg" alt="Branches tab in the plant lab style"><figcaption><b>S11</b>Full panel height, about 28 commits. The selected pot's branch is highlighted.</figcaption></figure>
+    <figure><img src="v3_layout-slides/cozy-night-s11.jpg" alt="Branches tab in the cozy night style"><figcaption><b>S11</b>Labels show agent colour and status. Click one to open that agent. Opens with G, the rail or the garden map.</figcaption></figure>
+  </div>
+</section>
+
+<section class="slide" aria-label="Failures">
+  <div class="eyebrow">States · when things go wrong</div>
+  <h2>It still works without the daemon or the 3D view</h2>
+  <div class="row pair">
+    <figure><img src="v3_layout-slides/s15.jpg" alt="Daemon not reachable dialog"><figcaption><b>S15</b>Daemon offline: last known state, dimmed, and what to do.</figcaption></figure>
+    <figure><img src="v3_layout-slides/s16.jpg" alt="Scene failed, panel and terminal still work"><figcaption><b>S16</b>WebGL fails: a message instead of the scene. Agents and terminals work as usual.</figcaption></figure>
+  </div>
+</section>
+
+<section class="slide" aria-label="Styles">
+  <div class="eyebrow">Same layout, both directions</div>
+  <h2>The layout doesn't depend on the style</h2>
+  <div class="row quad">
+    <figure><img src="v3_layout-slides/s01.jpg" alt="Plant lab, light"><figcaption><b>lab-05</b>light</figcaption></figure>
+    <figure><img src="v3_layout-slides/lab-dark-s01.jpg" alt="Plant lab, dark"><figcaption><b>lab-05</b>dark</figcaption></figure>
+    <figure><img src="v3_layout-slides/cozy-day-s01.jpg" alt="Cozy greenhouse, day"><figcaption><b>cozy-04</b>day</figcaption></figure>
+    <figure><img src="v3_layout-slides/cozy-night-s01.jpg" alt="Cozy greenhouse, night"><figcaption><b>cozy-04</b>night</figcaption></figure>
+  </div>
+</section>
+
+<section class="slide" aria-label="Scope">
+  <div class="eyebrow">What we build</div>
+  <h2>MVP first, tiling and drag later</h2>
+  <div class="cols c3">
+    <div class="card mvp"><h3>MVP</h3><ul>
+      <li>App shell, rail, top bar</li><li>One terminal window: minimise, maximise, focus this</li><li>Agents and Issues tabs</li><li>Issue sheet with "Give to agent"</li><li>Waiting notice, title and favicon count</li><li>Connect screen, scene fallback</li></ul></div>
+    <div class="card should"><h3>Should-have</h3><ul>
+      <li>Tiling 2–4 terminals, tabs fallback</li><li>Branches tab with commit-graph</li><li>Garden map object</li><li>Drag an issue onto a pot</li><li>Agent colours and picker</li><li>Browser notification, sound</li></ul></div>
+    <div class="card later"><h3>Later</h3><ul>
+      <li>3D seed packets on the table</li><li>Shell tab in an agent's worktree</li><li>Shader backgrounds for panels</li></ul></div>
+  </div>
+</section>
+
+<section class="slide" aria-label="Tickets">
+  <div class="eyebrow">Board</div>
+  <h2>What it means for our tickets</h2>
+  <div class="cols c2">
+    <div class="card"><h3>Existing tickets change</h3><ul>
+      <li><b>#5</b> scene: bench and pots, fixed camera with view offset</li>
+      <li><b>#8</b> store: a list of open windows from day one</li>
+      <li><b>#11</b> terminal: a window, not a drawer; no Esc to close</li>
+      <li><b>#18</b> HUD: top bar + side panel</li>
+      <li><b>#12</b> vines → Branches tab, <b>#13</b> beetles → pots, if we adopt v3</li>
+      <li><b>#25</b> feasibility: test view offset, drag onto canvas, panel cost</li></ul></div>
+    <div class="card"><h3>New tickets (N1–N12)</h3><ul>
+      <li>Layout shell and window component</li>
+      <li>Issues tab, sheet, give to agent</li>
+      <li>Attention: notices, title, favicon</li>
+      <li>Tiling · Branches tab · drag to pot</li>
+      <li>Keyboard and focus · connect and empty states</li></ul></div>
+  </div>
+</section>
+
+<section class="slide" aria-label="Decisions">
+  <div class="eyebrow">To decide</div>
+  <h2>Questions for the team</h2>
+  <ol class="qlist">
+    <li>Do we adopt v3 (pots) over v1/v2 (vines, beetles)?</li>
+    <li>Issue sheet over the scene, or a tile in the band?</li>
+    <li>One terminal in scene mode: full band width or half?</li>
+    <li>Which key leaves the terminal, now that Esc is taken? <span class="muted">Ctrl+` or F6</span></li>
+    <li>Merge: detect it on GitHub, or a merge button in gitspore?</li>
+    <li>Branch naming that links a branch to its issue</li>
+    <li>Seed mark from the issue number or from labels?</li>
+    <li>Clicking a pot replaces the visible terminal; shift-click opens it beside. OK?</li>
+  </ol>
+</section>
+
+</div></div>
+
+<nav id="nav" aria-label="Slides">
+  <button type="button" id="prev" aria-label="Previous slide">←</button>
+  <span id="count"></span>
+  <button type="button" id="next" aria-label="Next slide">→</button>
+  <button type="button" id="full" aria-label="Full screen">full screen</button>
+</nav>
+<div id="zoom" hidden><img alt=""></div>
+
+<script>
+(() => {
+  const slides = [...document.querySelectorAll('.slide')];
+  const stage = document.getElementById('stage');
+  const n = slides.length;
+  slides.forEach((s, i) => {
+    const f = document.createElement('div'); f.className = 'foot';
+    f.innerHTML = `<span>gitspore · v3 layout</span><span>${i + 1} / ${n}</span>`;
+    s.appendChild(f);
+  });
+  let cur = 0;
+  const fromHash = () => { const m = /^#(\d+)$/.exec(location.hash); return m ? Math.min(n - 1, Math.max(0, +m[1] - 1)) : 0; };
+  function show(i) {
+    cur = Math.min(n - 1, Math.max(0, i));
+    slides.forEach((s, k) => s.classList.toggle('on', k === cur));
+    document.getElementById('count').textContent = `${cur + 1} / ${n}`;
+    document.getElementById('bar').style.width = `${((cur + 1) / n) * 100}%`;
+    try { history.replaceState(null, '', '#' + (cur + 1)); } catch (e) {}
+  }
+  function fit() {
+    const pad = innerWidth < 700 ? 8 : 28;
+    const k = Math.min((innerWidth - pad * 2) / 1600, (innerHeight - pad * 2) / 900);
+    stage.style.transform = `scale(${k})`;
+  }
+  addEventListener('resize', fit);
+  const zoom = document.getElementById('zoom');
+  addEventListener('keydown', (e) => {
+    if (!zoom.hidden) { if (e.key === 'Escape' || e.key === ' ') { zoom.hidden = true; e.preventDefault(); } return; }
+    if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); show(cur + 1); }
+    else if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); show(cur - 1); }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(n - 1);
+    else if (e.key.toLowerCase() === 'f') toggleFull();
+  });
+  function toggleFull() {
+    try { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen().catch(() => {}); } catch (e) {}
+  }
+  document.getElementById('prev').onclick = () => show(cur - 1);
+  document.getElementById('next').onclick = () => show(cur + 1);
+  document.getElementById('full').onclick = toggleFull;
+  stage.addEventListener('click', (e) => {
+    const img = e.target.closest('figure img, .title-slide img');
+    if (img) { zoom.querySelector('img').src = img.src; zoom.querySelector('img').alt = img.alt; zoom.hidden = false; }
+  });
+  zoom.onclick = () => { zoom.hidden = true; };
+  let tx = null;
+  addEventListener('touchstart', (e) => { tx = e.touches[0].clientX; }, { passive: true });
+  addEventListener('touchend', (e) => { if (tx === null) return; const dx = e.changedTouches[0].clientX - tx; if (Math.abs(dx) > 50) show(cur + (dx < 0 ? 1 : -1)); tx = null; });
+  fit(); show(fromHash());
+})();
+</script>
+</body>
+</html>
