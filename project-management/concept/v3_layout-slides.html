@@ -239,6 +239,26 @@ figcaption b { color: var(--ink); font-weight: 600; font-family: var(--font-mono
   </div>
 </section>
 
+<section class="slide" aria-label="Overview">
+  <div class="eyebrow">New · proposed 2026-10-07</div>
+  <h2>The beetle: one chat that sees all agents</h2>
+  <div class="cols c3">
+    <div class="card"><h3>What it is</h3><ul>
+      <li>One more Claude Code session, in the repo root, without a pot</li>
+      <li>Knows what each agent did, its status, where the whole is going</li>
+      <li>Read-only first; orchestrator later via the daemon</li></ul></div>
+    <div class="card"><h3>In the layout</h3><ul>
+      <li>Beetle button on the rail, or key <code>0</code></li>
+      <li>Opens maximised (Focus this)</li>
+      <li>Then an ordinary window: beside an agent, minimise, notification</li></ul></div>
+    <div class="card"><h3>In the scene</h3><ul>
+      <li>A beetle carved into the table's front edge</li>
+      <li>Emissive glow shows its state: dim, pulse, red when it waits</li>
+      <li>The table grows: pots at the back, packets and carving in front</li></ul></div>
+  </div>
+  <p class="muted" style="font-size:22px;margin-top:24px">Should-have, decided at the end of week 2. Needed from day one: an agent may have no pot. Wireframes S17–S19 in concept/v3_layout.html.</p>
+</section>
+
 <section class="slide" aria-label="Scope">
   <div class="eyebrow">What we build</div>
   <h2>MVP first, tiling and drag later</h2>
@@ -246,7 +266,7 @@ figcaption b { color: var(--ink); font-weight: 600; font-family: var(--font-mono
     <div class="card mvp"><h3>MVP</h3><ul>
       <li>App shell, rail, top bar</li><li>One terminal window: minimise, maximise, focus this</li><li>Agents and Issues tabs</li><li>Issue sheet with "Give to agent"</li><li>Waiting notice, title and favicon count</li><li>Connect screen, scene fallback</li></ul></div>
     <div class="card should"><h3>Should-have</h3><ul>
-      <li>Tiling 2–4 terminals, tabs fallback</li><li>Branches tab with commit-graph</li><li>Garden map object</li><li>Drag an issue onto a pot</li><li>Agent colours and picker</li><li>Browser notification, sound</li></ul></div>
+      <li>Tiling 2–4 terminals, tabs fallback</li><li>Branches tab with commit-graph</li><li>Garden map object</li><li>Drag an issue onto a pot</li><li>Agent colours and picker</li><li>Browser notification, sound</li><li>Overview agent, beetle carving</li></ul></div>
     <div class="card later"><h3>Later</h3><ul>
       <li>3D seed packets on the table</li><li>Shell tab in an agent's worktree</li><li>Shader backgrounds for panels</li></ul></div>
   </div>
@@ -263,12 +283,13 @@ figcaption b { color: var(--ink); font-weight: 600; font-family: var(--font-mono
       <li><b>#18</b> HUD: top bar + side panel</li>
       <li><b>#12</b> vines → Branches tab, <b>#13</b> beetles → pots, if we adopt v3</li>
       <li><b>#25</b> feasibility: test view offset, drag onto canvas, panel cost</li></ul></div>
-    <div class="card"><h3>New tickets (N1–N12)</h3><ul>
+    <div class="card"><h3>New tickets (N1–N14)</h3><ul>
       <li>Layout shell and window component</li>
       <li>Issues tab, sheet, give to agent</li>
       <li>Attention: notices, title, favicon</li>
       <li>Tiling · Branches tab · drag to pot</li>
-      <li>Keyboard and focus · connect and empty states</li></ul></div>
+      <li>Keyboard and focus · connect and empty states</li>
+      <li>Overview agent · beetle carving and button</li></ul></div>
   </div>
 </section>
 
@@ -284,6 +305,7 @@ figcaption b { color: var(--ink); font-weight: 600; font-family: var(--font-mono
     <li>Branch naming that links a branch to its issue</li>
     <li>Seed mark from the issue number or from labels?</li>
     <li>Clicking a pot replaces the visible terminal; shift-click opens it beside. OK?</li>
+    <li>Overview: should-have or MVP? Read-only first?</li>
   </ol>
 </section>
 

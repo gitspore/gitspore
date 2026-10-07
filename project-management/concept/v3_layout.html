@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>gitspore v3 layout</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -135,6 +136,9 @@ td.nw { white-space: nowrap; }
 .s-dash { fill: none; stroke: var(--wf-line); stroke-width: .7; stroke-dasharray: 2 1.5; }
 .s-drop { fill: none; stroke: var(--accent); stroke-width: 1.2; stroke-dasharray: 2.5 1.5; }
 .s-line { fill: none; stroke: var(--wf-line); stroke-width: .7; }
+.s-carve { fill: none; stroke: var(--wf-ink); stroke-width: .55; stroke-linecap: round; }
+.s-carve.inv { stroke: var(--wf-bar); }
+.f-glow-work { fill: var(--work); opacity: .28; }
 .s-annot { fill: none; stroke: var(--accent); stroke-width: .8; stroke-dasharray: 3 2; }
 .t { font-family: var(--font-mono); font-size: 5px; fill: var(--wf-ink); }
 .t.b { font-weight: 600; }
@@ -154,7 +158,7 @@ td.nw { white-space: nowrap; }
   <header class="prose">
     <div class="eyebrow">gitspore · concept v3 · layout</div>
     <h1>Planter grid layout</h1>
-    <p class="meta">Draft, 2026-10-06. Comes from the layout discussion about Georgios's Penpot board (not in the repo). Not agreed by the team yet. Builds on <code>concept/v3_planter-grid.md</code> and the mockup <code>research/inspiration/renders/planter-grid.html</code>. Live 3D prototype of these states: <code>research/inspiration/renders/planter-grid-layout.html</code>.</p>
+    <p class="meta">Draft, 2026-10-06. Comes from the layout discussion about Georgios's Penpot board (not in the repo). Not agreed by the team yet. Builds on <code>concept/v3_planter-grid.md</code> and the mockup <code>research/inspiration/renders/planter-grid.html</code>. Live 3D prototype of these states: <code>research/inspiration/renders/planter-grid-layout.html</code>. Updated 2026-10-07: the overview agent (the beetle) and a larger table; the prototype doesn't show these yet.</p>
     <p>This page shows every layout state of the app as a simple wireframe, the ways to reach each action, the user stories, the components we need, the limits, and how all of it maps to the tickets on the board. The wireframes show structure only. Colours and materials come from the chosen visual direction.</p>
   </header>
 
@@ -184,6 +188,8 @@ td.nw { white-space: nowrap; }
       <div><b>The branch graph is a side panel tab</b>Agents · Issues · Branches, full height, one fixed panel width of about 400 px. No separate git window. Each branch label shows the agent colour and a status dot, because the tab hides the agents list.</div>
       <div><b>Priority flag dropped</b>The issue window has no priority action.</div>
       <div><b>Panels are solid or slightly transparent</b>Blur only if it measures fine over the moving scene. A shader version is later polish.</div>
+      <div><b>An overview agent: the beetle</b>One more Claude Code session, in the repo root instead of a worktree, without a pot. It knows what every agent has done, their status and where the whole is going. Later it may orchestrate. Its window is an ordinary window; the beetle button opens it maximised. Added 2026-10-07.</div>
+      <div><b>The table grows</b>Two rows of three pots at the back, a strip at the front with space for the seed packets and a beetle carved into the front edge. The carving shows the overview's status. Added 2026-10-07.</div>
     </div>
   </section>
 
@@ -198,7 +204,7 @@ td.nw { white-space: nowrap; }
       <tbody>
         <tr><td>Side panel</td><td>Agents tab · Issues tab · Branches tab · closed. One fixed width (about 400 px) for all tabs.</td><td>Rail buttons (click the active one again to close), key <code>G</code>, garden map object, entering focus mode</td></tr>
         <tr><td>Main area mode</td><td><b>Scene mode</b>: windows sit in a band at the bottom, the scene shows above.<br><b>Focus mode</b>: windows cover the whole main area.</td><td>Maximise / restore button on any window, <i>Focus this</i>, rail button</td></tr>
-        <tr><td>Open windows</td><td>An ordered list. Each window is visible or minimised (a chip in the tray).</td><td>Clicking a pot, an agent row, a chip or a notification; minimise and close buttons</td></tr>
+        <tr><td>Open windows</td><td>An ordered list. Each window is visible or minimised (a chip in the tray).</td><td>Clicking a pot, an agent row, a chip or a notification; the beetle button or carving (overview); minimise and close buttons</td></tr>
       </tbody>
     </table></div>
     <p class="prose">The grid areas are calculated from these three settings. We don't draw each state by hand; the rules below decide the tiles.</p>
@@ -216,6 +222,7 @@ td.nw { white-space: nowrap; }
       <li><b>The side panel has one width for all tabs</b>, about 400 px, enough for 7 lanes and commit messages. Switching tabs never moves the windows. The branch graph lives in this panel as the Branches tab, not as a window.</li>
       <li><b>The issue window is a sheet, not a tile.</b> It opens at the top of the main area, over the scene, and closes when the issue is planted or dismissed. It doesn't take part in tiling.</li>
       <li><b>Exactly one window has keyboard focus</b> and shows a strong border. App shortcuts only work while no terminal has focus.</li>
+      <li><b>The overview is a window like any terminal.</b> The beetle button (or the carving, or key <code>0</code>) runs <i>Focus this</i> on it. Shift-click opens it beside the focused window instead. Restore, minimise, tiling, chip and notification work as for the agents. It has no pot and doesn't count against the six.</li>
     </ol>
   </section>
 
@@ -247,6 +254,7 @@ td.nw { white-space: nowrap; }
         <tr><td><b>Open the branch graph</b></td><td>Rail branches button · key <code>G</code> · click the garden map object in the scene. All three open the side panel on the Branches tab.</td><td>button, G <span class="pill p-should">should</span><br>map object <span class="pill p-should">should</span></td><td><a href="#S11">S11</a></td></tr>
         <tr><td><b>Restart, stop, free a pot</b></td><td><code>⋯</code> menu in the window header · <code>⋯</code> menu on the agent row. Stop and free ask for confirmation.</td><td><span class="pill p-mvp">MVP</span></td><td><a href="#S01">S01</a></td></tr>
         <tr><td><b>Notice a waiting agent</b></td><td>The plant wilts · red dot in the agents tab · red dot on its chip · badge on the rail agents button · bottom-right notification · count in the tab title and favicon · browser notification · sound</td><td>scene, list, chip, notification, title <span class="pill p-mvp">MVP</span><br>browser notification, sound <span class="pill p-should">should</span></td><td><a href="#S12">S12</a></td></tr>
+        <tr><td><b>Ask about all agents</b><br>the overview</td><td>Beetle button on the rail · click the beetle carving · key <code>0</code> · its chip · its notification. All open it maximised (<i>Focus this</i>). Shift-click the button: open beside the focused window. When it waits, the carving glows red and it gets the same notice, badge and title count as an agent.</td><td><span class="pill p-should">should</span></td><td><a href="#S17">S17</a> <a href="#S18">S18</a> <a href="#S19">S19</a></td></tr>
         <tr><td><b>Leave a terminal with the keyboard</b></td><td>Click anywhere outside it · one key combination still to choose (<kbd>Esc</kbd> is taken: Claude Code uses it to interrupt the agent)</td><td><span class="pill p-mvp">MVP</span></td><td>all</td></tr>
       </tbody>
     </table></div>
@@ -270,7 +278,7 @@ td.nw { white-space: nowrap; }
         <tr><td class="nw"><code>ConnectionStatus</code></td><td>online · reconnecting · offline, from the store.</td><td><span class="pill p-mvp">MVP</span></td><td>#8, #18</td></tr>
         <tr><td class="nw"><code>SettingsMenu</code></td><td>Theme (light, dark, system), sound, browser notifications. shadcn <code>DropdownMenu</code>.</td><td><span class="pill p-mvp">MVP</span></td><td>#27</td></tr>
         <tr><td class="nw"><code>HelpPopover</code></td><td>How to read a plant (the legend), keyboard shortcuts.</td><td><span class="pill p-mvp">MVP</span></td><td>#23</td></tr>
-        <tr><td class="nw"><code>ToolRail</code></td><td>Buttons: agents tab, issues tab, branches tab, scene/focus. Badge with the number of waiting agents. shadcn <code>Button</code> + <code>Tooltip</code>.</td><td><span class="pill p-mvp">MVP</span></td><td>N1</td></tr>
+        <tr><td class="nw"><code>ToolRail</code></td><td>Buttons: agents tab, issues tab, branches tab, scene/focus. Below a divider, the beetle button for the overview window (it opens a window, not a tab). Badge with the number of waiting agents. shadcn <code>Button</code> + <code>Tooltip</code>.</td><td><span class="pill p-mvp">MVP</span>, beetle <span class="pill p-should">should</span></td><td>N1, N14</td></tr>
         <tr><th colspan="4">Main area</th></tr>
         <tr><td class="nw"><code>WindowGrid</code></td><td>Calculates the tiles from mode, window list and screen width (rules R1–R6). Triggers <code>fit()</code> after each change.</td><td>1 window <span class="pill p-mvp">MVP</span><br>tiling <span class="pill p-should">should</span></td><td>N1, N6</td></tr>
         <tr><td class="nw"><code>Window</code></td><td>Frame with header: agent colour, title, status, controls (minimise, focus this, maximise/restore, close), <code>⋯</code> menu. Only terminals use it for now; a shell tab inside an agent window is possible later.</td><td><span class="pill p-mvp">MVP</span></td><td>N2</td></tr>
@@ -278,6 +286,7 @@ td.nw { white-space: nowrap; }
         <tr><td class="nw"><code>WindowTabs</code></td><td>Tabs inside a tile when there is no room for another tile (R1, R2). shadcn <code>Tabs</code>.</td><td><span class="pill p-should">should</span></td><td>N6</td></tr>
         <tr><td class="nw"><code>IssueSheet</code></td><td>Issue title, body, labels, age. Buttons: Give to agent, Open on GitHub, Close.</td><td><span class="pill p-mvp">MVP</span></td><td>N3</td></tr>
         <tr><td class="nw"><code>MinimisedTray</code> + <code>WindowChip</code></td><td>Bottom-left chips: agent colour, number, status dot. Click restores.</td><td><span class="pill p-mvp">MVP</span></td><td>N1</td></tr>
+        <tr><td class="nw"><code>OverviewWindow</code></td><td><code>Window</code> + <code>TerminalView</code> for the overview agent. Title "overview", no pot number, same status and controls as an agent window.</td><td><span class="pill p-should">should</span></td><td>N13</td></tr>
         <tr><th colspan="4">Side panel</th></tr>
         <tr><td class="nw"><code>SidePanel</code></td><td>Tabs <i>Agents</i>, <i>Issues</i> and <i>Branches</i>, one fixed width of about 400 px, so switching tabs never moves the windows.</td><td><span class="pill p-mvp">MVP</span></td><td>#18</td></tr>
         <tr><td class="nw"><code>AgentRow</code></td><td>Status marker, agent colour, issue number and title, waiting time, <code>⋯</code> menu. Click opens the terminal.</td><td><span class="pill p-mvp">MVP</span></td><td>#18</td></tr>
@@ -287,18 +296,22 @@ td.nw { white-space: nowrap; }
         <tr><th colspan="4">Scene</th></tr>
         <tr><td class="nw"><code>SceneCanvas</code></td><td>Full-page canvas, loaded with <code>next/dynamic</code>, inside an error boundary (S16).</td><td><span class="pill p-mvp">MVP</span></td><td>#5</td></tr>
         <tr><td class="nw"><code>CameraRig</code></td><td>Frames the pots into the largest free rectangle of the main area with a camera view offset. No canvas resize.</td><td><span class="pill p-mvp">MVP</span></td><td>#5, #14</td></tr>
-        <tr><td class="nw"><code>Bench</code>, <code>Pot</code>, <code>Plant</code>, <code>NameTag</code></td><td>Six fixed slots, plant states and wilt stages, hover and selected state, drop target.</td><td><span class="pill p-mvp">MVP</span></td><td>#5, #13→pots, #14</td></tr>
+        <tr><td class="nw"><code>Bench</code>, <code>Pot</code>, <code>Plant</code>, <code>NameTag</code></td><td>A larger table: six fixed slots in two rows at the back, a front strip for seed packets and the carving. Plant states and wilt stages, hover and selected state, drop target.</td><td><span class="pill p-mvp">MVP</span></td><td>#5, #13→pots, #14</td></tr>
+        <tr><td class="nw"><code>BeetleCarving</code></td><td>A beetle carved into the front edge of the table: a decal or texture area with an emissive mask, no extra model. The glow shows the overview's status: dim when idle, slow pulse when working, red when waiting, flicker on error. Click (raycast on its plane) opens the overview. Engraved and lit plate in lab-05, glowing wood carving in cozy-04.</td><td><span class="pill p-should">should</span></td><td>N14</td></tr>
         <tr><td class="nw"><code>DropHandler</code></td><td>Takes HTML drag events over the canvas, raycasts to find the pot under the pointer.</td><td><span class="pill p-should">should</span></td><td>N4</td></tr>
         <tr><td class="nw"><code>GardenMap</code></td><td>Object in the scene that opens the Branches tab.</td><td><span class="pill p-should">should</span></td><td>N9</td></tr>
-        <tr><td class="nw"><code>SeedPacket</code></td><td>3D packets for the first few issues, same look as the rows.</td><td><span class="pill p-later">later</span></td><td>N10</td></tr>
+        <tr><td class="nw"><code>SeedPacket</code></td><td>3D packets for the first few issues, same look as the rows. They lie in the front strip of the table, left and right of the carving.</td><td><span class="pill p-later">later</span></td><td>N10</td></tr>
         <tr><th colspan="4">Attention and system</th></tr>
         <tr><td class="nw"><code>NotificationStack</code></td><td>Bottom-right cards for waiting agents. Stay until the agent no longer waits, never take keyboard focus. Buttons: Open, Open beside. shadcn <code>Sonner</code>.</td><td><span class="pill p-mvp">MVP</span></td><td>N5</td></tr>
         <tr><td class="nw"><code>AttentionSignals</code></td><td>Waiting count in the tab title and favicon, browser notification, sound. No visible UI.</td><td>title, favicon <span class="pill p-mvp">MVP</span><br>rest <span class="pill p-should">should</span></td><td>N5</td></tr>
         <tr><td class="nw"><code>ConfirmDialog</code></td><td>Stop agent, free pot, remove worktree. shadcn <code>AlertDialog</code>.</td><td><span class="pill p-mvp">MVP</span></td><td>N2</td></tr>
         <tr><td class="nw"><code>ConnectScreen</code></td><td>Daemon not reachable, token missing, no GitHub access.</td><td><span class="pill p-mvp">MVP</span></td><td>N12</td></tr>
         <tr><td class="nw"><code>EmptyStates</code></td><td>No agents yet, no open issues, all six pots taken.</td><td><span class="pill p-mvp">MVP</span></td><td>N12</td></tr>
-        <tr><td class="nw"><code>ShortcutHandler</code></td><td>1–6, F, G and the leave-terminal key, active only when no terminal has focus.</td><td><span class="pill p-mvp">MVP</span></td><td>N11</td></tr>
+        <tr><td class="nw"><code>ShortcutHandler</code></td><td>1–6, 0 (overview), F, G and the leave-terminal key, active only when no terminal has focus.</td><td><span class="pill p-mvp">MVP</span></td><td>N11</td></tr>
         <tr><td class="nw"><code>AgentColorPicker</code></td><td>8 swatches in the window <code>⋯</code> menu, taken colours disabled.</td><td><span class="pill p-should">should</span></td><td>N8</td></tr>
+        <tr><th colspan="4">Daemon (for the overview)</th></tr>
+        <tr><td class="nw"><code>OverviewAgent</code></td><td>Starts Claude Code in the repo root instead of a worktree. Read-only at first: it reads <code>git log --all</code>, the worktrees' diffs and the status file, and doesn't commit.</td><td><span class="pill p-should">should</span></td><td>N13, #16</td></tr>
+        <tr><td class="nw"><code>StatusFile</code></td><td>The daemon writes agents, issues, states, waiting times and branches to a file the overview reads, outside the repo or ignored by git.</td><td><span class="pill p-should">should</span></td><td>N13</td></tr>
       </tbody>
     </table></div>
   </section>
@@ -314,6 +327,8 @@ td.nw { white-space: nowrap; }
       <li><b>Keyboard.</b> <kbd>Esc</kbd> belongs to the terminal (Claude Code uses it to interrupt). App shortcuts only work when no terminal has focus.</li>
       <li><b>Panel backgrounds.</b> <code>backdrop-filter: blur</code> over a WebGL canvas is recalculated every frame. Measure it on our laptops before using it; solid panels are the default.</li>
       <li><b>Answer buttons.</b> Depend on spike S3. Until then, answers go through the terminal.</li>
+      <li><b>Table size.</b> The larger table has to fit the same free rectangle, so the pots get a bit smaller. The camera rig frames pots and front strip together, so the carving stays visible in scene mode.</li>
+      <li><b>Overview context.</b> The overview only knows what git and the status file tell it, not the other agents' terminal output. Until it can act through the daemon, it can only advise.</li>
       <li><b>Drag from HTML onto the scene.</b> Needs our own drop handling and raycast. It is a should-have; the button path works without it.</li>
     </ul>
   </section>
@@ -324,19 +339,19 @@ td.nw { white-space: nowrap; }
     <div class="tbl"><table>
       <thead><tr><th>Ticket</th><th>Effect</th><th>What changes</th></tr></thead>
       <tbody>
-        <tr><td class="nw">#2 GS-01 Shared contracts</td><td><span class="pill p-change">change</span></td><td>Agent gets a pot slot (0–5), an agent colour index and the time it started waiting. Add the merged state. The layout state stays in the web app, not in shared.</td></tr>
-        <tr><td class="nw">#5 GS-04 R3F scene scaffold</td><td><span class="pill p-change">change</span></td><td>Bench and pots instead of the terrarium. Full-page canvas under the HTML. Fixed camera with a view offset instead of free <code>OrbitControls</code> (or very tight limits).</td></tr>
+        <tr><td class="nw">#2 GS-01 Shared contracts</td><td><span class="pill p-change">change</span></td><td>Agent gets a pot slot (0–5), an agent colour index and the time it started waiting. Add the merged state. Allow an agent without a pot (slot <code>null</code>) for the overview. The layout state stays in the web app, not in shared.</td></tr>
+        <tr><td class="nw">#5 GS-04 R3F scene scaffold</td><td><span class="pill p-change">change</span></td><td>Bench and pots instead of the terrarium, on a larger table with a front strip for packets and the beetle carving. Full-page canvas under the HTML. Fixed camera with a view offset instead of free <code>OrbitControls</code> (or very tight limits).</td></tr>
         <tr><td class="nw">#6 GS-05 Mock event server</td><td><span class="pill p-change">change</span></td><td>Six pots, a list of open issues, waiting transitions with timestamps, so the layout can be built before the daemon.</td></tr>
-        <tr><td class="nw">#8 GS-07 Socket client and store</td><td><span class="pill p-change">change</span></td><td>Add a UI slice: side panel, main area mode, ordered window list (visible or minimised), focused window, selected agent. A list from day one, so tiling can be added later without a refactor.</td></tr>
+        <tr><td class="nw">#8 GS-07 Socket client and store</td><td><span class="pill p-change">change</span></td><td>Add a UI slice: side panel, main area mode, ordered window list (visible or minimised), focused window, selected agent. A list from day one, so tiling can be added later without a refactor. Windows refer to agents, not to pots, so the overview window fits in.</td></tr>
         <tr><td class="nw">#11 GS-10 xterm terminal panel</td><td><span class="pill p-change">change</span></td><td>A window in the grid, not a drawer. Not closed by <kbd>Esc</kbd>. Disposed on close, kept alive when minimised. <code>fit()</code> after layout transitions.</td></tr>
         <tr><td class="nw">#12 GS-11 Vine rendering</td><td><span class="pill p-gone">superseded</span></td><td>Under v3, branches show in the Branches tab of the side panel, not as vines.</td></tr>
-        <tr><td class="nw">#13 GS-12 Gardener beetles</td><td><span class="pill p-gone">superseded</span></td><td>Pots and plants show the agents. The status list (working, waiting, error, done) carries over to the plant.</td></tr>
+        <tr><td class="nw">#13 GS-12 Gardener beetles</td><td><span class="pill p-gone">superseded</span></td><td>Pots and plants show the agents. The status list (working, waiting, error, done) carries over to the plant. The beetle stays as the carving for the overview agent (N14).</td></tr>
         <tr><td class="nw">#14 GS-13 Hover and click</td><td><span class="pill p-change">change</span></td><td>Hover and click on pots and name tags. "New shell on a branch" is out. Camera fly-to becomes framing by the camera rig.</td></tr>
-        <tr><td class="nw">#16 GS-14 Agent spawning</td><td><span class="pill p-keep">keep</span></td><td>Input is an issue and a pot slot. Status from hooks stays as written.</td></tr>
+        <tr><td class="nw">#16 GS-14 Agent spawning</td><td><span class="pill p-change">change</span></td><td>Input is an issue and a pot slot. Status from hooks stays as written. Can also start one agent in the repo root, without a pot, for the overview (N13).</td></tr>
         <tr><td class="nw">#18 GS-15 HUD overlay</td><td><span class="pill p-change">change</span></td><td>Becomes top bar + side panel + connection status. The "New Gardener" modal is replaced by the issue list and <i>Give to agent</i>. Its acceptance criterion (works without the scene) is state S16.</td></tr>
         <tr><td class="nw">#21 GS-16 Issue sync</td><td><span class="pill p-keep">keep</span></td><td>Feeds the issues tab. The branch naming rule that links issues to branches needs agreeing.</td></tr>
         <tr><td class="nw">#23 Info box</td><td><span class="pill p-change">change</span></td><td>Becomes the help popover with the plant legend.</td></tr>
-        <tr><td class="nw">#25 GS-19 Scene feasibility</td><td><span class="pill p-change">change</span></td><td>Add three tests: camera view offset framing, HTML drag dropped on the canvas, cost of panels (and blur) over the canvas.</td></tr>
+        <tr><td class="nw">#25 GS-19 Scene feasibility</td><td><span class="pill p-change">change</span></td><td>Add four tests: camera view offset framing of the larger table, HTML drag dropped on the canvas, cost of panels (and blur) over the canvas, an emissive decal with animated states.</td></tr>
         <tr><td class="nw">#26 GS-20 Choose direction</td><td><span class="pill p-change">change</span></td><td>Decide v3 vs v1/v2 first, then cozy-04 vs lab-05.</td></tr>
         <tr><td class="nw">#27 GS-21 Theme tokens</td><td><span class="pill p-change">change</span></td><td>Add tokens for panels and windows, issue paper, the 8 agent colours per theme.</td></tr>
         <tr><td class="nw">#3, #4, #7, #9, #10, #24, #28</td><td><span class="pill p-keep">keep</span></td><td>Backend, setup and research; the layout doesn't touch them.</td></tr>
@@ -359,6 +374,8 @@ td.nw { white-space: nowrap; }
         <tr><td>N10</td><td>3D seed packets</td><td><span class="pill p-later">later</span></td><td>US-08, US-09</td></tr>
         <tr><td>N11</td><td>Keyboard: shortcuts, focus handling, leave-terminal key</td><td><span class="pill p-mvp">MVP</span></td><td>US-06</td></tr>
         <tr><td>N12</td><td>Connect screen, empty states, scene fallback</td><td><span class="pill p-mvp">MVP</span></td><td>US-13, US-14</td></tr>
+        <tr><td>N13</td><td>Overview agent: start Claude Code in the repo root, status file, overview window, key <code>0</code></td><td><span class="pill p-should">should</span></td><td>US-17</td></tr>
+        <tr><td>N14</td><td>Beetle: rail button, carving on the table's front edge with emissive states, click to open</td><td><span class="pill p-should">should</span></td><td>US-17</td></tr>
       </tbody>
     </table></div>
   </section>
@@ -372,6 +389,9 @@ td.nw { white-space: nowrap; }
       <li><b>Merge.</b> Detect a merge made on GitHub, or offer a merge button in gitspore? The second brings merge conflicts, which are out of scope.</li>
       <li><b>Branch naming.</b> Which name links an agent's branch to its issue (<code>GSP-&lt;n&gt;_…</code>, <code>issue-&lt;n&gt;-…</code>)?</li>
       <li><b>Seed mark.</b> Chosen from the issue number (8 symbols) or from GitHub labels?</li>
+      <li><b>Overview: MVP or should-have?</b> Most of it reuses MVP parts (window, terminal, spawning, attention). Decide at the end of week 2, once terminals and spawning work.</li>
+      <li><b>Overview permissions.</b> Read-only at first? Orchestration later would go through an MCP server on the daemon (plant an issue, stop an agent, read status).</li>
+      <li><b>Status file.</b> Written on every hook event, or only when the overview asks?</li>
       <li><b>v3 adoption.</b> The ticket mapping assumes the team adopts v3. Until then, #12 and #13 stay as they are.</li>
     </ol>
   </section>
@@ -403,16 +423,35 @@ td.nw { white-space: nowrap; }
     return `<circle cx="${cx}" cy="${cy}" r="${k}" class="s-dash"/>`;
   }
 
-  function pots(a, sel, drop) {
-    let o = r(a.x + a.w * .06, a.y + a.h * .12, a.w * .88, a.h * .8, 'f-bench', 3);
-    const cw = a.w / 3, ch = a.h / 2, rad = Math.min(cw, ch) * .27;
+  // Beetle glyph: the carving on the table, the rail button and the overview window.
+  function beetle(cx, cy, k, s, inv) {
+    const c = inv ? 's-carve inv' : 's-carve';
+    let o = '';
+    if (s === 'work') o += `<ellipse cx="${cx}" cy="${cy}" rx="${k * 1.5}" ry="${k * 1.75}" class="f-glow-work pulse"/>`;
+    if (s === 'wait') o += `<ellipse cx="${cx}" cy="${cy}" rx="${k * 1.5}" ry="${k * 1.75}" class="s-wait pulse"/>`;
+    o += `<ellipse cx="${cx}" cy="${cy + k * .15}" rx="${k * .62}" ry="${k * .85}" class="${c}"/>`;
+    o += `<circle cx="${cx}" cy="${cy - k * .98}" r="${k * .3}" class="${c}"/>`;
+    o += `<path d="M${cx} ${cy - k * .7} V${cy + k}` +
+      [-1, 1].map((d) => ` M${cx + d * k * .6} ${cy - k * .3} l${d * k * .45} ${-k * .3} M${cx + d * k * .62} ${cy + k * .1} h${d * k * .5} M${cx + d * k * .58} ${cy + k * .5} l${d * k * .45} ${k * .35}`).join('') +
+      `" class="${c}"/>`;
+    return o;
+  }
+
+  // Larger table: pots in two rows at the back, a front strip with packet space and the beetle carving.
+  function pots(a, sel, drop, carving = 'idle') {
+    let o = r(a.x + a.w * .03, a.y + a.h * .04, a.w * .94, a.h * .94, 'f-bench', 3);
+    const cw = a.w / 3, ch = a.h * .64 / 2, rad = Math.min(cw, ch) * .3;
+    const sy = a.y + a.h * .7, sh = a.h * .22, pw = Math.min(a.w * .07, sh * .7), ph = sh * .78;
+    o += `<line x1="${a.x + a.w * .05}" x2="${a.x + a.w * .95}" y1="${sy - 2}" y2="${sy - 2}" class="s-dash"/>`;
+    [.1, .2, .3, .62, .72, .82].forEach((f) => { o += r(a.x + a.w * f, sy + (sh - ph) / 2, pw, ph, 's-dash', 1); });
+    o += beetle(a.x + a.w * .5, sy + sh / 2, Math.min(sh * .36, 9), carving);
     POTS.forEach((p, i) => {
-      const cx = a.x + cw * (i % 3 + .5), cy = a.y + ch * (Math.floor(i / 3) + .5);
+      const cx = a.x + cw * (i % 3 + .5), cy = a.y + a.h * .04 + ch * (Math.floor(i / 3) + .5);
       o += `<circle cx="${cx}" cy="${cy}" r="${rad}" class="${p.s === 'empty' ? 's-dash' : 'f-pot'}"/>`;
       o += marker(p.s, cx, cy, rad * .32, true);
       if (i === sel) o += `<circle cx="${cx}" cy="${cy}" r="${rad * 1.28}" class="s-ink"/>`;
       if (i === drop) o += `<circle cx="${cx}" cy="${cy}" r="${rad * 1.28}" class="s-drop"/>`;
-      if (rad > 7) o += t(cx, cy + rad + 6, p.n ? '#' + p.n : 'free', 'm', 'middle');
+      if (rad > 7) o += t(cx + rad + 3, cy + 2, p.n ? '#' + p.n : 'free', 'm');
     });
     return o;
   }
@@ -426,12 +465,15 @@ td.nw { white-space: nowrap; }
   }
 
   function rail(on = [], badge) {
-    let o = r(4, 18, 12, 54, 'f-bar', 2);
+    let o = r(4, 18, 12, 68, 'f-bar', 2);
     ['A', 'I', 'G', 'F'].forEach((k, i) => {
       const y = 21 + i * 12.5, active = on.includes(k);
       o += r(6, y, 8, 9, active ? 'f-ink' : 'f-win', 1.2);
       o += t(10, y + 6.3, k, active ? 'inv' : '', 'middle');
     });
+    o += `<line x1="6" x2="14" y1="70.5" y2="70.5" class="s-line"/>`;
+    const ov = on.includes('O');
+    o += r(6, 73, 8, 10, ov ? 'f-ink' : 'f-win', 1.2) + beetle(10, 78.3, 2.6, 'idle', ov);
     if (badge) o += `<circle cx="14.5" cy="21" r="2.8" class="f-wait"/>` + t(14.5, 22.7, badge, 'inv', 'middle');
     return o;
   }
@@ -488,11 +530,15 @@ td.nw { white-space: nowrap; }
         tx += tw + 2;
       });
     } else {
-      o += r(w.x + 3, w.y + 3, 4, 4, 'f-ink', .6) + t(w.x + 9.5, w.y + 6.8, w.title, w.wait ? 'w' : '');
+      o += (w.overview ? beetle(w.x + 5, w.y + 5.2, 2.6, 'idle') : r(w.x + 3, w.y + 3, 4, 4, 'f-ink', .6)) + t(w.x + 9.5, w.y + 6.8, w.title, w.wait ? 'w' : '');
     }
     o += t(w.x + w.w - 3, w.y + 6.8, '–  ◎  ▢  ×  ⋯', 'm', 'end');
     const bx = w.x + 5, by = w.y + 16, bw = w.w - 10;
     const lines = Math.max(1, Math.floor((w.h - 18) / 7));
+    if (w.lines) {
+      w.lines.slice(0, lines - 1).forEach((l, i) => { o += t(bx, by + i * 7 + 1.8, l, l.startsWith('>') ? 'b' : l.includes('waits') ? 'w' : ''); });
+      return o + r(bx, by + Math.min(w.lines.length, lines - 1) * 7, 3, 4, 'f-ink');
+    }
     for (let i = 0; i < lines; i++) {
       const last = i === lines - 1;
       if (w.wait && i === lines - 2) o += t(bx, by + i * 7 + 1.8, '? How should I store the uploads?', 'w');
@@ -515,9 +561,9 @@ td.nw { white-space: nowrap; }
 
   const chip = (c, i) => { const x = 20 + i * 46; return r(x, 188, 42, 8, 'f-win', 1.5) + marker(c.s, x + 5, 192, 1.6, false) + t(x + 9, 193.8, c.label); };
 
-  function toast(x, y) {
+  function toast(x, y, label = '#15 avatar-upload waits') {
     let o = r(x, y, 92, 30, 'f-win', 2) + r(x, y, 92, 30, 's-wait', 2);
-    o += marker('wait', x + 7, y + 8, 1.8, true) + t(x + 13, y + 9.8, '#15 avatar-upload waits', 'b') + t(x + 13, y + 16.5, 'for 40 s', 'm');
+    o += marker('wait', x + 7, y + 8, 1.8, true) + t(x + 13, y + 9.8, label, 'b') + t(x + 13, y + 16.5, 'for 40 s', 'm');
     o += r(x + 5, y + 20, 36, 7, 'f-ink', 1.5) + t(x + 23, y + 24.8, 'Open beside', 'inv', 'middle');
     o += r(x + 44, y + 20, 22, 7, 'f-win', 1.5) + t(x + 55, y + 24.8, 'Open', '', 'middle');
     return o;
@@ -539,7 +585,7 @@ td.nw { white-space: nowrap; }
   function draw(st) {
     let o = `<svg viewBox="0 0 320 200" role="img" aria-label="${esc(st.alt || st.name)}" xmlns="http://www.w3.org/2000/svg">`;
     o += r(0, 0, 320, 200, 'f-scene');
-    if (st.pots) o += pots(st.pots, st.sel, st.drop);
+    if (st.pots) o += pots(st.pots, st.sel, st.drop, st.carving);
     if (st.noScene) o += t(st.noScene.x, st.noScene.y, '3D view could not start', 'b big', 'middle') + t(st.noScene.x, st.noScene.y + 9, 'agents and terminals still work', 'm', 'middle');
     if (st.dim) o += r(0, 14, 320, 186, 'f-scene', 0, 'opacity=".75"');
     o += topbar(st.top);
@@ -548,7 +594,7 @@ td.nw { white-space: nowrap; }
     (st.wins || []).forEach((w) => { o += win(w); });
     if (st.sheet) o += sheet(st.sheet);
     (st.chips || []).forEach((c, i) => { o += chip(c, i); });
-    if (st.toast) o += toast(st.toast[0], st.toast[1]);
+    if (st.toast) o += toast(...st.toast);
     if (st.ghost) o += ghost(...st.ghost);
     if (st.dialog) o += dialog(st.dialog);
     (st.annot || []).forEach((a) => { o += r(a.x, a.y, a.w, a.h, 's-annot', 2) + t(a.lx ?? a.x + 3, a.ly ?? a.y + 8, a.label, 'a', a.anchor || 'start'); });
@@ -561,7 +607,7 @@ td.nw { white-space: nowrap; }
       pots: { x: 20, y: 16, w: 214, h: 104 }, sel: 1, rail: ['A'], panel: { tab: 'agents', sel: 1 },
       wins: [{ x: 20, y: 124, w: 214, h: 72, title: T15, wait: true, focus: true }],
       get: 'Start of the app once an agent exists. Click a pot or an agent row.',
-      see: 'Scene above the band, one terminal in the band, agents tab.',
+      see: 'Scene above the band, one terminal in the band, agents tab. The table: pots at the back, packet space and the beetle carving at the front.',
       limit: 'The pots shrink into the space above the band.' },
     { id: 'S02', name: 'Scene only', board: 'board 2',
       pots: { x: 20, y: 16, w: 296, h: 168 }, rail: [], chips: [{ s: 'wait', label: '#15' }],
@@ -637,7 +683,7 @@ td.nw { white-space: nowrap; }
       limit: 'If tiles would get too narrow, it opens as a tab instead (R2).' },
     { id: 'S14', name: 'Drag an issue onto a pot', board: '–',
       pots: { x: 20, y: 16, w: 214, h: 168 }, drop: 5, rail: ['I'], panel: { tab: 'issues', sel: 1 }, chips: [{ s: 'wait', label: '#15' }],
-      ghost: [178, 112, 56],
+      ghost: [207, 108, 56],
       get: 'Drag a row from the issues tab. Should-have; the button path in S10 is the MVP.',
       see: 'The drag preview is a seed packet. The target pot gets a dashed ring.',
       limit: 'Dropping on a taken pot does nothing. Dropping on the table uses the next free pot.' },
@@ -653,6 +699,32 @@ td.nw { white-space: nowrap; }
       get: 'WebGL missing or the scene throws an error.',
       see: 'Message in place of the scene. The agents tab and terminals work as usual.',
       limit: 'No plants, so the agents tab is the only status view.' },
+    { id: 'S17', name: 'Overview, opened from the beetle', board: '–',
+      rail: ['O', 'F'], wins: [{ x: 20, y: 18, w: 296, h: 178, title: 'overview · all agents', overview: true, focus: true, lines: [
+        '> where do we stand?',
+        '#12 login-redirect: tests pass, 3 commits, almost done',
+        '#15 avatar-upload waits 40 s: asks where to store uploads',
+        '#18 flaky-ci: failed twice on the same test, needs a look',
+        '#21 dark-mode: ready for review · #9 readme: started 5 min ago',
+        'Suggestion: answer #15 first, then review #21.',
+        '> what does #12 touch that #21 also changes?',
+        'Both edit src/styles/theme.ts. Merge #21 first.'] }],
+      get: 'Beetle button on the rail, click the carving, or key 0.',
+      see: 'The overview agent maximised (Focus this): one Claude Code session in the repo root that sees every agent, its status and branch.',
+      limit: 'Read-only at first. It knows what git and the status file tell it, not the other agents\u2019 terminal output.' },
+    { id: 'S18', name: 'Overview beside an agent', board: '–',
+      rail: ['O', 'F'], wins: [
+        { x: 20, y: 18, w: 146, h: 178, title: T15, wait: true },
+        { x: 170, y: 18, w: 146, h: 178, title: 'overview', overview: true, focus: true, lines: ['> what is #15 stuck on?', 'It asks: resize uploads', 'or keep the originals.', '#12 already resizes', 'avatars to 256 px.', 'Answer 1 keeps it the same.'] }],
+      get: 'Shift-click the beetle button while an agent is open, or Open beside in its notification.',
+      see: 'The overview tiles next to the agent you ask about (R1, R2).',
+      limit: 'Same width rule as terminals: with the side panel open it stacks or becomes a tab.' },
+    { id: 'S19', name: 'The overview waits', board: '–',
+      pots: { x: 20, y: 16, w: 296, h: 168 }, carving: 'wait', rail: [], badge: '1', chips: [{ s: 'wait', label: 'overview' }],
+      toast: [220, 150, 'overview waits'],
+      get: 'The overview asks something while its window isn\u2019t visible.',
+      see: 'The beetle carving on the front edge of the table glows red. Same notice, badge, chip and title count as an agent.',
+      limit: 'The carving shows only the overview\u2019s status, not the agents\u2019. In focus mode the scene is hidden, so the notice carries it.' },
   ];
 
   const REGIONS = {
@@ -661,7 +733,7 @@ td.nw { white-space: nowrap; }
     wins: [{ x: 20, y: 124, w: 214, h: 60, title: '#12 login-redirect · working' }], chips: [{ s: 'wait', label: '#15' }],
     annot: [
       { x: 1, y: 1, w: 318, h: 12, label: 'top bar', lx: 70, ly: 9 },
-      { x: 2, y: 16, w: 16, h: 58, label: 'rail', lx: 3, ly: 82 },
+      { x: 2, y: 16, w: 16, h: 72, label: 'rail', lx: 3, ly: 96 },
       { x: 18, y: 16, w: 218, h: 182, label: 'main area', lx: 24, ly: 24 },
       { x: 20, y: 122, w: 214, h: 64, label: 'band (scene mode)', lx: 120, ly: 160 },
       { x: 18, y: 186, w: 80, h: 12, label: 'tray', lx: 104, ly: 194 },
@@ -677,6 +749,8 @@ td.nw { white-space: nowrap; }
     `<span><svg viewBox="0 0 14 14" aria-hidden="true">${marker(s, 7, 7, s === 'wait' ? 2.4 : 3.2, false)}</svg>${l}</span>`).join('') +
     `<span><svg viewBox="0 0 14 14" aria-hidden="true"><rect x="1" y="2" width="12" height="10" rx="1.5" class="f-win focus"/></svg>focused window</span>` +
     `<span><svg viewBox="0 0 14 14" aria-hidden="true"><rect x="1" y="2" width="12" height="10" rx="1" class="f-issue"/></svg>issue</span>` +
+    `<span><svg viewBox="0 0 14 14" aria-hidden="true"><rect x="3" y="1.5" width="8" height="11" rx="1" class="s-dash"/></svg>packet space on the table (later)</span>` +
+    `<span><svg viewBox="0 0 14 14" aria-hidden="true">${beetle(7, 7.6, 4.4, 'idle')}</svg>beetle: carving and button for the overview</span>` +
     `<span class="mono">– minimise · ◎ focus this · ▢ maximise · × close · ⋯ menu</span>`;
 
   document.getElementById('gallery').innerHTML = STATES.map((s) => `
@@ -708,6 +782,7 @@ td.nw { white-space: nowrap; }
       ['US-11', 'I want to open the branch graph and see where each agent’s branch stands against main.', 'should', 'S11', 'N7 N9'],
       ['US-12', 'I want to see when a branch is merged: the plant blooms and the pot is free again.', 'mvp', 'S01', '#16 + merge detection'],
       ['US-16', 'I want a short explanation of the plant states, so I can read the scene on day one.', 'mvp', '–', '#23'],
+      ['US-17', 'I want to ask one chat what all agents have done, where each one stands and where the whole project is going.', 'should', 'S17 S18 S19', 'N13 N14'],
     ]],
     ['When things go wrong', [
       ['US-13', 'If the 3D view fails, I still want to see my agents and use their terminals.', 'mvp', 'S16', '#18 N12'],

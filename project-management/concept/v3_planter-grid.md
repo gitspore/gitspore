@@ -14,7 +14,7 @@ Developers run several AI coding agents at once, each in its own git worktree. A
 
 A greenhouse table in 3D. Each pot is one agent. A plant that wilts is an agent that waits for you.
 
-1. Open GitHub issues are listed as **seed packets** in the issues tab. Later they also lie on the table as 3D packets.
+1. Open GitHub issues are listed as **seed packets** in the issues tab. Later they also lie on the table as 3D packets, in a strip at the front of the table.
 2. Give an issue to an empty **pot** (button, click on the empty pot, or drag). gitspore creates a worktree and a branch and starts Claude Code with the issue as its task.
 3. The plant shows how the agent is doing. You see at a glance which one needs you.
 4. Click a pot to open the agent's real terminal and answer it.
@@ -51,6 +51,17 @@ The scene shows agents, not the repo. The repo lives in the **garden map**:
 - The side panel keeps one width (about 400 px) for all tabs, so switching tabs never moves the windows.
 - The graph comes from the `commit-graph` React package. We tested it with React 19 and Next 16; gotchas below.
 
+## The overview: the beetle
+
+Added 2026-10-07. The plants show one agent each. Nothing yet answers "what have all of them done, and where is the whole thing going". The overview does.
+
+- It is one more Claude Code session, started by the daemon in the repo root instead of a worktree, without a pot. It reads `git log --all`, the worktrees' diffs and a status file the daemon writes (agents, issues, states, waiting times, branches).
+- A beetle button on the tool rail, the key `0`, or a click on the beetle carving opens its window maximised. It is an ordinary window: restore, minimise, open beside an agent, chip and notification work as for the agents.
+- In the scene it is a **beetle carved into the front edge of the table**. The carving is a decal or texture area with an emissive mask, not a separate model, so its glow can show the overview's status: dim when idle, a slow pulse when working, red when it waits, a flicker on error. Engraved and lit like an instrument plate in lab-05, a glowing wood carving in cozy-04. It picks up the beetles of v1/v2.
+- The **table grows** for it: two rows of three pots at the back, a strip at the front with space for the seed packets and the carving in the middle.
+- Read-only at first. Later it may orchestrate (plant an issue, stop an agent) through an MCP server on the daemon.
+- Should-have. Most of it reuses MVP parts. We decide at the end of week 2 whether it moves up. What has to be right from day one: an agent may have no pot (`slot: null`), and windows refer to agents, not to pots.
+
 ## Next to the scene
 
 The full layout (windows, states, rules) is in `concept/v3_layout.html` and replaces the docked layout of the mockup.
@@ -70,7 +81,7 @@ Developers who run three or more agents at once. Our hypothesis is that with git
 
 **Must-have.** issues tab with seed-packet rows, planting by button or by clicking an empty pot, worktree + branch + Claude Code start, agent status from Claude Code hooks, wilting, terminal windows (minimise, maximise, focus this), side panel with agents and issues, waiting notification with tab title and favicon count, merge detection with bloom and worktree cleanup, macOS and Windows, daemon only on localhost with a token.
 
-**Should-have.** Branches tab and garden map, drag an issue onto a pot, tiling of 2-4 terminals, agent colours, replay, greenhouse vitality, sound cue and browser notification.
+**Should-have.** Branches tab and garden map, overview agent with the beetle carving, drag an issue onto a pot, tiling of 2-4 terminals, agent colours, replay, greenhouse vitality, sound cue and browser notification.
 
 **Out.** agents other than Claude Code, several repos, more than six agents, merge conflicts in the UI, resuming agents after a daemon restart, points and levels.
 
@@ -81,7 +92,8 @@ Developers who run three or more agents at once. Our hypothesis is that with git
 | Scene, pots, plant states, light and dark theme | 5-7 (cozy-04 more, lab-05 less) |
 | Garden map object and Branches tab | 2-3 |
 | Agent colours (palette, band, tag dot, graph) | 0.5-1 |
-| **Total** | **7.5-11, about 13-18 % of ~60 team days** |
+| Larger table, beetle carving with emissive states | 1-2 |
+| **Total** | **8.5-13, about 14-22 % of ~60 team days** |
 
 ## `commit-graph` gotchas
 
