@@ -1,187 +1,20 @@
 # Aesthetics
 
-Visual direction for gitspore. Based on `references.md`, the Pinterest boards listed there, and the render studies in `renders/`.
+Visual direction for gitspore. Based on `references.md`, the Pinterest boards listed there, and the render studies in `renders/`. The first brief and the terrarium proposals (bark-01, clay-02, vine-03) are archived in `archive/research/inspiration/aesthetics-terrarium-proposals.md`.
 
-## Direction (Georgios, 2026-10-05)
+## Current
 
-- Sci-fi micro flora: plants that represent data and code. No story behind them; nobody needs them to be a believable species.
-- Organic and natural forms. The idea also has moss, insects and similar.
-- Everything sits on a base of some sort, under a glass dome.
-- Neon tones in a dark environment, with Bloom. Combined with organic forms and some nice polished details: just enough to be visible and to convince people there is more detail than there is.
-- Plants are tubes along curves, generated from commit data. Procedurally, more complex meshes get scattered on them for variety.
-- Feasible in the short project time. Aesthetics are a small part of the 4 weeks, even though large in effect, and they have to be largely promptable.
-- All terms (vine, beetle, spore, bloom, shoot, pest...) are still open.
+proposal-cozy-06 (below) is the proposed direction, not agreed by the team yet. Its files:
 
-Later in the same session: one terrarium per repo inside a larger geodesic dome (from the "micro-Biome Station" reference), branches lying on the soil like roots, darker and more realistic than that reference, amber terminal, little metal.
+- `renders/planter-grid-layout.html`: the 3D prototype of the layout. cozy-06 by default, lab-05 in its style switch.
+- `renders/cozy-06-minimal.html`: the interface study.
+- `concept/v3_layout-slides/`: screenshots of the prototype.
 
-## Proposals
-
-Three proposals, all built as live Three.js scenes in `renders/`. None is decided. bark-01 and clay-02 share one scene: a geodesic dome, one glass terrarium per repo, a soil bed, branches as roots on the soil, rocks, moss, ferns, crystals, mushrooms, beetles as agents. vine-03 is a different scene: one repo as a climbing vine in a tall bell jar.
-
-### proposal-bark-01: bioluminescent bark
-
-Night scene. Dark textured bark with thin cyan light veins running through it; amber terminal interface.
-
-- Renders: `renders/biome-station-frame.html`, `biome-station-frame.jpg`, `biome-station-frame-close.jpg`. Earlier steps: `biome-station-bark.*`, `biome-station.*`.
-- Character: calm, nocturnal, organic. Strongest close up; the full view is dark and carried by frames and labels.
-
-| Meaning | Colour | Where |
-|---|---|---|
-| Life and data | cyan `#3ef2d0` | veins in the bark, pulses, commit beads, merge flowers, spores |
-| Issues | coral `#ff5a4f` | berries on short stalks |
-| Agents and interface | amber `#ffb000`, dim `#6b4a1a` | beetle seam, labels, terminal, HUD |
-| Night | sky `#05060c` → `#111628` → `#2a2238`, fog `#0b0d16` | background |
-| Matter | CC0 textures, tinted dark | bark `bark_willow_02`, soil `forest_ground_04`, rock `rock_boulder_dry`, `rocks_ground_06` |
-| Frame and dome | `#1b1a19`, `#14171d`, matte | thin, recedes into the night |
-
-Measured share of the image (full view / close-up, interface included): neutrals 99.4% / 97.7% (dark 80.4 / 25.5, mid 18.8 / 70.2, light 0.2 / 2.0), cyan 0.2% / 1.6%, amber 0.3% / 0.4%, coral 0.0% / 0.1%.
-
-Light and post: hemisphere `#5a6a9a`/`#1a1210` 0.9, cool key light 1.2, ACES tone mapping, Bloom strength 0.45 / radius 0.35 / threshold 0.9, vignette 0.35, fine grain. Interface: amber monospace on near-black panels, 1px amber borders, no rounding.
-
-### proposal-clay-02: clay specimen, light and dark
-
-Off-white plastic, like a physical lab model (reference: the white and coral clay data board). One scene with a light and a dark theme and a switch between them.
-
-- Renders: `renders/biome-station-modes.html` (switch top right, or `?theme=light` / `?theme=dark`), `biome-station-modes-dark.jpg`, `biome-station-modes-dark-close.jpg`, light mode in `biome-station-light.jpg`, `biome-station-light-close.jpg`.
-- Character: clean, legible, a specimen under study. Light mode reads like a product; dark mode looks like embers running through roots.
-
-Forms and materials are the same in both themes. Textures only add relief (normal maps), no colour. Tones vary slightly between objects so they stay distinct.
-
-| Meaning | Light theme | Dark theme |
-|---|---|---|
-| Matter (roots, soil, rocks, plants, frame, dome) | clay `#f3f0eb` `#eeebe6` `#f1eee9` `#e8e4de` `#e4e0da` `#d9d5ce`, roughness 0.5-0.8, light clearcoat | the same tones × 0.035 (charcoal plastic) |
-| Data (veins, commit beads, merge flowers) | red `#ff2d1f`, painted on, petals `#ff5a4a` | the same red, glowing with Bloom |
-| Issues | glossy black `#161514` | glossy bone `#e9e4dc` |
-| Agents | white ceramic beetle, amber seam `#ffa000` | dark iridescent beetle `#16130f`, amber seam |
-| Interface | frosted glass `rgba(255,255,255,.42)`, blur 16px, ink `#141210`, red `#e5261a` | smoked glass `rgba(18,19,25,.45)`, ink `#eeebe5`, red `#ff4a3d` |
-| Background | `#f6f4f0` → `#d8d3cc`, fog `#e6e2dc` | night sky and stars, fog `#0b0d16` |
-
-Measured share of the image (full view / close-up, interface included):
-
-| | Light | Dark |
-|---|---|---|
-| Neutrals | 99.9% / 97.8% (almost all light tones) | 99.7% / 95.9% (dark 70.3 / 17.6, mid 29.4 / 78.2) |
-| Red (data) | 0.1% / 2.1% | 0.3% / 3.8% |
-| Amber (agents) | 0.0% / 0.1% | 0.0% / 0.1% |
-
-Light and post:
-
-| | Light | Dark |
-|---|---|---|
-| Hemisphere | `#ffffff` / `#9a9086`, 0.32 | `#5a6a9a` / `#1a1210`, 0.7 |
-| Key light | `#fffaf2`, 2.6, low from the side, shadow map 4096, radius 2 | `#aab8ff`, 0.9 |
-| Environment reflections | 0.16 | 0.3 |
-| Bloom | off (it catches every white surface) | strength 0.55, threshold 0.85 |
-| Vignette | 0.82 (mild) | 0.35 |
-
-Interface: rounded glass panels and tags, black or white text, red for prompts, status, repos and agents. In red-on-white the coral data and the black issues carry all meaning, without glow.
-
-### proposal-vine-03: specimen jar
-
-One repo in a tall glass bell jar on a stone plinth. The repo grows upward as a vine; the interface around it is an amber lab instrument.
-
-- Renders: `renders/vine-jar-textured.html`, `vine-jar-textured.jpg`, `vine-jar-textured-close.jpg`. Untextured first version: `vine-jar.*`.
-- Character: vertical, precise, a specimen under observation. The strongest of the three at showing branch structure (splitting and rejoining) and where a branch could grow next. Shows one repo at a time.
-
-| Meaning | Colour | Where |
-|---|---|---|
-| Commits | amber `#ffb000` | beads along every vine |
-| Recent commits, growing tips | off-white `#f2e8d5` | beads near open tips |
-| Merges | amber `#ffb000`, bright | knot and ring where a branch fuses back |
-| Possible growth | cyan `#3ef2d0` | dashed paths fading out from active tips, particles flowing along them |
-| Issues | coral `#ff5a4f` | small node clusters on vines |
-| Agents | amber seam on a dark iridescent beetle | at active tips |
-| Stale | dim amber `#6b4a1a`, moss `#2b2614` | drooping vines, moss on them and on the rocks |
-| Background | warm black `#0b0805`, fog (exponential, 0.035) | everywhere |
-| Matter | CC0 textures tinted warm and dark | vines `bark_willow_02`, plinth `rocks_ground_06`, soil `forest_ground_04`, rocks `rock_boulder_dry` |
-
-| Thing in the repo | Shape in the scene |
-|---|---|
-| Repository | the bell jar on its plinth |
-| `main` | central vine spiralling up through the jar |
-| Branch | thinner vine coiling around `main`; merged branches fuse back into it, nested branches into their parent |
-| Open branch | vine wandering outward, ending in a curled tendril |
-| Stale branch | vine drooping down, mossy, dim beads |
-| Activity over time | the plinth as a radial bar chart, one bar per day, recent days amber |
-| Agent working | beetle at the branch tip, cyan possible paths ahead of it |
-
-Measured share of the image (full view / close-up, interface included): neutrals 96.3% / 96.0% (dark 85.5 / 83.9, mid 10.7 / 11.9), amber 3.6% / 4.0%, coral 0.0% / 0.1%, cyan 0.0% / 0.0%.
-
-Light and post: no tone mapping, warm ambient `#3a2814`, warm key `#ffd9a0`, amber point light inside the jar, small cyan light near the active tips. Bloom strength 0.6 / radius 0.4 / threshold 0.78, vignette 0.25, grain. Glass: rim light only (Fresnel shader), condensation dots low on the glass, a few mist sprites at the top.
-
-Interface: amber monospace (IBM Plex Mono) on warm black, 1px dim amber boxes, no rounding. A census table (branches, merged, open, stale, commits, issues, agents), an agent radar, an agent card with a 1-bit dithered portrait rendered from the beetle model and a live waveform, an activity timeline matching the plinth chart, labels with leader lines to the vine tips.
-
-Known weak points: the vines read as a regular coil (needs noise and gravity), beetles are small at this distance, textures only show close up, the tube winding bug is still in this render.
-
-### Colour proportions
-
-How the shares were measured: each screenshot scaled to 320×180; pixels with saturation above 0.4 and value above 0.3 count by hue (red/coral, amber, cyan), all others as neutral, split by luminance (dark below 0.12, light above 0.5). The interface panels are part of the image and count too.
-
-What the numbers show: in all three proposals neutrals fill 96-99% of the image and colour is a small accent. In the full views the data colour stays under 1% (bark-01, clay-02), too little to read the repo from a distance. vine-03 has the most colour (about 4% amber) because its commit beads are larger and denser.
-
-Suggested targets (Claude, not agreed): neutrals about 93-95%, the data colour 3-5%, every other accent at most 1%. To reach that in overview shots: larger beads and stronger veins when zoomed out, smaller when zoomed in.
-
-### Shared by bark-01 and clay-02
-
-**Meanings stay fixed; only colours change per proposal and theme.**
-
-| Thing in the repo | Shape in the scene |
-|---|---|
-| Repository | glass terrarium on a soil bed, connected to others by cables |
-| `main` | the thickest root, running the length of the bed |
-| Branch | thinner root leaving `main`; merged branches grow back into it |
-| Open / stale branch | free root end lifting slightly / root without light |
-| Commit | bead on the root |
-| Data moving | pulse travelling along the veins |
-| Merge / PR | flowers at the merge point |
-| Issue | berries on a stalk |
-| Agent | beetle on the branch it works on, with label |
-
-**Scene parts and how they are built**
-
-| Part | Method | Effort |
-|---|---|---|
-| Roots | `CatmullRomCurve3` from data, custom tapered tube | medium |
-| Veins and pulses | one shader on the bark material (procedural veins, pulses along the length) | low, done |
-| Beads, moss | `InstancedMesh` | low |
-| Terrarium | hexagonal prism from code, thin struts as instanced cylinders, glass | low |
-| Dome | icosahedron edges as instanced struts | low |
-| Flowers, crystals, mushrooms, ferns | small generated meshes | low |
-| Beetle | primitives now; one modelled asset later | medium |
-| Textures | CC0 from Poly Haven, loaded from their CDN | low |
-| Theme switch | one table of light/dark values per material, one function to apply | low, done |
-| Interface | HTML/CSS overlay, labels projected from 3D | low |
-
-**Notes for the implementation**
-
-- The tube builder in the early studies wound its triangles the wrong way, so the inside of the roots was visible. Fixed in `biome-station-light.html` and `biome-station-modes.html`; the dark-only studies still have it.
-- Labels inside a terrarium overlap. Show branch names on hover or when zoomed in.
-- In the full view the side terrariums are too small to read. The app should open zoomed in on one repo and use the station view as an overview.
-- Bloom works only on dark backgrounds. In light themes, meaning has to come from colour contrast.
-
-### Scope
-
-Aesthetics share the 4 weeks with everything else. Suggested budget: about 15-20% of the team's time, mostly one person.
-
-| Week | Aesthetics work | Done when |
-|---|---|---|
-| 1 | Pick a proposal. Port the scene parts to R3F components with the theme table. Doubles as the R3F test in the week-1 gate. | one terrarium renders from sample data |
-| 2 | Parts wired to real data: roots from commits, beads, merges, issues | any repo renders |
-| 3 | Beetle model, agents clickable, interface | agents visible and clickable |
-| 4 | Polish only: shadows, post-processing, label behaviour | demo looks finished on our repo |
-
-Cut first if time runs short: the theme switch (ship one theme), the geodesic dome, cables between terrariums, crystals and mushrooms, the beetle model (keep primitives).
-
-### Keeping it promptable
-
-- The colour tables above are the tokens. Code reads them from one theme file; prompts name the meaning ("data colour", "issue colour"), not a hex value.
-- One shared material module (clay, bark with veins, glass, frame). Prompts say "use the bark material", not "make it glow".
-- Prefer procedural over hand-made. Only the beetle is a real asset.
-- The renders in `renders/` are our own work and can be committed and referenced in prompts.
+Everything older is in `archive/research/inspiration/`: the terrarium proposals bark-01, clay-02 and vine-03, the first planter grid mockup with cozy-04 and lab-05 (`renders/planter-grid.html` there), and the proposal catalogue `proposals.html`. Kept for documentation and the portfolio, not to build from. cozy-04 and lab-05 stay described below, because cozy-06 takes its scene values from cozy-04 and the prototype still has lab-05.
 
 ## Planter grid proposals (concept v3)
 
-Two directions for `concept/v3_planter-grid.md`, built as one live render: `renders/planter-grid.html`. Switches at the top select the style (cozy greenhouse or plant lab), the theme, and the branch graph overlay (G). Without `data-theme` the page follows the system setting. Screenshots: `planter-grid-cozy-day.jpg`, `-cozy-night.jpg`, `-lab-light.jpg`, `-lab-dark.jpg`.
+Two directions for `concept/v3_planter-grid.md`, built as one live render: `archive/research/inspiration/renders/planter-grid.html` (archived). Switches at the top select the style (cozy greenhouse or plant lab), the theme, and the branch graph overlay (G). Without `data-theme` the page follows the system setting. Screenshots: `planter-grid-cozy-day.jpg`, `-cozy-night.jpg`, `-lab-light.jpg`, `-lab-dark.jpg`.
 
 Both share the layout: 3D stage, branch graph as an absolute overlay on the stage's left (the camera shifts right while it is open), sidebar with vitality and pots, docked terminal under the stage. The render is interactive: click pots, drag seed packets onto the empty pot, answer, restart and merge from the terminal. The waiting agent wilts in real time: rim pulse, droop at 15 s, wilted at 60 s. Status colours and agent colours are CSS tokens; the 3D scene reads the same tokens.
 
@@ -228,7 +61,119 @@ Clay-02 carried over: off-white or charcoal clay, a ribbed glass vault, plants a
 
 Waiting and error share red. They differ by shape (bent vs collapsed stalks) and by the sidebar marker (pulsing dot vs diamond). The agent colours are greyed so red stays the only strong colour.
 
-Character: calm, precise, a specimen under study. Red is rare, so a waiting agent stands out more than in cozy-04. Georgios's preference.
+Character: calm, precise, a specimen under study. Red is rare, so a waiting agent stands out more than in cozy-04. Georgios's preference until cozy-06.
+
+### proposal-cozy-06: cozy minimal, day and night
+
+Georgios's pick on 2026-10-07, replacing his earlier preference for lab-05. Not agreed by the team yet. Record: `records/2026-10-07_cozy-minimal-proposal.md`.
+
+The cozy-04 greenhouse scene with a quieter interface: no frames, no double lines, squarish corners, the beetle as logo. The playful part is shape and motion (plants in circles, a wiggling plant, a bobbing hotbar slot). Status takes lab-05's rule that red means "needs you" and keeps cozy colours for the other states.
+
+- Interface study: `renders/cozy-06-minimal.html` (sections Minimal, The mark, Other ways to show status; the Enamel section is the rejected variant). Every stage is a 1440 × 900 screen of state S01.
+- The 3D scene in that study is a flat placeholder. The scene is cozy-04's (`renders/planter-grid-layout.html`; first in the archived `planter-grid.html`) with the changes listed below.
+
+**Logo.** The agent beetle seen from above. The seam between the wing cases is a lens: one line that splits and joins again, a branch and its merge. Shell, head, four legs, one leaf; nothing else, so it reads at 16 px. On the plate it is one colour plus the seam.
+
+```svg
+<svg viewBox="0 0 32 32"><!-- BODY, SEAM, SEP (= background behind the head), LEAF -->
+  <path d="M7.5 15.5 L4 13.5 M7 22.5 L3.5 24 M24.5 15.5 L28 13.5 M25 22.5 L28.5 24" stroke="BODY" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+  <ellipse cx="16" cy="19.5" rx="9.5" ry="10.5" fill="BODY"/>
+  <ellipse cx="16" cy="7.4" rx="4.3" ry="3.4" fill="BODY" stroke="SEP" stroke-width="1.6"/>
+  <path d="M17 4.4 C18 1.8 21.4 .9 24.4 1.7 C22.7 4.1 20 5.2 17 4.4Z" fill="LEAF"/>
+  <path d="M16 11.6 C12.4 15 12.4 23.6 16 27.6 C19.6 23.6 19.6 15 16 11.6Z" fill="SEAM"/>
+</svg>
+```
+
+| Use | Day | Night |
+|---|---|---|
+| On the plate (logo, app icon, favicon) | plate `#2f5446`, body `#f6eedb`, seam = plate, leaf `#8fd07a` | same, seam `#ffc45e` with a soft blur copy behind it (glow) |
+| Without plate | body `#b8613a`, seam and sep = background, leaf `#4f9a45` | body `#7a4a2c`, seam `#ffd27a` with glow, leaf `#7cc96b` |
+| Plate corner radius | 25 % of the plate size (8 px at 32 px, 22 px at 96 px) | |
+
+Wordmark "gitspore", always lowercase, Fredoka 600, next to the plate.
+
+**Type.**
+
+| Font | Use |
+|---|---|
+| Fredoka 600 | logo, panel titles ("Your pots"), notification titles |
+| Figtree 400–800 | everything else in the interface |
+| JetBrains Mono | terminal, timers, hotbar key numbers |
+
+**Colours.** Interface tokens, the same names in both modes. The scene keeps cozy-04's matter (terracotta, wood, soil, frame) and light setups.
+
+| Token | Day | Night | Where |
+|---|---|---|---|
+| `panel` / `panel-2` | `#ece6d6` / `#ddd4bf` | `#1d2621` / `#26332c` | side panel, terminal header, hotbar / segmented tab track, hotbar slots |
+| `ink` / `muted` | `#2a2119` / `#6b5a44` | `#f3e7cf` / `#bba98b` | text |
+| `line` | `#2f5446` | `#9cc2ad` | 2 px lines: under the terminal header, around the terminal card, hotbar separator |
+| `plate` / `plate-ink` | `#2f5446` / `#f6eedb` | `#2f5446` / `#f3ead6` | logo plate, rail bookmarks, active tab |
+| `accent` | `#e8b04a` | `#e8b04a` | open bookmark, selected hotbar slot, primary button |
+| `hover` | `rgba(47,84,70,.08)` | `rgba(156,194,173,.08)` | hover, odd rows, icon buttons |
+| `wait` / `wait-ink` | `#b3372a` / `#fff3e8` | `#c4402f` / `#fff3e8` | the waiting row, wait badge, notification, waiting hotbar slot |
+| sky | `#f6ead1` → `#e2c796` | `#2a3047` → `#12151f` | behind the scene |
+| terminal | light (`#fbf7ec` on `#2a2119`) | dark (`#171916` on `#e4e0d4`) | sun/moon switch per window overrides it |
+
+**Agent colours.** Proposed 2026-10-07, not agreed. Eight per mode, all cool hues plus an ink and an umber, so none reads as a status. Checked in CIELAB: every pair is at least 22 ΔE apart, every colour at least 25 ΔE from the five status colours.
+
+| Slot | Day | Night |
+|---|---|---|
+| 1 blue | `#2f6db3` | `#4f86de` |
+| 2 sky | `#7ab6e6` | `#a9d6f5` |
+| 3 navy | `#1c2a55` | `#2f3f8f` |
+| 4 teal | `#168a8f` | `#3fc1c4` |
+| 5 violet | `#6a4cc2` | `#8d6ff0` |
+| 6 lavender | `#b7a3e6` | `#d6c8fa` |
+| 7 ink | `#2b2622` | `#f1ebe0` |
+| 8 umber | `#6b4a2e` | `#b88a62` |
+
+With green, red, grey, yellow and pink taken, the eight lean on blue and violet. Neighbours like sky and lavender differ more by lightness than by hue.
+
+**Status.** Five states. Each one has a plant, a colour, a word, a growth stage and a shape, so none depends on colour alone.
+
+| State | Plant | Colour day / night | Word | Growth track (5 squares) | Shape |
+|---|---|---|---|---|---|
+| Working | sprout with two leaves | `#4f9a45` / `#7cc96b` | growing | 3 filled | circle |
+| Waiting for you | drooping, yellowed | `wait` (row fill), glyphs `#b3372a` / `#ff6a50` | timer instead of a word | 3 filled, the third blinks | triangle |
+| Error | grey bare stalk | `#8a8277` / `#9a948a` | wilted | 3 filled, grey | cross |
+| Ready for review | closed yellow bud | `#d99a1e` / `#f5bd3c` | review | 4 filled | diamond |
+| Merged | pink bloom | `#c2458e` / `#ff6fc0` | merged | 5 filled | five-dot flower |
+| Empty pot | none, dashed circle | `muted` | pick an issue | none | dashed circle |
+
+Changed from cozy-04: waiting is red instead of yellow, error is grey instead of red, review is yellow instead of teal, and review (bud) and merged (bloom) are separate states.
+
+Where status shows:
+
+- Side panel row: plant in a 38 px circle filled with the agent colour at 33 % opacity, name, word in `muted` (error in its colour), growth track. The waiting row is 76 px high, filled `wait`, with the timer in place of the word; its plant wiggles.
+- Hotbar slot: the plant, the shape marker top right, the agent colour as a 4 px band at the bottom. The waiting slot is filled `wait`, shows the seconds and bobs.
+- Top bar: "1 WAITING" badge in `wait`, uppercase, square dot blinking.
+- Scene: the pot rim takes the status colour (waiting pulses), the plant shows the state. The pot's name tag gets the shape marker next to the agent colour dot.
+
+The study compares four more options (plant tag, water gauge, pot rim, beetle pose). They are not part of this proposal.
+
+**Shapes and sizes.**
+
+| Element | Value |
+|---|---|
+| Side panel | 400 px, radius 12, soft shadow, no border |
+| Tabs | segmented: track `panel-2` radius 8, tab radius 5, active tab `plate` |
+| Rows | 52 px, radius 8; waiting row 76 px, radius 10 |
+| Badges, small tags | radius 2–5 |
+| Buttons | 40 px high, radius 6; icon buttons 36 px, radius 7, `hover` fill, no border |
+| Terminal | a card: radius 12, 2 px `line` outline, header 42 px in `panel` with a 2 px `line` underneath; window buttons 32 px, radius 6 |
+| Hotbar | `panel`, radius 14, slots 68 × 68 in `panel-2`, radius 10 |
+| Rail bookmarks | 58 × 52 (open: 72), radius `0 9 9 0`, `plate`, open one `accent` |
+| Notification | `wait`, radius 10, nudges sideways every 2.4 s |
+
+Motion: wiggle (waiting plant), bob (waiting slot), blink (current growth square, wait dot), nudge (notification). All off with `prefers-reduced-motion`.
+
+**Open.**
+
+- Agent colours. The study uses five ad-hoc colours; two of them (amber, pink) are close to the review and merged colours. A set of 8 is proposed above; it needs the team's yes.
+- Whether "merged" stays in the pot list or the pot empties on merge.
+- Fredoka at small sizes in the scene's name tags, or Figtree there.
+
+**Scope.** About cozy-04's 9–10.5 person-days. The interface is cheaper (no frames, about 0.5 days instead of 1); the bud state and the shape markers add about 0.5 days.
 
 ### Scope
 
@@ -248,8 +193,9 @@ Person-days for the scene and interface look, on top of the planter grid logic i
 
 Both fit the 15-20 % aesthetics budget. Cut first: the second theme, foliage and shelf (cozy), the vault (lab), the drops.
 
-## Earlier exploration
+## Keeping it promptable
 
-Kept for context; superseded by the proposals above.
-
-- Three image directions (bioluminescent tank, specimen lab, neon reef) and image-generator prompts. Generated images were not convincing; the team switched to rendering the scenes directly.
+- The colour tables above are the tokens. Code reads them from one theme file; prompts name the meaning ("data colour", "issue colour"), not a hex value.
+- One shared material module (clay, bark with veins, glass, frame). Prompts say "use the bark material", not "make it glow".
+- Prefer procedural over hand-made. Only the beetle is a real asset.
+- The renders in `renders/` and in the archive are our own work and can be committed and referenced in prompts.

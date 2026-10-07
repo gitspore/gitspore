@@ -1,6 +1,8 @@
 # gitspore: main concept
 
-The current concept. The `v<n>_*.md` files are earlier versions and input for this one.
+The current concept. The current version is v3: `concept/v3_planter-grid.md` (the idea) and `concept/v3_layout.html` (the app layout). Earlier versions are in `archive/concept/`.
+
+The core idea below predates v3 and still describes the beetle and repo view of v1.
 
 ## Core idea
 

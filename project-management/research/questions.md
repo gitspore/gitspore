@@ -23,7 +23,7 @@ To explore and decide in week 1. When a question is answered, record the decisio
 
 ## Found in the backlog tickets (2026-10-05)
 
-Differences between the tickets (#2 to #11) and the first notes. Details in `concept/v2_agents-and-worktrees.md`.
+Differences between the tickets (#2 to #11) and the first notes. Details in `archive/concept/v2_agents-and-worktrees.md`.
 
 1. Product: v1 visualizes a GitHub repo in a web app; the tickets build a local daemon that runs agents in worktrees. Which one is the capstone? `scope.md` lists "agents that write code" as out of scope.
 2. Vocabulary: shoot/insect/pest/flower (v1) vs. Vine/Beetle/Spore/Bloom (tickets). Agree on one glossary.

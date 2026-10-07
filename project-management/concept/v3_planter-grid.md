@@ -1,6 +1,6 @@
 # v3: Planter grid
 
-2026-10-06. A proposal, not agreed yet. Background: `records/2026-10-06_planter-grid-proposal.md`. Visual directions: `research/inspiration/aesthetics.md` (cozy-04, lab-05). Live mockup: `research/inspiration/renders/planter-grid.html`. App layout: `concept/v3_layout.html`.
+2026-10-06. A proposal, not agreed yet. Background: `records/2026-10-06_planter-grid-proposal.md`. Visual directions: `research/inspiration/aesthetics.md` (cozy-06 proposed, lab-05 as the alternative). Live 3D prototype: `research/inspiration/renders/planter-grid-layout.html`; the first mockup is archived in `archive/research/inspiration/renders/planter-grid.html`. App layout: `concept/v3_layout.html`. Updated 2026-10-07: the cozy-06 states, the hotbar, the carving on the table top.
 
 ## In one sentence
 
@@ -22,23 +22,26 @@ A greenhouse table in 3D. Each pot is one agent. A plant that wilts is an agent 
 
 ## How to read a plant
 
-| Plant | Agent |
-|---|---|
-| Sprout, gently swaying | working |
-| Rim pulses, then the plant droops, then it wilts | waiting for you (0-15 s, 15-60 s, over 60 s) |
-| Grey plant, red rim | error |
-| Glowing bud | done, ready for review |
-| Flower | merged, the pot frees up |
+Five states, as in cozy-06. Each has a plant, a rim colour, a word in the agents tab, a growth stage (five squares, seed to bloom) and a shape, so none depends on colour alone.
 
-Every visual element means exactly one thing.
+| Plant | Agent | Word | Shape |
+|---|---|---|---|
+| Sprout with two leaves, gently swaying, green rim | working | growing | circle |
+| Red rim pulses, then the plant droops and yellows (0-15 s, 15-60 s, over 60 s) | waiting for you | a timer | triangle |
+| Grey bare stalk, grey rim | error | wilted | cross |
+| Closed yellow bud, yellow rim | ready for review | review | diamond |
+| Pink bloom, pink rim | merged, the pot frees up | merged | five-dot flower |
+| Empty pot | no agent | pick an issue | dashed circle |
+
+Waiting is the only red. Every visual element means exactly one thing.
 
 ## Agent colour
 
 Each agent gets an ID colour, so you can tell them apart in the scene, the agents tab, the terminal window and the Branches tab.
 
 - It stays small: a thin band at the foot of the pot and a dot on the name tag. The rim stays reserved for status.
-- The same colour marks the agent's row in the agents tab, its terminal window header, its chip when minimised and its branch in the Branches tab.
-- The user picks from a fixed set of 8 colours per visual style, not a free colour picker. We design that set as part of the art direction: muted, and clearly apart from the status colours, so a wilting plant still stands out.
+- The same colour marks the agent's row in the agents tab, its terminal window header, its hotbar slot and its branch in the Branches tab.
+- The user picks from a fixed set of 8 colours per visual style, not a free colour picker. The set stays clear of the status colours, so a wilting plant still stands out. Proposed set for cozy-06: blues, teal, violets, ink and umber, in `aesthetics.md`.
 - gitspore assigns the next free colour on its own; the user can change it.
 
 ## The repo: garden map
@@ -46,7 +49,7 @@ Each agent gets an ID colour, so you can tell them apart in the scene, the agent
 The scene shows agents, not the repo. The repo lives in the **garden map**:
 
 - A small object in the scene: a plan pinned to the greenhouse wall (cozy) or a small floor-plan plate on the bench (lab). It shows one mark per pot in its ID colour and nothing else.
-- Click it, press G, or use the rail button, and the side panel opens on its **Branches** tab: `main` and every agent branch over the full panel height (about 28 commits), each branch in its agent's colour, with a status dot on its label. The tab replaces the earlier overlay over the scene, so the graph never covers the pots.
+- Click it, press G, or use the rail button, and the side panel opens on its **Branches** tab: `main` and every agent branch over the full panel height (about 28 commits), each branch in its agent's colour, with a status shape on its label. The tab replaces the earlier overlay over the scene, so the graph never covers the pots.
 - Click a pot while the tab is open and its branch is highlighted. Click a branch and its agent's terminal opens.
 - The side panel keeps one width (about 400 px) for all tabs, so switching tabs never moves the windows.
 - The graph comes from the `commit-graph` React package. We tested it with React 19 and Next 16; gotchas below.
@@ -56,8 +59,8 @@ The scene shows agents, not the repo. The repo lives in the **garden map**:
 Added 2026-10-07. The plants show one agent each. Nothing yet answers "what have all of them done, and where is the whole thing going". The overview does.
 
 - It is one more Claude Code session, started by the daemon in the repo root instead of a worktree, without a pot. It reads `git log --all`, the worktrees' diffs and a status file the daemon writes (agents, issues, states, waiting times, branches).
-- A beetle button on the tool rail, the key `0`, or a click on the beetle carving opens its window maximised. It is an ordinary window: restore, minimise, open beside an agent, chip and notification work as for the agents.
-- In the scene it is a **beetle carved into the front edge of the table**. The carving is a decal or texture area with an emissive mask, not a separate model, so its glow can show the overview's status: dim when idle, a slow pulse when working, red when it waits, a flicker on error. Engraved and lit like an instrument plate in lab-05, a glowing wood carving in cozy-04. It picks up the beetles of v1/v2.
+- Hotbar slot 0, the key `0`, or a click on the beetle carving opens its window maximised. It is an ordinary window: restore, minimise, open beside an agent, hotbar slot and notification work as for the agents.
+- In the scene it is a **beetle carved into the table top**, in the front strip between the seed packets, about as large as two packets. The carving is a decal or texture area with an emissive mask, not a separate model, so its glow can show the overview's status: dim when idle, a slow pulse when working, red when it waits, a flicker on error. Engraved and lit like an instrument plate in lab-05, a glowing wood carving in cozy-06. It picks up the beetles of v1/v2.
 - The **table grows** for it: two rows of three pots at the back, a strip at the front with space for the seed packets and the carving in the middle.
 - Read-only at first. Later it may orchestrate (plant an issue, stop an agent) through an MCP server on the daemon.
 - Should-have. Most of it reuses MVP parts. We decide at the end of week 2 whether it moves up. What has to be right from day one: an agent may have no pot (`slot: null`), and windows refer to agents, not to pots.
@@ -68,7 +71,8 @@ The full layout (windows, states, rules) is in `concept/v3_layout.html` and repl
 
 - The scene fills the page. Everything else lies on top of it in a CSS grid with gaps: top bar, tool rail on the left, main area for terminal windows, side panel on the right.
 - The side panel has three tabs: **Agents** (every agent with status, issue and waiting time), **Issues** (open issues as seed packets) and **Branches** (the graph). It works on its own if the 3D scene fails.
-- Every terminal window belongs to one agent and opens when you click its pot or its row. Buttons, not dragging, set a window's size: minimise to a chip in the bottom-left tray, maximise to cover the scene, or *focus this* to show one terminal alone.
+- Every terminal window belongs to one agent and opens when you click its pot, its row or its hotbar slot. Buttons, not dragging, set a window's size: minimise, maximise to cover the scene, or *focus this* to show one terminal alone.
+- The **hotbar** at the bottom of the main area has one slot per pot (keys 1-6) and one for the overview (key 0). Each slot shows the plant, the status shape and the agent colour; a mark on the slot means its window is minimised. There is no separate tray of minimised windows.
 - In scene mode terminals sit in a band under the scene. Up to four can tile side by side or stacked, as long as each keeps about 80 columns; more become tabs.
 - When an agent waits and its terminal is not in view, a notification appears in the bottom-right corner, and the tab title and favicon show the number of waiting agents.
 - Greenhouse vitality (should-have) is one value, 0-100 %, for how much agent time is lost to waiting.
@@ -79,7 +83,7 @@ Developers who run three or more agents at once. Our hypothesis is that with git
 
 ## Scope
 
-**Must-have.** issues tab with seed-packet rows, planting by button or by clicking an empty pot, worktree + branch + Claude Code start, agent status from Claude Code hooks, wilting, terminal windows (minimise, maximise, focus this), side panel with agents and issues, waiting notification with tab title and favicon count, merge detection with bloom and worktree cleanup, macOS and Windows, daemon only on localhost with a token.
+**Must-have.** issues tab with seed-packet rows, planting by button or by clicking an empty pot, worktree + branch + Claude Code start, agent status from Claude Code hooks, wilting, terminal windows (minimise, maximise, focus this), the hotbar, side panel with agents and issues, waiting notification with tab title and favicon count, merge detection with bloom and worktree cleanup, macOS and Windows, daemon only on localhost with a token.
 
 **Should-have.** Branches tab and garden map, overview agent with the beetle carving, drag an issue onto a pot, tiling of 2-4 terminals, agent colours, replay, greenhouse vitality, sound cue and browser notification.
 
@@ -89,7 +93,7 @@ Developers who run three or more agents at once. Our hypothesis is that with git
 
 | Work on the look | Person-days |
 |---|---|
-| Scene, pots, plant states, light and dark theme | 5-7 (cozy-04 more, lab-05 less) |
+| Scene, pots, plant states, light and dark theme | 5-7 (cozy-06 more, lab-05 less) |
 | Garden map object and Branches tab | 2-3 |
 | Agent colours (palette, band, tag dot, graph) | 0.5-1 |
 | Larger table, beetle carving with emissive states | 1-2 |

@@ -6,32 +6,36 @@
 <title>gitspore v3 layout</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
 <style>
-/* Layout: a fixed 1600×900 stage scaled to the window, one slide visible at a time. Lab-05 neutrals, red only for "needs you". */
+/* Layout: a fixed 1600×900 stage scaled to the window, one slide visible at a time. cozy-06 tokens and fonts (research/inspiration/aesthetics.md). */
 :root {
-  --bg: #e9e6e1; --stage: #f6f4f0; --ink: #141210; --muted: #6f6962; --line: #d8d3cb; --accent: #e5261a; --amber: #c97f00; --chip: #ece9e3;
-  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --bg: #e9e2d0; --stage: #f6f2e7; --ink: #2a2119; --muted: #6b5a44; --line: #ddd4bf; --accent: #2f5446; --amber: #9a6a10; --chip: #ece6d6;
+  --st-work: #4f9a45; --st-wait: #b3372a; --st-err: #8a8277; --st-rev: #d99a1e; --st-mer: #c2458e;
+  --font-sans: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-title: "Fredoka", "Figtree", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --bg: #08090c; --stage: #121317; --ink: #eeebe5; --muted: #9a958e; --line: #2c2c31; --accent: #ff4a3d; --amber: #ffa000; --chip: #1c1d22; color-scheme: dark;
+  --bg: #0f1412; --stage: #1d2621; --ink: #f3e7cf; --muted: #bba98b; --line: #33433b; --accent: #9cc2ad; --amber: #e9c46a; --chip: #26332c; color-scheme: dark;
+  --st-work: #7cc96b; --st-wait: #ff6a50; --st-err: #9a948a; --st-rev: #f5bd3c; --st-mer: #ff6fc0;
 } }
 :root[data-theme="dark"] {
-  --bg: #08090c; --stage: #121317; --ink: #eeebe5; --muted: #9a958e; --line: #2c2c31; --accent: #ff4a3d; --amber: #ffa000; --chip: #1c1d22; color-scheme: dark;
+  --bg: #0f1412; --stage: #1d2621; --ink: #f3e7cf; --muted: #bba98b; --line: #33433b; --accent: #9cc2ad; --amber: #e9c46a; --chip: #26332c; color-scheme: dark;
+  --st-work: #7cc96b; --st-wait: #ff6a50; --st-err: #9a948a; --st-rev: #f5bd3c; --st-mer: #ff6fc0;
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; overflow: hidden; }
 body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-sans); }
-#deck { position: fixed; inset: 0; display: grid; place-items: center; }
-#stage { width: 1600px; height: 900px; position: relative; transform-origin: center center; flex: none; }
+#deck { position: fixed; inset: 0; overflow: hidden; }
+#stage { width: 1600px; height: 900px; position: absolute; left: 50%; top: 50%; transform-origin: center center; }
 .slide { position: absolute; inset: 0; background: var(--stage); border-radius: 14px; padding: 64px 80px 70px; display: none; flex-direction: column; overflow: hidden;
   box-shadow: 0 20px 60px rgba(0, 0, 0, .12); }
 .slide.on { display: flex; }
 .eyebrow { font-family: var(--font-mono); font-size: 18px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 .eyebrow b { color: var(--accent); font-weight: 600; }
-h1 { font-size: 76px; line-height: 1.05; font-weight: 600; letter-spacing: -.015em; margin: 18px 0 0; text-wrap: balance; }
-h2 { font-size: 46px; line-height: 1.12; font-weight: 600; letter-spacing: -.01em; margin: 10px 0 0; text-wrap: balance; }
+h1 { font-family: var(--font-title); font-size: 76px; line-height: 1.05; font-weight: 600; letter-spacing: -.015em; margin: 18px 0 0; text-wrap: balance; }
+h2 { font-family: var(--font-title); font-size: 46px; line-height: 1.12; font-weight: 600; letter-spacing: -.01em; margin: 10px 0 0; text-wrap: balance; }
 p, li { font-size: 25px; line-height: 1.45; }
 p { margin: 16px 0 0; max-width: 34em; }
 ul { margin: 18px 0 0; padding-left: 1.1em; }
@@ -91,6 +95,15 @@ figcaption b { color: var(--ink); font-weight: 600; font-family: var(--font-mono
 #zoom { position: fixed; inset: 0; z-index: 9; background: rgba(0, 0, 0, .82); display: grid; place-items: center; padding: 16px; cursor: zoom-out; }
 #zoom[hidden] { display: none; }
 #zoom img { max-width: 100%; max-height: 100%; border-radius: 6px; }
+.states { width: 100%; border-collapse: collapse; margin-top: 34px; font-size: 24px; }
+.states th { text-align: left; font: 600 16px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 0 16px 12px 0; border-bottom: 1.5px solid var(--line); }
+.states td { padding: 14px 16px 14px 0; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.states td:first-child { font-weight: 600; }
+.states svg { width: 26px; height: 26px; vertical-align: -6px; margin-right: 10px; }
+.trk { display: inline-flex; gap: 4px; vertical-align: -1px; }
+.trk i { width: 16px; height: 16px; border-radius: 3px; box-shadow: inset 0 0 0 2px var(--muted); opacity: .55; }
+.trk i.f { box-shadow: none; opacity: 1; background: var(--c); }
+.states .w { color: var(--muted); }
 @media (prefers-reduced-motion: reduce) { #bar { transition: none; } }
 </style>
 </head>
@@ -104,7 +117,7 @@ figcaption b { color: var(--ink); font-weight: 600; font-family: var(--font-mono
     <div class="eyebrow">gitspore · concept v3 · <b>layout</b></div>
     <h1>Every agent in one place, and it tells you when it waits.</h1>
     <p class="big-q">The scene fills the page. Terminals, issues and branches sit on top of it, placed by buttons.</p>
-    <p class="muted mono" style="font-size:18px;margin-top:40px">Draft 2026-10-06 · not agreed yet<br>Spec: concept/v3_layout.html · Prototype: renders/planter-grid-layout.html</p>
+    <p class="muted mono" style="font-size:18px;margin-top:40px">Draft 2026-10-06, style cozy-06 since 2026-10-07 · not agreed yet<br>Spec: concept/v3_layout.html · Prototype: renders/planter-grid-layout.html</p>
   </div>
   <img src="v3_layout-slides/cozy-night-s01.jpg" alt="The app in the cozy night style: greenhouse table with pots, terminal at the bottom, agents panel on the right">
 </section>
@@ -115,11 +128,11 @@ figcaption b { color: var(--ink); font-weight: 600; font-family: var(--font-mono
   <div class="row shot-right">
     <div class="side">
       <div class="regions">
-        <span>Top bar</span><span>repo, focused agent, online status, settings, help</span>
+        <span>Top bar</span><span>focused agent, waiting count, online status, settings, help</span>
         <span>Rail</span><span>agents, issues, branches, scene/focus</span>
         <span>Main</span><span>the scene, with terminal windows in a band below it</span>
         <span>Panel</span><span>Agents · Issues · Branches, one fixed width</span>
-        <span>Tray</span><span>minimised terminals, bottom left</span>
+        <span>Hotbar</span><span>one slot per pot (keys 1–6) and the overview (0); a mark shows a minimised window</span>
         <span>Notices</span><span>waiting agents, bottom right</span>
       </div>
     </div>
@@ -133,9 +146,19 @@ figcaption b { color: var(--ink); font-weight: 600; font-family: var(--font-mono
   <div class="cols c3">
     <div class="card"><h3>Side panel</h3><ul><li>Agents, Issues, Branches, or closed</li><li>One width (~400 px) for all tabs, so windows never jump</li></ul></div>
     <div class="card"><h3>Main area mode</h3><ul><li><b>Scene mode</b>: terminals in a band, scene above</li><li><b>Focus mode</b>: terminals cover the scene, panel closes</li></ul></div>
-    <div class="card"><h3>Open windows</h3><ul><li>Each is visible or a chip in the tray</li><li>Tiles by count: 1, 2, 2+1, 2×2</li><li>A terminal tile keeps ~80 columns: too narrow, it stacks; no room to stack, it becomes a tab</li></ul></div>
+    <div class="card"><h3>Open windows</h3><ul><li>Each is visible or minimised (a mark on its hotbar slot)</li><li>Tiles by count: 1, 2, 2+1, 2×2</li><li>A terminal tile keeps ~80 columns: too narrow, it stacks; no room to stack, it becomes a tab</li></ul></div>
   </div>
   <p class="muted" style="font-size:22px;margin-top:24px">Also: closing a window never stops the agent · Esc belongs to the terminal (Claude Code uses it to interrupt) · shortcuts only work outside the terminal</p>
+</section>
+
+<section class="slide" aria-label="Five states">
+  <div class="eyebrow">How to read a pot</div>
+  <h2>Five states, each with a plant, a word, a growth stage and a shape</h2>
+  <table class="states">
+    <thead><tr><th>State</th><th>Plant</th><th>Word</th><th>Growth</th><th>Shape</th></tr></thead>
+    <tbody id="statesBody"></tbody>
+  </table>
+  <p class="muted" style="font-size:22px;margin-top:22px">Waiting is the only red. Error is grey, review yellow, merged pink. Colour never carries a state alone.</p>
 </section>
 
 <section class="slide" aria-label="Scene only">
@@ -143,11 +166,11 @@ figcaption b { color: var(--ink); font-weight: 600; font-family: var(--font-mono
   <h2><span class="sid">S02</span>Scene only: the plants do the talking</h2>
   <div class="row shot-right">
     <div class="side"><ul>
-      <li>Panel closed, terminal minimised to a chip</li>
+      <li>Panel closed, terminal minimised: its hotbar slot keeps the status</li>
       <li>The pots get the most room</li>
       <li>#15 waits and its terminal isn't visible, so a notice appears bottom right</li>
     </ul></div>
-    <figure><img src="v3_layout-slides/s02.jpg" alt="Scene only with a minimised terminal chip and a notification"><figcaption><b>S02</b>Scene only, with a chip and a waiting notice</figcaption></figure>
+    <figure><img src="v3_layout-slides/s02.jpg" alt="Scene only with the hotbar and a notification"><figcaption><b>S02</b>Scene only, with the hotbar and a waiting notice</figcaption></figure>
   </div>
 </section>
 
@@ -182,7 +205,7 @@ figcaption b { color: var(--ink); font-weight: 600; font-family: var(--font-mono
   <div class="eyebrow">States · attention</div>
   <h2>Another agent waits while you read</h2>
   <div class="row pair">
-    <figure><img src="v3_layout-slides/s12.jpg" alt="A notification in the corner while one terminal is focused"><figcaption><b>S12</b>Notice bottom right, badge on the rail, count in the tab title. Your keyboard stays in #12.</figcaption></figure>
+    <figure><img src="v3_layout-slides/s12.jpg" alt="A notification in the corner while one terminal is focused"><figcaption><b>S12</b>Notice bottom right, red hotbar slot, badge on the rail, count in the tab title. Your keyboard stays in #12.</figcaption></figure>
     <figure><img src="v3_layout-slides/s13.jpg" alt="Both terminals side by side after Open beside"><figcaption><b>S13</b>"Open beside" puts #15 next to the terminal you were reading.</figcaption></figure>
   </div>
 </section>
@@ -214,8 +237,8 @@ figcaption b { color: var(--ink); font-weight: 600; font-family: var(--font-mono
   <div class="eyebrow">States · overview</div>
   <h2>Branches live in the side panel</h2>
   <div class="row pair">
-    <figure><img src="v3_layout-slides/s11.jpg" alt="Branches tab in the plant lab style"><figcaption><b>S11</b>Full panel height, about 28 commits. The selected pot's branch is highlighted.</figcaption></figure>
-    <figure><img src="v3_layout-slides/cozy-night-s11.jpg" alt="Branches tab in the cozy night style"><figcaption><b>S11</b>Labels show agent colour and status. Click one to open that agent. Opens with G, the rail or the garden map.</figcaption></figure>
+    <figure><img src="v3_layout-slides/s11.jpg" alt="Branches tab, cozy day"><figcaption><b>S11</b>Full panel height, about 28 commits. The selected pot's branch is highlighted.</figcaption></figure>
+    <figure><img src="v3_layout-slides/cozy-night-s11.jpg" alt="Branches tab, cozy night"><figcaption><b>S11</b>Labels show agent colour and status shape. Click one to open that agent. Opens with G, the rail or the garden map.</figcaption></figure>
   </div>
 </section>
 
@@ -232,10 +255,10 @@ figcaption b { color: var(--ink); font-weight: 600; font-family: var(--font-mono
   <div class="eyebrow">Same layout, both directions</div>
   <h2>The layout doesn't depend on the style</h2>
   <div class="row quad">
-    <figure><img src="v3_layout-slides/s01.jpg" alt="Plant lab, light"><figcaption><b>lab-05</b>light</figcaption></figure>
+    <figure><img src="v3_layout-slides/cozy-day-s01.jpg" alt="Cozy greenhouse, day"><figcaption><b>cozy-06</b>day · the proposed style</figcaption></figure>
+    <figure><img src="v3_layout-slides/cozy-night-s01.jpg" alt="Cozy greenhouse, night"><figcaption><b>cozy-06</b>night</figcaption></figure>
+    <figure><img src="v3_layout-slides/lab-light-s01.jpg" alt="Plant lab, light"><figcaption><b>lab-05</b>light</figcaption></figure>
     <figure><img src="v3_layout-slides/lab-dark-s01.jpg" alt="Plant lab, dark"><figcaption><b>lab-05</b>dark</figcaption></figure>
-    <figure><img src="v3_layout-slides/cozy-day-s01.jpg" alt="Cozy greenhouse, day"><figcaption><b>cozy-04</b>day</figcaption></figure>
-    <figure><img src="v3_layout-slides/cozy-night-s01.jpg" alt="Cozy greenhouse, night"><figcaption><b>cozy-04</b>night</figcaption></figure>
   </div>
 </section>
 
@@ -248,15 +271,24 @@ figcaption b { color: var(--ink); font-weight: 600; font-family: var(--font-mono
       <li>Knows what each agent did, its status, where the whole is going</li>
       <li>Read-only first; orchestrator later via the daemon</li></ul></div>
     <div class="card"><h3>In the layout</h3><ul>
-      <li>Beetle button on the rail, or key <code>0</code></li>
+      <li>Hotbar slot 0, or key <code>0</code></li>
       <li>Opens maximised (Focus this)</li>
       <li>Then an ordinary window: beside an agent, minimise, notification</li></ul></div>
     <div class="card"><h3>In the scene</h3><ul>
-      <li>A beetle carved into the table's front edge</li>
+      <li>A beetle carved into the table top, between the seed packets</li>
       <li>Emissive glow shows its state: dim, pulse, red when it waits</li>
       <li>The table grows: pots at the back, packets and carving in front</li></ul></div>
   </div>
   <p class="muted" style="font-size:22px;margin-top:24px">Should-have, decided at the end of week 2. Needed from day one: an agent may have no pot. Wireframes S17–S19 in concept/v3_layout.html.</p>
+</section>
+
+<section class="slide" aria-label="Overview in the prototype">
+  <div class="eyebrow">States · the overview</div>
+  <h2>Opened from the beetle, or it calls you</h2>
+  <div class="row pair">
+    <figure><img src="v3_layout-slides/s17.jpg" alt="The overview agent maximised"><figcaption><b>S17</b>Hotbar slot 0, the carving or key 0: the overview opens maximised.</figcaption></figure>
+    <figure><img src="v3_layout-slides/s19.jpg" alt="The overview waits: red carving, red hotbar slot and notification"><figcaption><b>S19</b>When it waits, the carving glows red, slot 0 turns red, and it gets a notice like any agent.</figcaption></figure>
+  </div>
 </section>
 
 <section class="slide" aria-label="Scope">
@@ -264,7 +296,7 @@ figcaption b { color: var(--ink); font-weight: 600; font-family: var(--font-mono
   <h2>MVP first, tiling and drag later</h2>
   <div class="cols c3">
     <div class="card mvp"><h3>MVP</h3><ul>
-      <li>App shell, rail, top bar</li><li>One terminal window: minimise, maximise, focus this</li><li>Agents and Issues tabs</li><li>Issue sheet with "Give to agent"</li><li>Waiting notice, title and favicon count</li><li>Connect screen, scene fallback</li></ul></div>
+      <li>App shell, rail, top bar, hotbar</li><li>One terminal window: minimise, maximise, focus this</li><li>Agents and Issues tabs</li><li>Issue sheet with "Give to agent"</li><li>Waiting notice, title and favicon count</li><li>Connect screen, scene fallback</li></ul></div>
     <div class="card should"><h3>Should-have</h3><ul>
       <li>Tiling 2–4 terminals, tabs fallback</li><li>Branches tab with commit-graph</li><li>Garden map object</li><li>Drag an issue onto a pot</li><li>Agent colours and picker</li><li>Browser notification, sound</li><li>Overview agent, beetle carving</li></ul></div>
     <div class="card later"><h3>Later</h3><ul>
@@ -289,7 +321,7 @@ figcaption b { color: var(--ink); font-weight: 600; font-family: var(--font-mono
       <li>Attention: notices, title, favicon</li>
       <li>Tiling · Branches tab · drag to pot</li>
       <li>Keyboard and focus · connect and empty states</li>
-      <li>Overview agent · beetle carving and button</li></ul></div>
+      <li>Overview agent · beetle carving and hotbar slot</li></ul></div>
   </div>
 </section>
 
@@ -321,6 +353,25 @@ figcaption b { color: var(--ink); font-weight: 600; font-family: var(--font-mono
 
 <script>
 (() => {
+  const SHAPE = {
+    work: '<circle cx="8" cy="8" r="5" fill="var(--st-work)"/>',
+    wait: '<path d="M8 2 L14.5 13.5 H1.5 Z" fill="var(--st-wait)"/>',
+    err: '<path d="M3 3 L13 13 M13 3 L3 13" stroke="var(--st-err)" stroke-width="3" stroke-linecap="round"/>',
+    rev: '<path d="M8 1.5 L14.5 8 L8 14.5 L1.5 8 Z" fill="var(--st-rev)"/>',
+    mer: [0, 72, 144, 216, 288].map((a) => `<circle cx="${8 + Math.cos((a - 90) * Math.PI / 180) * 3.6}" cy="${8 + Math.sin((a - 90) * Math.PI / 180) * 3.6}" r="2.6" fill="var(--st-mer)"/>`).join(''),
+    empty: '<circle cx="8" cy="8" r="5" fill="none" stroke="var(--muted)" stroke-width="1.6" stroke-dasharray="2 2"/>',
+  };
+  const ROWS = [
+    ['work', 'Working', 'sprout with two leaves', 'growing', 3, 'circle'],
+    ['wait', 'Waiting for you', 'droops and yellows, rim pulses red', 'a timer', 3, 'triangle'],
+    ['err', 'Error', 'grey bare stalk', 'wilted', 3, 'cross'],
+    ['rev', 'Ready for review', 'closed yellow bud', 'review', 4, 'diamond'],
+    ['mer', 'Merged', 'pink bloom', 'merged', 5, 'five-dot flower'],
+    ['empty', 'Empty pot', 'none', 'pick an issue', 0, 'dashed circle'],
+  ];
+  document.getElementById('statesBody').innerHTML = ROWS.map(([k, name, plant, word, n, shape]) => `<tr><td>${name}</td><td>${plant}</td><td class="w">${word}</td>
+    <td>${n ? `<span class="trk" style="--c:var(--st-${k})">${[1, 2, 3, 4, 5].map((i) => `<i class="${i <= n ? 'f' : ''}"></i>`).join('')}</span>` : '<span class="w">–</span>'}</td>
+    <td><svg viewBox="0 0 16 16" aria-hidden="true">${SHAPE[k]}</svg>${shape}</td></tr>`).join('');
   const slides = [...document.querySelectorAll('.slide')];
   const stage = document.getElementById('stage');
   const n = slides.length;
@@ -341,7 +392,7 @@ figcaption b { color: var(--ink); font-weight: 600; font-family: var(--font-mono
   function fit() {
     const pad = innerWidth < 700 ? 8 : 28;
     const k = Math.min((innerWidth - pad * 2) / 1600, (innerHeight - pad * 2) / 900);
-    stage.style.transform = `scale(${k})`;
+    stage.style.transform = `translate(-50%, -50%) scale(${k})`;
   }
   addEventListener('resize', fit);
   const zoom = document.getElementById('zoom');

@@ -2,6 +2,10 @@
 
 Visual references for gitspore: images, videos, 3D models, other apps, sketches.
 
+## What is current
+
+`renders/` holds the current proposal (cozy-06): the 3D layout prototype and the interface study. Earlier and rejected proposals go to `archive/research/inspiration/`, mirroring this folder, so it stays clear which files to look at. `aesthetics.md` starts with a list of the current files.
+
 ## The repo is public
 
 Publishing someone else's image in a public repo needs the creator's permission, and "moodboard" is no exception. In Germany this regularly leads to an Abmahnung (a lawyer's cease-and-desist letter with fees). Old commits keep the file even after deletion. So:

@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>gitspore cozy UI 3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Page chrome. Each stage is a 1440 × 900 laptop screen at real pixel sizes, scaled to fit. */
+:root { --bg: #efede8; --surface: #fbfaf7; --ink: #1d1b18; --muted: #6a645b; --line: #d6d0c5; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #151413; --surface: #1e1d1b; --ink: #ece8e1; --muted: #a39c92; --line: #34312d; color-scheme: dark; } }
+:root[data-theme="dark"] { --bg: #151413; --surface: #1e1d1b; --ink: #ece8e1; --muted: #a39c92; --line: #34312d; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.6 "Inter", system-ui, sans-serif; overflow-x: hidden; }
+.wrap { max-width: 1280px; margin: 0 auto; padding: 40px 16px 100px; }
+.prose { max-width: 74ch; }
+h1 { font-size: 34px; line-height: 1.15; margin: 0; }
+h2 { font-size: 24px; margin: 64px 0 0; padding-top: 18px; border-top: 1px solid var(--line); }
+h3 { font-size: 15px; margin: 22px 0 0; color: var(--muted); font-weight: 600; }
+p { margin: 10px 0 0; }
+.eyebrow { font: 600 12px "JetBrains Mono", monospace; color: var(--muted); }
+.bar { position: sticky; top: 0; z-index: 30; display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 0; background: var(--bg); }
+.bar button, #themeBtn { font: 500 13px "Inter", sans-serif; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 5px 12px; cursor: pointer; }
+.bar button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.bar a { color: var(--ink); font-size: 14px; align-self: center; margin-left: 6px; }
+#themeBtn { position: fixed; top: 12px; right: 12px; z-index: 40; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 12px; margin-top: 16px; }
+.facts div { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; font-size: 14px; }
+.facts b { display: block; }
+.stage-wrap { margin-top: 10px; width: 100%; aspect-ratio: 1440 / 900; position: relative; overflow: hidden; border-radius: 10px; outline: 2px solid var(--ink); }
+.stage { position: absolute; left: 0; top: 0; width: 1440px; height: 900px; transform-origin: 0 0; overflow: hidden; font-family: "Figtree", sans-serif; color: var(--s-ink); }
+
+/* ===== brand strip ===== */
+.brand { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 14px; margin-top: 16px; }
+.bcard { border-radius: 12px; padding: 22px; display: grid; gap: 18px; }
+.bcard.day { background: #f6f2e7; color: #2a2119; border: 1px solid #e3dccb; }
+.bcard.night { background: radial-gradient(120% 90% at 30% 10%, #262019 0%, #12110e 75%); color: #f3e7cf; border: 1px solid #2a241c; }
+.bcard .cap { font: 600 11px "JetBrains Mono", monospace; letter-spacing: .1em; text-transform: uppercase; opacity: .65; }
+.lock { display: flex; align-items: center; gap: 14px; font: 600 46px/1 "Fredoka", sans-serif; letter-spacing: -.01em; }
+.plate { display: grid; place-items: center; background: #2f5446; flex: none; }
+.lock .plate { width: 60px; height: 60px; border-radius: 14px; }
+.lock .plate svg { width: 44px; height: 44px; }
+.bcard.night .lock span:last-child { text-shadow: 0 0 22px rgba(255, 196, 94, .25); }
+.sizes { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 22px; }
+.sizes figure { margin: 0; display: grid; justify-items: center; gap: 6px; font: 500 11px "JetBrains Mono", monospace; opacity: .9; }
+.sizes figcaption { opacity: .7; }
+.app { width: 96px; height: 96px; border-radius: 22px; box-shadow: inset 0 0 0 3px #2f5446, inset 0 0 0 4.5px rgba(246, 238, 219, .5), 0 6px 14px rgba(0, 0, 0, .2); }
+.app svg { width: 66px; height: 66px; }
+.fav24 { width: 24px; height: 24px; border-radius: 6px; } .fav24 svg { width: 19px; height: 19px; }
+.fav16 { width: 16px; height: 16px; border-radius: 4px; } .fav16 svg { width: 13px; height: 13px; }
+.free svg { width: 64px; height: 64px; }
+
+/* ===== stage tokens ===== */
+.day   { --sky1: #f6ead1; --sky2: #e2c796; --s-ink: #2a2119; --s-muted: #6b5a44; --panel: #ece6d6; --panel-2: #ddd4bf; --plate: #2f5446; --plate-ink: #f6eedb;
+         --wait: #b3372a; --wait-ink: #fff3e8; --line-s: #2f5446; --top: #ece6d6; --yellow: #e8b04a; --hover: rgba(47, 84, 70, .08);
+         --c-work: #4f9a45; --c-wait: #b3372a; --c-err: #8a8277; --c-rev: #d99a1e; --c-mer: #c2458e; --seam: #2f5446; }
+.night { --sky1: #2a3047; --sky2: #12151f; --s-ink: #f3e7cf; --s-muted: #bba98b; --panel: #1d2621; --panel-2: #26332c; --plate: #2f5446; --plate-ink: #f3ead6;
+         --wait: #c4402f; --wait-ink: #fff3e8; --line-s: #9cc2ad; --top: #1d2621; --yellow: #e8b04a; --hover: rgba(156, 194, 173, .08);
+         --c-work: #7cc96b; --c-wait: #ff6a50; --c-err: #9a948a; --c-rev: #f5bd3c; --c-mer: #ff6fc0; --seam: #ffc45e; }
+
+/* ===== regions at real size ===== */
+.scene { position: absolute; inset: 0; }
+.top { position: absolute; left: 0; right: 0; top: 0; height: 56px; display: flex; align-items: center; gap: 18px; padding: 0 20px 0 16px; background: var(--top); }
+.ena .top { border-bottom: 2px solid var(--line-s); }
+.rail { position: absolute; left: 0; top: 76px; display: flex; flex-direction: column; gap: 8px; }
+.panel { position: absolute; right: 12px; top: 68px; width: 400px; bottom: 12px; }
+.tile { position: absolute; left: 76px; width: 940px; top: 370px; height: 422px; display: flex; flex-direction: column; }
+.hotbar { position: absolute; left: 546px; transform: translateX(-50%); bottom: 12px; height: 88px; display: flex; gap: 8px; align-items: center; padding: 0 12px; }
+.note { position: absolute; right: 30px; bottom: 30px; width: 352px; }
+
+/* top bar: beetle on the green plate, name in Fredoka */
+.logo { display: flex; align-items: center; gap: 9px; font: 600 23px "Fredoka", sans-serif; letter-spacing: -.01em; }
+.logo .mark { width: 32px; height: 32px; border-radius: 8px; background: var(--plate); display: grid; place-items: center; }
+.logo .mark svg { width: 25px; height: 25px; }
+.focus { margin-left: 34px; font: 500 15px "Figtree"; color: var(--s-muted); }
+.focus b { color: var(--s-ink); font-weight: 700; }
+.waitbadge { margin-left: auto; font: 700 13px "Figtree"; letter-spacing: .04em; text-transform: uppercase; color: var(--wait-ink); background: var(--wait); padding: 5px 11px; border-radius: 5px; display: flex; gap: 8px; align-items: center; }
+.waitbadge i { width: 8px; height: 8px; border-radius: 2px; background: var(--wait-ink); animation: blink 1s steps(2) infinite; }
+.meta { font: 500 14px "Figtree"; color: var(--s-muted); }
+.meta b { color: var(--s-ink); }
+.ib { width: 36px; height: 36px; display: grid; place-items: center; border: 1.5px solid var(--line-s); border-radius: 7px; }
+.min .ib { border: 0; background: var(--hover); }
+.ib svg { width: 20px; height: 20px; }
+
+/* rail: bookmarks */
+.bm { width: 58px; height: 52px; display: grid; place-items: center; position: relative; border-radius: 0 9px 9px 0; background: var(--plate); }
+.ena .bm { border: 2px solid #1d382e; border-left: 0; box-shadow: 3px 3px 0 rgba(0, 0, 0, .25); }
+.min .bm { box-shadow: 0 4px 10px rgba(0, 0, 0, .18); }
+.bm.on { width: 72px; background: var(--yellow); }
+.bm svg { width: 26px; height: 26px; }
+.bm .badge { position: absolute; right: -8px; top: -8px; min-width: 22px; height: 22px; border-radius: 5px; background: var(--wait); color: var(--wait-ink); font: 700 12px "Figtree"; display: grid; place-items: center; border: 2px solid var(--panel); }
+
+/* side panel: Fredoka title + Figtree rows */
+.panel { background: var(--panel); border-radius: 12px; padding: 8px; }
+.ena .panel { border: 2px solid var(--line-s); box-shadow: inset 0 0 0 6px var(--panel-2), 0 16px 34px rgba(0, 0, 0, .3); }
+.min .panel { box-shadow: 0 12px 30px rgba(0, 0, 0, .22); }
+.phead { padding: 14px 12px 10px; display: flex; align-items: baseline; justify-content: space-between; }
+.phead b { font: 600 29px/1 "Fredoka", sans-serif; }
+.phead span { font: 500 14px "Figtree"; color: var(--s-muted); }
+.tabs { display: flex; gap: 6px; padding: 0 12px; }
+.tab { font: 600 15px "Figtree"; min-height: 38px; padding: 0 16px; display: grid; place-items: center; border-radius: 6px; border: 2px solid var(--line-s); }
+.tab.on { background: var(--plate); color: var(--plate-ink); border-color: var(--plate); }
+.min .tabs { gap: 0; margin: 0 12px; padding: 4px; background: var(--panel-2); border-radius: 8px; }
+.min .tab { flex: 1; border: 0; border-radius: 5px; }
+.rows { margin: 14px 12px 0; display: flex; flex-direction: column; gap: 8px; }
+.row { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 14px; border-radius: 8px; font: 600 16px "Figtree"; }
+.row .sw { width: 12px; height: 12px; border-radius: 2px; flex: none; }
+.row { white-space: nowrap; }
+.row .end { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.timer { font: 700 22px "JetBrains Mono", monospace; }
+
+/* enamel rows: plates, status as a stamped plant tag */
+.ena .row { background: var(--plate); color: var(--plate-ink); box-shadow: inset 0 0 0 4px var(--plate), inset 0 0 0 5.5px rgba(246, 238, 219, .55), 0 3px 0 rgba(0, 0, 0, .3); }
+.ena .row.wait { min-height: 76px; background: var(--wait); box-shadow: inset 0 0 0 4px var(--wait), inset 0 0 0 5.5px rgba(255, 240, 225, .7), 0 3px 0 rgba(0, 0, 0, .3); font-size: 19px; }
+.ena .row.empty { background: transparent; color: var(--s-muted); box-shadow: inset 0 0 0 2px var(--line-s); opacity: .75; }
+.tag { position: relative; display: inline-flex; align-items: center; height: 24px; padding: 0 10px 0 19px; font: 800 11.5px "Figtree"; letter-spacing: .1em; text-transform: uppercase; clip-path: polygon(9px 0, 100% 0, 100% 100%, 9px 100%, 0 50%); }
+.tag::before { content: ""; position: absolute; left: 8px; top: 50%; width: 5px; height: 5px; margin-top: -2.5px; border-radius: 50%; background: var(--plate); }
+.tag.work { background: #f6eedb; color: #2f5446; }
+.tag.err { background: #8a8277; color: #f6eedb; }
+.tag.rev { background: #e8b04a; color: #2a2119; }
+.tag.mer { background: #f4a6c4; color: #4a1a33; }
+.tag.wait { background: var(--wait-ink); color: var(--wait); }
+.tag.wait::before { background: var(--wait); }
+.tag.empty { background: transparent; color: var(--s-muted); box-shadow: none; padding-left: 0; clip-path: none; }
+.tag.empty::before { display: none; }
+/* water gauge: drains while an agent waits */
+.gauge { display: grid; gap: 3px; justify-items: start; font: 700 10px "Figtree"; letter-spacing: .12em; text-transform: uppercase; opacity: .9; }
+.gauge span { width: 58px; height: 10px; border: 1.5px solid currentColor; border-radius: 2px; padding: 1.5px; display: block; }
+.gauge i { display: block; height: 100%; width: 28%; background: currentColor; border-radius: 1px; animation: drain 6s linear infinite; }
+
+/* minimal rows: plant in a circle, status as a growth track (seed → sprout → leaf → bud → bloom) */
+.min .row { padding: 0 12px 0 8px; color: var(--s-ink); }
+.min .row:nth-child(odd):not(.wait) { background: var(--hover); }
+.min .row .pp { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; flex: none; }
+.min .row .pp svg { width: 30px; height: 30px; }
+.min .row .word { font: 500 14px "Figtree"; color: var(--s-muted); }
+.min .row .word.err { color: var(--c-err); }
+.min .row.wait { min-height: 76px; background: var(--wait); color: var(--wait-ink); font-size: 19px; border-radius: 10px; }
+.min .row.wait .pp { background: var(--wait-ink) !important; animation: wiggle .7s ease-in-out infinite; }
+.min .row.empty { color: var(--s-muted); }
+.min .row.empty .pp { border: 2px dashed var(--s-muted); }
+.track { display: flex; gap: 3px; }
+.track i { width: 8px; height: 8px; border-radius: 2px; box-shadow: inset 0 0 0 1.5px var(--s-muted); opacity: .55; }
+.track i.f { box-shadow: none; opacity: 1; }
+.track i.now { animation: blink 1s steps(2) infinite; }
+.row.wait .track i { box-shadow: inset 0 0 0 1.5px var(--wait-ink); }
+.row.wait .track i.f { background: var(--wait-ink); box-shadow: none; }
+
+/* ===== terminal ===== */
+.screen { --t-bg: #fbf7ec; --t-fg: #2a2119; --t-dim: #857862; --t-o: #b24f22; --t-g: #3d7a37; --t-y: #8a5b00; --t-b: #5e7189; --t-hl: #f2e3c0; }
+.screen.dark { --t-bg: #171916; --t-fg: #e4e0d4; --t-dim: #8d9085; --t-o: #e8956b; --t-g: #9fc98a; --t-y: #e9c46a; --t-b: #a9b5c9; --t-hl: #2a2c25; }
+.screen { flex: 1; min-height: 0; background: var(--t-bg); color: var(--t-fg); overflow: hidden; }
+.term { padding: 12px 18px; font: 13px/1.45 "JetBrains Mono", monospace; white-space: pre; }
+.term .o { color: var(--t-o); } .term .d { color: var(--t-dim); } .term .g { color: var(--t-g); } .term .y { color: var(--t-y); background: var(--t-hl); } .term .b { color: var(--t-b); }
+.thead { flex: none; height: 42px; display: flex; align-items: center; gap: 10px; padding: 0 8px 0 14px; font: 600 14px "Figtree"; }
+.thead .dot { width: 9px; height: 9px; border-radius: 2px; background: var(--wait); animation: blink 1s steps(2) infinite; }
+.thead .sub { font-weight: 500; opacity: .75; }
+.thead .tw { margin-left: auto; display: flex; gap: 4px; align-items: center; }
+.cb { width: 32px; height: 32px; border-radius: 6px; display: grid; place-items: center; font: 700 15px "Figtree"; cursor: pointer; border: 0; background: transparent; color: inherit; }
+.cb svg { width: 18px; height: 18px; }
+.cb.mode { width: auto; padding: 0 10px; gap: 6px; display: flex; font: 600 12.5px "Figtree"; border-radius: 5px; margin-right: 8px; }
+.ena .tile { background: var(--plate); border-radius: 10px; padding: 0 6px 6px; box-shadow: inset 0 0 0 1.5px rgba(246, 238, 219, .45), 0 14px 30px rgba(0, 0, 0, .3); }
+.ena .thead { color: var(--plate-ink); }
+.ena .cb:hover, .ena .cb.mode { background: rgba(246, 238, 219, .14); }
+.ena .screen { border-radius: 6px; }
+.min .tile { border-radius: 12px; overflow: hidden; box-shadow: 0 0 0 2px var(--line-s), 0 16px 34px rgba(0, 0, 0, .25); background: var(--panel); }
+.min .thead { color: var(--s-ink); background: var(--panel); border-bottom: 2px solid var(--line-s); }
+.min .cb:hover, .min .cb.mode { background: var(--hover); }
+
+/* hotbar */
+.slot { position: relative; width: 68px; height: 68px; display: grid; place-items: center; border-radius: 9px; background: var(--plate); color: var(--plate-ink); }
+.slot svg { width: 46px; height: 46px; }
+.slot .n { position: absolute; left: 6px; top: 3px; font: 700 13px "JetBrains Mono", monospace; }
+.slot .t { position: absolute; right: 4px; bottom: 4px; font: 700 12px "JetBrains Mono", monospace; padding: 0 4px; border-radius: 3px; }
+.slot .band { position: absolute; left: 10px; right: 10px; bottom: 0; height: 4px; border-radius: 1px 1px 0 0; }
+.slot.sel { outline: 3px solid var(--yellow); outline-offset: 2px; }
+.slot.wait { animation: bob 1.1s ease-in-out infinite; }
+.slot.wait .t { background: var(--wait); color: var(--wait-ink); }
+.slot.empty svg { opacity: .5; }
+.slot .shape { position: absolute; right: 5px; top: 5px; width: 13px; height: 13px; }
+.sep { width: 2px; height: 56px; margin: 0 6px; background: var(--line-s); }
+.ena .hotbar { background: var(--panel); border: 2px solid var(--line-s); border-radius: 12px; box-shadow: inset 0 0 0 5px var(--panel-2), 0 10px 24px rgba(0, 0, 0, .3); }
+.ena .slot { box-shadow: inset 0 0 0 3px var(--plate), inset 0 0 0 4.5px rgba(246, 238, 219, .5); }
+.min .hotbar { background: var(--panel); border-radius: 14px; box-shadow: 0 10px 24px rgba(0, 0, 0, .22); }
+.min .slot { background: var(--panel-2); color: var(--s-ink); border-radius: 10px; }
+.min .slot.wait { background: var(--wait); color: var(--wait-ink); }
+.min .slot.wait .t { background: var(--wait-ink); color: var(--wait); }
+
+/* notification */
+.sign { padding: 16px 18px; border-radius: 10px; background: var(--wait); color: var(--wait-ink); }
+.ena .sign { box-shadow: inset 0 0 0 4px var(--wait), inset 0 0 0 6px rgba(255, 240, 225, .7), 0 12px 24px rgba(0, 0, 0, .35); }
+.min .sign { box-shadow: 0 12px 26px rgba(0, 0, 0, .3); animation: nudge 2.4s ease-in-out infinite; }
+.sign b { display: block; font: 600 22px "Fredoka", sans-serif; }
+.sign p { margin: 2px 0 12px; font: 500 15px "Figtree"; opacity: .88; }
+.btn { display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px; font: 700 15px "Figtree"; border-radius: 6px; margin-right: 8px; background: var(--yellow); color: #2a2119; border: 2px solid var(--wait-ink); }
+.btn.alt { background: transparent; color: var(--wait-ink); }
+
+/* sizes overlay */
+.sz-ov { position: absolute; inset: 0; pointer-events: none; display: none; z-index: 20; }
+body.sizes .sz-ov { display: block; }
+.sz-ov div { position: absolute; border: 2px dashed #1e7bd6; background: rgba(30, 123, 214, .06); }
+.sz-ov span { position: absolute; left: 4px; top: 4px; font: 600 13px "JetBrains Mono", monospace; color: #fff; background: #1e7bd6; padding: 1px 6px; border-radius: 3px; white-space: nowrap; }
+
+/* ===== status lab ===== */
+.lab { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 560px), 1fr)); gap: 14px; margin-top: 16px; }
+.opt { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px 16px; display: grid; gap: 10px; }
+.opt h4 { margin: 0; font: 600 15px "Inter"; }
+.opt h4 small { font: 500 12px "JetBrains Mono", monospace; color: var(--muted); margin-left: 8px; }
+.opt p { margin: 0; font-size: 14px; color: var(--muted); }
+.strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; padding: 12px 10px; border-radius: 6px; font-family: "Figtree", sans-serif; }
+.strip.day { background: #ece6d6; color: #2a2119; }
+.strip.night { background: #1d2621; color: #f3e7cf; }
+.cell { display: grid; justify-items: center; align-content: end; gap: 6px; min-height: 52px; text-align: center; }
+.cell small { font: 500 11px "JetBrains Mono", monospace; opacity: .7; }
+.cell svg { display: block; }
+.strip .tag::before { background: currentColor; opacity: .5; }
+.strip .gauge span { width: 56px; }
+.strip.day .gauge, .strip.night .gauge { opacity: 1; }
+@media (max-width: 520px) { .strip .tag { font-size: 10px; letter-spacing: .04em; padding-right: 6px; } .strip .gauge span { width: 44px; } }
+
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes blink { 50% { opacity: .3; } }
+@keyframes wiggle { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-8deg); } 75% { transform: rotate(8deg); } }
+@keyframes nudge { 0%, 88%, 100% { transform: translateX(0); } 92% { transform: translateX(-5px); } 96% { transform: translateX(4px); } }
+@keyframes drain { from { width: 42%; } to { width: 8%; } }
+@media (prefers-reduced-motion: reduce) { .stage *, .lab * { animation: none !important; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="gsGlow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="1.8"/></filter></svg>
+<button type="button" id="themeBtn">page: system</button>
+<div class="wrap">
+  <header class="prose">
+    <div class="eyebrow">gitspore · proposal-cozy-06 · 2026-10-07</div>
+    <h1>Beetle logo, Fredoka, and other ways to show status</h1>
+    <p>Interface study for proposal-cozy-06 (see <code>aesthetics.md</code>). Two variants were compared; <b>Minimal</b> was picked, Enamel is kept for comparison. Same screen as state S01 in <code>concept/v3_layout.html</code> (#15 waits). The scene is a flat placeholder.</p>
+  </header>
+  <div class="facts">
+    <div><b>Changed from the earlier cozy studies</b>Beetle on the green plate as the logo. Fredoka for the logo, panel title and notification; Figtree stays for the interface. Pills, tabs, badges and buttons have 4–6 px corners instead of full rounds.</div>
+    <div><b>Status</b>Enamel: stamped plant tags on every row, and a water gauge that drains while an agent waits. Minimal: a growth track of five pips, seed to bloom. More options compared at the end.</div>
+    <div><b>Kept</b>Layout and sizes, terminal, bookmarks, the hotbar on keys 1–6 and 0, colours.</div>
+  </div>
+
+  <h2 id="brand">The mark</h2>
+  <p class="prose">The agent beetle, cut down: shell, head, four legs, one leaf. The seam is a lens, one line that splits and joins again (branch and merge). On the plate it is one colour plus the seam; at night the seam glows amber from inside.</p>
+  <div class="brand" id="brandRow"></div>
+
+  <nav class="bar" aria-label="Controls">
+    <button type="button" id="sizesBtn" aria-pressed="false">Show sizes</button>
+    <a href="#ena">Enamel</a><a href="#min">Minimal</a><a href="#lab">Status options</a>
+  </nav>
+
+  <section id="ena">
+    <h2>Enamel</h2>
+    <p class="prose">Rows stay enamel plates. Status is a stamped plant tag with a hole, like the tags stuck in real pots. The waiting row trades its tag for a water gauge that drains, so you can see how long it has been thirsty without reading the timer.</p>
+    <h3>Day</h3><div class="stage-wrap"><div class="stage ena day"></div></div>
+    <h3>Night</h3><div class="stage-wrap"><div class="stage ena night"></div></div>
+  </section>
+
+  <section id="min">
+    <h2>Minimal</h2>
+    <p class="prose">No plates. Each row has the plant in a circle, a word and a growth track: five small squares for seed, sprout, leaf, bud and bloom. Filled squares show how far the agent has come; the current one blinks while it waits. The hotbar shows a shape marker per slot, so status reads without colour.</p>
+    <h3>Day</h3><div class="stage-wrap"><div class="stage min day"></div></div>
+    <h3>Night</h3><div class="stage-wrap"><div class="stage min night"></div></div>
+  </section>
+
+  <section id="lab">
+    <h2>Other ways to show status</h2>
+    <p class="prose">Six ways, each shown for growing, waiting, error, review and merged, in day and night. They combine: one carries the meaning, a second adds shape for colour-blind readers.</p>
+    <div class="lab" id="labGrid"></div>
+  </section>
+</div>
+
+<script>
+(() => {
+  const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const SEAM = 'M16 11.6 C12.4 15 12.4 23.6 16 27.6 C19.6 23.6 19.6 15 16 11.6Z';
+  // the beetle mark: shell, head, four legs, a leaf, and the seam as a lens (split + merge)
+  function beetle({ body, seam, sep = 'none', leaf = '#8fd07a', glow = false, extra = '', w }) {
+    return `<svg viewBox="0 0 32 32" ${w ? `width="${w}" height="${w}"` : ''} aria-hidden="true">${extra}<path d="M7.5 15.5 L4 13.5 M7 22.5 L3.5 24 M24.5 15.5 L28 13.5 M25 22.5 L28.5 24" stroke="${body}" stroke-width="2.2" stroke-linecap="round" fill="none"/><ellipse cx="16" cy="19.5" rx="9.5" ry="10.5" fill="${body}"/><ellipse cx="16" cy="7.4" rx="4.3" ry="3.4" fill="${body}" stroke="${sep}" stroke-width="1.6"/>${leaf ? `<path d="M17 4.4 C18 1.8 21.4 .9 24.4 1.7 C22.7 4.1 20 5.2 17 4.4Z" fill="${leaf}"/>` : ''}${glow ? `<path d="${SEAM}" fill="#ffb347" filter="url(#gsGlow)"/>` : ''}<path d="${SEAM}" fill="${seam}"/></svg>`;
+  }
+  const onPlate = (night, w) => beetle({ body: '#f6eedb', seam: night ? '#ffc45e' : '#2f5446', sep: '#2f5446', glow: night, w });
+
+  // brand strip
+  document.getElementById('brandRow').innerHTML = [false, true].map((night) => `
+    <div class="bcard ${night ? 'night' : 'day'}"><span class="cap">${night ? 'Night · seam lit from inside' : 'Day · enamel plate'}</span>
+      <div class="lock"><span class="plate">${onPlate(night)}</span><span>gitspore</span></div>
+      <div class="sizes">
+        <figure><span class="plate app">${onPlate(night)}</span><figcaption>app 96</figcaption></figure>
+        <figure><span class="plate fav24">${onPlate(night)}</span><figcaption>24</figcaption></figure>
+        <figure><span class="plate fav16">${onPlate(night)}</span><figcaption>16</figcaption></figure>
+        <figure class="free">${night ? beetle({ body: '#7a4a2c', seam: '#ffd27a', sep: '#12110e', leaf: '#7cc96b', glow: true }) : beetle({ body: '#b8613a', seam: '#f6f2e7', sep: '#f6f2e7', leaf: '#4f9a45' })}<figcaption>without plate</figcaption></figure>
+      </div></div>`).join('');
+
+  const ICON = {
+    agents: '<path d="M13 22 V12 M13 14 c-1 -5 -6 -7 -9 -5 c1 5 5 6 9 5 M13 12 c1 -6 6 -8 10 -6 c-1 6 -6 7 -10 6"/><path d="M7 22 h12"/>',
+    issues: '<path d="M6 7 l2 -2 l2 2 l2 -2 l2 2 l2 -2 l2 2 l2 -2 V22 H6 Z"/><circle cx="13" cy="14" r="3"/>',
+    branches: '<circle cx="8" cy="6" r="2.4"/><circle cx="8" cy="20" r="2.4"/><circle cx="18" cy="9" r="2.4"/><path d="M8 8.4 V17.6 M18 11.4 c0 4 -10 3 -10 6"/>',
+    focus: '<path d="M5 10 V5 H10 M16 5 H21 V10 M21 16 V21 H16 M10 21 H5 V16"/>',
+    help: '<circle cx="13" cy="13" r="9"/><path d="M10 10.5 c0 -2 1.5 -3 3 -3 s3 1 3 2.8 c0 2.2 -3 2.4 -3 4.6"/><circle cx="13" cy="18.6" r=".6"/>',
+    gear: '<circle cx="13" cy="13" r="3.2"/><path d="M13 3.5 v3 M13 19.5 v3 M3.5 13 h3 M19.5 13 h3 M6.3 6.3 l2.1 2.1 M17.6 17.6 l2.1 2.1 M6.3 19.7 l2.1 -2.1 M17.6 8.4 l2.1 -2.1"/>',
+    sun: '<circle cx="13" cy="13" r="4.2"/><path d="M13 3 v2.6 M13 20.4 V23 M3 13 h2.6 M20.4 13 H23 M5.9 5.9 l1.8 1.8 M18.3 18.3 l1.8 1.8 M5.9 20.1 l1.8 -1.8 M18.3 7.7 l1.8 -1.8"/>',
+    moon: '<path d="M19.5 15.5 A8 8 0 1 1 10.5 6.5 A6.4 6.4 0 0 0 19.5 15.5 Z"/>',
+    min: '<path d="M7 17 H19"/>', target: '<circle cx="13" cy="13" r="7"/><circle cx="13" cy="13" r="2"/>', max: '<rect x="6.5" y="6.5" width="13" height="13" rx="2"/>', close: '<path d="M8 8 L18 18 M18 8 L8 18"/>', more: '<circle cx="7" cy="13" r="1.3"/><circle cx="13" cy="13" r="1.3"/><circle cx="19" cy="13" r="1.3"/>',
+  };
+  const icon = (k, c, w = 2.1) => `<svg viewBox="0 0 26 26" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${ICON[k]}</svg>`;
+
+  // plants per status; 'rev' is a closed bud, 'mer' a bloom
+  function plant(s, potless, rim) {
+    let o = '<svg viewBox="0 0 40 40">';
+    const leaf = '<path d="M20 20 c5 -4 9 -2 10 1 c-4 3 -8 2 -10 -1z" fill="#79c05a"/>';
+    if (s === 'work') o += '<path d="M20 27 V13" stroke="#3f7a2c" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M20 18 c6 -6 12 -4 13 0 c-5 4 -10 3 -13 0z M20 15 c-6 -5 -11 -3 -12 1 c5 3 9 2 12 -1z" fill="#79c05a"/>';
+    if (s === 'wait') o += '<path d="M20 27 C20 20, 24 15, 29 17" stroke="#6d7a2c" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M29 17 c3 3 2 8 -1 9 c-1 -3 -1 -6 1 -9z M21 21 c-5 0 -8 4 -6 7 c3 -1 5 -3 6 -7z" fill="#c4b54e"/>';
+    if (s === 'err') o += '<path d="M20 27 L18 15 M18 15 l-5 -3 M19 20 l5 -3" stroke="#8a8277" stroke-width="2.4" fill="none" stroke-linecap="round"/>';
+    if (s === 'rev') o += '<path d="M20 27 V13" stroke="#3f7a2c" stroke-width="2.2"/>' + leaf + '<path d="M20 14 c-3.5 -2 -3.5 -8 0 -10 c3.5 2 3.5 8 0 10z" fill="#e8b04a" stroke="#8a5b00" stroke-width="1"/>';
+    if (s === 'mer') o += '<path d="M20 27 V12" stroke="#3f7a2c" stroke-width="2.2"/>' + leaf + [0, 72, 144, 216, 288].map((a) => { const x = 20 + Math.cos(a * Math.PI / 180) * 4.5, y = 10 + Math.sin(a * Math.PI / 180) * 4.5; return `<ellipse cx="${x}" cy="${y}" rx="3.6" ry="2.6" fill="#f4a6c4" transform="rotate(${a} ${x} ${y})"/>`; }).join('') + '<circle cx="20" cy="10" r="2.4" fill="#ffd166"/>';
+    if (s === 'empty' && potless) return o + '</svg>';
+    const pot = s === 'empty' ? 'fill="none" stroke="#c88b62" stroke-width="2" stroke-dasharray="3 2"' : 'fill="#c8693d" stroke="#5a2e15" stroke-width="1.5"';
+    return o + `<path d="M9 26 H31 L28.5 37 H11.5 Z" ${pot}/><rect x="8" y="24" width="24" height="4" rx="1" ${rim ? `fill="#c8693d" stroke="${rim}" stroke-width="2.6"` : pot}/></svg>`;
+  }
+
+  // small status glyphs shared by the stages and the lab
+  const shape = (s, c, size = 16) => {
+    const g = {
+      work: `<circle cx="8" cy="8" r="5" fill="${c}"/>`,
+      wait: `<path d="M8 2 L14.5 13.5 H1.5 Z" fill="${c}"/>`,
+      err: `<path d="M3 3 L13 13 M13 3 L3 13" stroke="${c}" stroke-width="3" stroke-linecap="round"/>`,
+      rev: `<path d="M8 1.5 L14.5 8 L8 14.5 L1.5 8 Z" fill="${c}"/>`,
+      mer: [0, 72, 144, 216, 288].map((a) => `<circle cx="${8 + Math.cos((a - 90) * Math.PI / 180) * 3.6}" cy="${8 + Math.sin((a - 90) * Math.PI / 180) * 3.6}" r="2.6" fill="${c}"/>`).join(''),
+    }[s] || `<circle cx="8" cy="8" r="5" fill="none" stroke="${c}" stroke-width="1.6" stroke-dasharray="2 2"/>`;
+    return `<svg class="shape" viewBox="0 0 16 16" width="${size}" height="${size}" aria-hidden="true">${g}</svg>`;
+  };
+  const STAGE = { work: 2, wait: 2, err: 2, rev: 3, mer: 4 };
+  const track = (s, c) => `<span class="track">${[0, 1, 2, 3, 4].map((i) => `<i class="${i <= STAGE[s] ? 'f' : ''}${i === STAGE[s] && s === 'wait' ? ' now' : ''}" style="${i <= STAGE[s] && c ? `background:${c}` : ''}"></i>`).join('')}</span>`;
+  const gauge = (s) => `<span class="gauge">water<span><i style="${s === 'wait' ? '' : `animation:none;width:${{ work: 80, err: 0, rev: 100, mer: 100 }[s]}%`}"></i></span></span>`;
+  const WORD = { work: 'growing', wait: 'waiting', err: 'wilted', rev: 'review', mer: 'merged', empty: 'pick an issue' };
+
+  function scene(night) {
+    const pots = [[340, 190], [470, 190], [600, 190], [320, 270], [470, 270], [620, 270]];
+    let o = `<svg class="scene" viewBox="0 0 1440 900" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="sky${night ? 'n' : 'd'}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--sky1)"/><stop offset="1" style="stop-color:var(--sky2)"/></linearGradient></defs><rect width="1440" height="900" fill="url(#sky${night ? 'n' : 'd'})"/>`;
+    o += `<g stroke="${night ? '#3a4260' : '#d4b88a'}" stroke-width="3">${[...Array(8)].map((_, i) => `<line x1="${100 + i * 130}" y1="56" x2="${100 + i * 130}" y2="380"/>`).join('')}</g>`;
+    if (night) o += [...Array(10)].map((_, i) => `<circle cx="${120 + i * 92}" cy="${92 + (i % 2) * 10}" r="16" fill="#ffd27a" opacity=".18"/><circle cx="${120 + i * 92}" cy="${92 + (i % 2) * 10}" r="4" fill="#ffd27a"/>`).join('');
+    o += `<path d="M250 150 H690 L740 330 H200 Z" fill="${night ? '#5a3c26' : '#b07a4a'}" stroke="${night ? '#2a1a10' : '#5a3a1e'}" stroke-width="3"/>`;
+    o += pots.map(([x, y], i) => `<ellipse cx="${x}" cy="${y}" rx="${i < 3 ? 34 : 40}" ry="${i < 3 ? 13 : 15}" fill="${night ? '#8a4a2a' : '#c8693d'}" stroke="${night ? '#2a1a10' : '#5a2e15'}" stroke-width="2"/>`).join('');
+    o += `<ellipse cx="470" cy="190" rx="52" ry="20" fill="none" style="stroke:var(--wait)" stroke-width="4"/>`;
+    o += `<text x="470" y="362" text-anchor="middle" font-family="Figtree" font-size="13" fill="${night ? '#8a90a8' : '#8a6a44'}">3D scene placeholder</text>`;
+    return o + '</svg>';
+  }
+
+  function term() {
+    const W = 64, box = (t) => '│ ' + t.padEnd(W - 4) + ' │';
+    const L = [
+      ['o', '⏺ ', 'Read(src/users/avatar-upload.ts)'], ['d', '  ⎿  Read 124 lines'],
+      ['o', '⏺ ', 'Update(src/users/avatar-upload.ts)'], ['d', '  ⎿  58 additions, 2 removals'],
+      ['o', '⏺ ', 'Uploaded files can be large. One decision before I go on:'], [''],
+      ['b', '╭' + '─'.repeat(W - 2) + '╮'], ['b', box('How should I store uploaded avatars?')], ['b', box('')],
+      ['y', box('> 1. Resize to 256 px and keep them in the database')],
+      ['b', box('  2. Save the original to /uploads and store the path')], ['b', box('  3. Type something else')],
+      ['b', '╰' + '─'.repeat(W - 2) + '╯'], ['d', '  waiting for your answer · 43s'], [''],
+      ['g', '> ▍'], ['d', '  ? for shortcuts' + ' '.repeat(28) + 'gsp-15 · context 61%'],
+    ];
+    return `<div class="term">${L.map(([c, a, b]) => b !== undefined ? `<span class="${c}">${esc(a)}</span>${esc(b)}` : `<span class="${c}">${esc(a || '')}</span>`).join('\n')}</div>`;
+  }
+
+  const AGENTS = [['wait', '#15 avatar-upload', '#e0a03a'], ['work', '#12 login-redirect', '#6aa3c9'], ['err', '#18 flaky-ci', '#9a74c4'], ['rev', '#21 dark-mode', '#5fae8b'], ['mer', '#9 readme-setup', '#d96f8f'], ['empty', 'pot 6', 'transparent']];
+  const SLOTS = [['work', '#6aa3c9', ''], ['wait', '#e0a03a', '43s'], ['err', '#9a74c4', ''], ['rev', '#5fae8b', ''], ['mer', '#d96f8f', ''], ['empty', 'transparent', '']];
+
+  function build(st) {
+    const min = st.classList.contains('min'), night = st.classList.contains('night');
+    const cs = getComputedStyle(st), v = (k) => cs.getPropertyValue(k).trim();
+    const ink = v('--s-ink'), plateInk = v('--plate-ink'), headInk = min ? ink : plateInk;
+    const col = (s) => v('--c-' + s);
+    const rows = AGENTS.map(([s, name, ac]) => {
+      if (min) {
+        const lead = `<span class="pp" style="background:${s === 'empty' ? 'transparent' : ac + '55'}">${plant(s, true)}</span>`;
+        if (s === 'wait') return `<div class="row wait">${lead}${name}<span class="end">${track(s)}<span class="timer">0:43</span></span></div>`;
+        if (s === 'empty') return `<div class="row empty">${lead}${name}<span class="end"><span class="word">${WORD[s]}</span></span></div>`;
+        return `<div class="row">${lead}${name}<span class="end"><span class="word ${s}">${WORD[s]}</span>${track(s, col(s))}</span></div>`;
+      }
+      const lead = `<span class="sw" style="background:${ac};${s === 'empty' ? 'border:2px dashed currentColor' : ''}"></span>`;
+      if (s === 'wait') return `<div class="row wait">${lead}${name}<span class="end">${gauge(s)}<span class="timer">0:43</span></span></div>`;
+      return `<div class="row ${s === 'empty' ? 'empty' : ''}">${lead}${name}<span class="end"><span class="tag ${s}">${WORD[s]}</span></span></div>`;
+    }).join('');
+    const termDark = st.dataset.term ? st.dataset.term === 'dark' : night;
+    const slotMark = (s) => min ? shape(s, s === 'wait' ? v('--wait-ink') : col(s) || v('--s-muted'), 13) : '';
+    st.innerHTML = scene(night) + `
+      <div class="top"><span class="logo"><span class="mark">${onPlate(night)}</span>gitspore</span>
+        <span class="focus"><b>#15 avatar-upload</b> · branch gsp-15</span>
+        <span class="waitbadge"><i></i>1 waiting</span><span class="meta">online · vitality <b>41%</b></span>
+        <span class="ib">${icon('help', ink)}</span><span class="ib">${icon('gear', ink)}</span></div>
+      <div class="rail">
+        <div class="bm on">${icon('agents', '#2a2119')}<span class="badge">1</span></div>
+        <div class="bm">${icon('issues', '#f6eedb')}</div><div class="bm">${icon('branches', '#f6eedb')}</div><div class="bm">${icon('focus', '#f6eedb')}</div>
+        <div class="bm" style="margin-top:16px">${beetle({ body: '#e8cf9f', seam: '#2f5446', sep: '#2f5446', leaf: '' })}</div></div>
+      <div class="panel"><div class="phead"><b>Your pots</b><span>5 of 6 planted</span></div>
+        <div class="tabs"><span class="tab on">Agents</span><span class="tab">Issues</span><span class="tab">Branches</span></div>
+        <div class="rows">${rows}</div></div>
+      <div class="tile"><div class="thead"><span class="dot"></span>#15 avatar-upload<span class="sub">· waits for you · gsp-15</span>
+        <span class="tw"><button type="button" class="cb mode" aria-label="Terminal light or dark">${icon(termDark ? 'moon' : 'sun', headInk)}${termDark ? 'dark' : 'light'}</button>
+        <span class="cb" title="minimise">${icon('min', headInk)}</span><span class="cb" title="focus this">${icon('target', headInk)}</span><span class="cb" title="maximise">${icon('max', headInk)}</span><span class="cb" title="close">${icon('close', headInk)}</span><span class="cb" title="menu">${icon('more', headInk)}</span></span></div>
+        <div class="screen ${termDark ? 'dark' : ''}">${term()}</div></div>
+      <div class="hotbar">${SLOTS.map(([s, c, t], i) => `<div class="slot ${i === 1 ? 'sel ' : ''}${s}"><span class="n">${i + 1}</span>${plant(s)}${slotMark(s)}${t ? `<span class="t">${t}</span>` : ''}<span class="band" style="background:${c}"></span></div>`).join('')}<span class="sep"></span><div class="slot"><span class="n">0</span>${beetle({ body: min ? ink : '#e8cf9f', seam: min ? v('--panel-2') : '#2f5446', sep: min ? v('--panel-2') : '#2f5446', leaf: '', w: 40 })}</div></div>
+      <div class="note"><div class="sign"><b>#15 needs you</b><p>Waiting for 43 s · pot 2</p><span class="btn">Open beside</span><span class="btn alt">Open</span></div></div>
+      <div class="sz-ov">
+        <div style="left:1028px;top:68px;width:400px;height:820px"><span>side panel 400 × 820</span></div>
+        <div style="left:76px;top:370px;width:940px;height:422px"><span>terminal tile 940 × 422</span></div>
+        <div style="left:258px;top:800px;width:576px;height:88px"><span style="top:-26px">hotbar · slots 68 × 68</span></div>
+        <div style="left:0;top:76px;width:72px;height:52px"><span style="top:56px">58–72 × 52</span></div>
+      </div>`;
+    st.querySelector('.cb.mode').onclick = () => { st.dataset.term = termDark ? 'light' : 'dark'; build(st); };
+  }
+
+  // status lab
+  const PAL = {
+    day: { work: '#4f9a45', wait: '#b3372a', err: '#8a8277', rev: '#d99a1e', mer: '#c2458e', ink: '#2a2119', soft: '#6b5a44' },
+    night: { work: '#7cc96b', wait: '#ff6a50', err: '#9a948a', rev: '#f5bd3c', mer: '#ff6fc0', ink: '#f3e7cf', soft: '#bba98b' },
+  };
+  const ST = ['work', 'wait', 'err', 'rev', 'mer'];
+  const tagStyle = (s, m) => {
+    const p = PAL[m], dark = m === 'night' || s === 'rev';
+    return `background:${p[s]};color:${dark ? '#1a1712' : '#fff8ec'}`;
+  };
+  const OPTS = [
+    { id: 'tag', name: 'Plant tag', used: 'enamel rows', note: 'A stamped label with a hole, like the tags in real pots. Readable without colour; takes the most room.',
+      cell: (s, m) => `<span class="tag" style="${tagStyle(s, m)}">${WORD[s]}</span>` },
+    { id: 'track', name: 'Growth track', used: 'minimal rows', note: 'Five squares from seed to bloom. Shows progress, not just state. Error and waiting need a second cue (grey, blink).',
+      cell: (s, m) => `<span style="--s-muted:${PAL[m].soft}">${track(s, PAL[m][s])}</span>` },
+    { id: 'shape', name: 'Shape marker', used: 'minimal hotbar', note: 'Circle, triangle, cross, diamond, flower. Tiny and colour-blind safe; meaning has to be learned once.',
+      cell: (s, m) => shape(s, PAL[m][s], 18) },
+    { id: 'gauge', name: 'Water gauge', used: 'enamel waiting row', note: 'How long since you last looked. Drains while an agent waits; full when it is done. Good for urgency, weak for error.',
+      cell: (s, m) => `<span style="color:${PAL[m][s]}">${gauge(s)}</span>` },
+    { id: 'rim', name: 'Pot rim', used: 'the 3D scene', note: 'The same coloured rim as on the bench, so list and scene match. Needs the plant to tell error from waiting.',
+      cell: (s, m) => `<span style="width:34px;height:34px;display:block">${plant(s, false, PAL[m][s])}</span>` },
+    { id: 'beetle', name: 'Beetle pose', used: 'not yet', note: 'The mascot acts it out: working, raising a flag, on its back, holding a bud, holding a flower. Charming, but slow to read in a list.',
+      cell: (s, m) => {
+        const p = PAL[m], body = m === 'day' ? '#b8613a' : '#c98a5a', bg = m === 'day' ? '#ece6d6' : '#1d2621';
+        const leaf = { work: p.work, wait: '', err: '', rev: p.rev, mer: p.mer }[s];
+        const extra = s === 'wait' ? `<path d="M21 1 V10" stroke="${p.ink}" stroke-width="1.4"/><path d="M21 1.5 H28 L26 4 L28 6.5 H21 Z" fill="${p.wait}"/>` : '';
+        const svg = beetle({ body: s === 'err' ? p.err : body, seam: bg, sep: bg, leaf, extra, w: 30 });
+        return s === 'err' ? `<span style="display:block;transform:rotate(180deg)">${svg}</span>` : svg;
+      } },
+  ];
+  document.getElementById('labGrid').innerHTML = OPTS.map((o) => `
+    <div class="opt"><h4>${o.name}<small>${o.used}</small></h4><p>${o.note}</p>
+      ${['day', 'night'].map((m) => `<div class="strip ${m}">${ST.map((s) => `<div class="cell">${o.cell(s, m)}<small>${WORD[s]}</small></div>`).join('')}</div>`).join('')}
+    </div>`).join('');
+
+  function fit() { document.querySelectorAll('.stage').forEach((s) => { s.style.transform = `scale(${s.parentElement.clientWidth / 1440})`; }); }
+  const buildAll = () => { fit(); document.querySelectorAll('.stage').forEach(build); };
+  addEventListener('resize', fit);
+  document.fonts.ready.then(buildAll);
+  buildAll();
+
+  const sizesBtn = document.getElementById('sizesBtn');
+  sizesBtn.onclick = () => { const on = document.body.classList.toggle('sizes'); sizesBtn.setAttribute('aria-pressed', String(on)); };
+  const tb = document.getElementById('themeBtn'), T = ['system', 'light', 'dark'];
+  let theme = 'system';
+  try { theme = localStorage.getItem('gs-cozy3-theme') || 'system'; } catch (e) {}
+  const apply = () => { if (theme === 'system') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = theme; tb.textContent = 'page: ' + theme; try { localStorage.setItem('gs-cozy3-theme', theme); } catch (e) {} };
+  tb.onclick = () => { theme = T[(T.indexOf(theme) + 1) % 3]; apply(); };
+  apply();
+})();
+</script>
+</body>
+</html>
