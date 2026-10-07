@@ -75,6 +75,8 @@ figcaption b { color: var(--ink); font-weight: 600; font-family: var(--font-mono
 .title-slide { flex-direction: row !important; gap: 56px; align-items: center; }
 .title-slide .txt { flex: 0 0 640px; }
 .title-slide img { flex: 1; min-width: 0; border-radius: 10px; border: 1px solid var(--line); box-shadow: 0 18px 50px rgba(0, 0, 0, .25); }
+.title-slide h1 { font-size: 64px; }
+.sub { font-family: var(--font-title); font-size: 30px; line-height: 1.25; font-weight: 500; color: var(--muted); margin: 10px 0 0; max-width: none; }
 .big-q { font-size: 34px; line-height: 1.35; margin-top: 26px; color: var(--muted); max-width: 18em; }
 
 .qlist { counter-reset: q; list-style: none; padding: 0; margin-top: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px 40px; }
@@ -117,8 +119,8 @@ figcaption b { color: var(--ink); font-weight: 600; font-family: var(--font-mono
 <section class="slide title-slide" aria-label="Title">
   <div class="txt">
     <div class="eyebrow">gitspore · <b>capstone 2026</b></div>
-    <h1>See which AI agent needs you, before it wilts.</h1>
-    <p class="big-q">Every coding agent is a plant on a greenhouse table. A plant that wilts is an agent waiting for your answer.</p>
+    <h1>A cozy gardening game for running AI agents in your repo</h1>
+    <p class="big-q">Each agent grows in its own pot on a greenhouse table.</p>
     <p class="muted mono" style="font-size:18px;margin-top:40px">Proposal, not agreed by the team yet · 2026-10-07</p>
   </div>
   <img src="images/cozy-night-s01.webp" alt="The app at night: greenhouse table with pots, a terminal below, the agents panel on the right">
@@ -126,20 +128,22 @@ figcaption b { color: var(--ink); font-weight: 600; font-family: var(--font-mono
 
 <section class="slide" aria-label="Problem and idea">
   <div class="eyebrow">The problem</div>
-  <h2>Agents wait, and nobody notices</h2>
+  <h2>Working with agents made cozy</h2>
+  <p class="sub">Working with agents means a lot of watching text scroll by</p>
   <div class="cols c2">
     <div class="card"><h3>Today</h3><ul>
-      <li>Developers run several AI coding agents at once, each in its own git worktree</li>
-      <li>An agent stops to ask a question</li>
-      <li>Nobody sees it for minutes: the developer is in another tab</li>
-      <li>The time won by running agents in parallel is lost to waiting</li></ul></div>
+      <li>AI agents open coding to people who aren't full-time developers</li>
+      <li>Their tools are still terminals: walls of scrolling text</li>
+      <li>While an agent works you wait, and attention drifts</li>
+      <li>Look away and you miss the moment it needs you</li></ul></div>
     <div class="card"><h3>gitspore</h3><ul>
-      <li>Open GitHub issues are seed packets</li>
-      <li>Give one to an empty pot: gitspore creates a worktree and a branch and starts Claude Code on it</li>
-      <li>The plant shows how the agent is doing</li>
-      <li>Click the pot, answer in its real terminal</li>
-      <li>Merged branch: the plant blooms, the pot is free</li></ul></div>
+      <li>We're exploring a different place to work with agents: pleasant and cozy</li>
+      <li>The plants show what each agent is doing at a glance</li>
+      <li>Zone out, watch the garden, chat with the beetle</li>
+      <li>A plant wilts when its agent needs you, so you miss nothing</li>
+      <li>Stay in the room while the work gets done</li></ul></div>
   </div>
+  <p class="muted" style="font-size:22px;margin-top:24px">Issues are seed packets, pots are worktrees, a merge makes the plant bloom.</p>
 </section>
 
 <section class="slide" aria-label="Five states">
@@ -212,7 +216,7 @@ figcaption b { color: var(--ink); font-weight: 600; font-family: var(--font-mono
 </section>
 
 <section class="slide" aria-label="Scope">
-  <div class="eyebrow">What we build</div>
+  <div class="eyebrow">What we build · <b>to be revisited</b></div>
   <h2>Four weeks: the core loop first</h2>
   <div class="cols c3">
     <div class="card mvp"><h3>MVP</h3><ul>
@@ -226,7 +230,7 @@ figcaption b { color: var(--ink); font-weight: 600; font-family: var(--font-mono
 </section>
 
 <section class="slide" aria-label="Questions">
-  <div class="eyebrow">Still open</div>
+  <div class="eyebrow">Still open · <b>to be revisited</b></div>
   <h2>What we still have to decide</h2>
   <ol class="qlist">
     <li>Can we detect "waiting for input" reliably from Claude Code hooks?</li>
