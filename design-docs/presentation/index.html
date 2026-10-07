@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>gitspore in 10 minutes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: a fixed 1600×900 stage scaled to the window, one slide visible at a time. Colours and fonts: design-docs/design/components.md. */
+:root {
+  --bg: #e9e2d0; --stage: #f6f2e7; --ink: #2a2119; --muted: #6b5a44; --line: #ddd4bf; --accent: #2f5446; --amber: #9a6a10; --chip: #ece6d6;
+  --st-work: #4f9a45; --st-wait: #b3372a; --st-err: #8a8277; --st-rev: #d99a1e; --st-mer: #c2458e;
+  --font-sans: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-title: "Fredoka", "Figtree", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1412; --stage: #1d2621; --ink: #f3e7cf; --muted: #bba98b; --line: #33433b; --accent: #9cc2ad; --amber: #e9c46a; --chip: #26332c; color-scheme: dark;
+  --st-work: #7cc96b; --st-wait: #ff6a50; --st-err: #9a948a; --st-rev: #f5bd3c; --st-mer: #ff6fc0;
+} }
+:root[data-theme="dark"] {
+  --bg: #0f1412; --stage: #1d2621; --ink: #f3e7cf; --muted: #bba98b; --line: #33433b; --accent: #9cc2ad; --amber: #e9c46a; --chip: #26332c; color-scheme: dark;
+  --st-work: #7cc96b; --st-wait: #ff6a50; --st-err: #9a948a; --st-rev: #f5bd3c; --st-mer: #ff6fc0;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; overflow: hidden; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-sans); }
+#deck { position: fixed; inset: 0; overflow: hidden; }
+#stage { width: 1600px; height: 900px; position: absolute; left: 50%; top: 50%; transform-origin: center center; }
+.slide { position: absolute; inset: 0; background: var(--stage); border-radius: 14px; padding: 64px 80px 70px; display: none; flex-direction: column; overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .12); }
+.slide.on { display: flex; }
+.eyebrow { font-family: var(--font-mono); font-size: 18px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.eyebrow b { color: var(--accent); font-weight: 600; }
+h1 { font-family: var(--font-title); font-size: 76px; line-height: 1.05; font-weight: 600; letter-spacing: -.015em; margin: 18px 0 0; text-wrap: balance; }
+h2 { font-family: var(--font-title); font-size: 46px; line-height: 1.12; font-weight: 600; letter-spacing: -.01em; margin: 10px 0 0; text-wrap: balance; }
+p, li { font-size: 25px; line-height: 1.45; }
+p { margin: 16px 0 0; max-width: 34em; }
+ul { margin: 18px 0 0; padding-left: 1.1em; }
+li { margin: 8px 0; }
+li::marker { color: var(--muted); }
+code { font-family: var(--font-mono); font-size: .86em; background: var(--chip); padding: 1px 6px; border-radius: 4px; }
+.mono { font-family: var(--font-mono); }
+.muted { color: var(--muted); }
+
+.row { display: grid; gap: 44px; flex: 1; min-height: 0; margin-top: 30px; }
+.row.shot-right { grid-template-columns: 430px minmax(0, 1fr); align-items: center; }
+.row.pair { grid-template-columns: 1fr 1fr; gap: 32px; align-items: center; }
+.row.quad { grid-template-columns: 1fr 1fr; grid-template-rows: auto auto; gap: 16px 28px; align-content: center; margin-top: 20px; }
+.side p, .side li { font-size: 23px; }
+.side ul { padding-left: 1em; }
+figure { margin: 0; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+figure img { display: block; width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--line); cursor: zoom-in; background: var(--chip); }
+.quad figure { gap: 6px; }
+.row.compact { margin-top: 24px; }
+.compact figure img { height: 300px; object-fit: cover; object-position: top; }
+.quad figure img { height: 262px; object-fit: cover; object-position: top; }
+figcaption { font-size: 20px; line-height: 1.4; color: var(--muted); }
+figcaption b { color: var(--ink); font-weight: 600; font-family: var(--font-mono); font-size: 17px; margin-right: 8px; }
+.sid { display: inline-block; font-family: var(--font-mono); font-size: 18px; font-weight: 600; color: var(--accent); border: 1.5px solid var(--accent); border-radius: 5px; padding: 1px 8px; margin-right: 12px; vertical-align: 6px; }
+
+.cols { display: grid; gap: 28px; margin-top: 40px; align-items: start; }
+.cols.c3 { grid-template-columns: repeat(3, 1fr); }
+.cols.c2 { grid-template-columns: 1fr 1fr; }
+.card { border: 1px solid var(--line); border-radius: 10px; padding: 22px 26px; background: color-mix(in srgb, var(--stage) 70%, var(--bg)); min-width: 0; }
+.card h3 { margin: 0 0 6px; font-family: var(--font-mono); font-size: 18px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; }
+.card li, .card p { font-size: 21px; line-height: 1.4; }
+.card ul { margin-top: 8px; }
+.card.mvp h3 { color: var(--ink); }
+.card.should h3 { color: var(--amber); }
+.card.later h3 { color: var(--muted); }
+
+.title-slide { flex-direction: row !important; gap: 56px; align-items: center; }
+.title-slide .txt { flex: 0 0 640px; }
+.title-slide img { flex: 1; min-width: 0; border-radius: 10px; border: 1px solid var(--line); box-shadow: 0 18px 50px rgba(0, 0, 0, .25); }
+.title-slide h1 { font-size: 64px; }
+.sub { font-family: var(--font-title); font-size: 30px; line-height: 1.25; font-weight: 500; color: var(--muted); margin: 10px 0 0; max-width: none; }
+.big-q { font-size: 34px; line-height: 1.35; margin-top: 26px; color: var(--muted); max-width: 18em; }
+
+.qlist { counter-reset: q; list-style: none; padding: 0; margin-top: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px 40px; }
+.qlist li { counter-increment: q; position: relative; padding-left: 56px; font-size: 24px; margin: 0; }
+.qlist li::before { content: counter(q); position: absolute; left: 0; top: 0; width: 38px; height: 38px; border-radius: 50%; border: 1.5px solid var(--ink); display: grid; place-items: center;
+  font-family: var(--font-mono); font-size: 18px; font-weight: 600; }
+
+.regions { display: grid; grid-template-columns: auto 1fr; gap: 10px 18px; margin-top: 8px; font-size: 22px; align-items: baseline; }
+.regions span:nth-child(odd) { font-family: var(--font-mono); font-size: 16px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+
+.foot { position: absolute; left: 80px; right: 80px; bottom: 26px; display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 15px; color: var(--muted); letter-spacing: .04em; }
+
+#nav { position: fixed; right: 16px; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 6px; align-items: center; z-index: 5; opacity: .35; transition: opacity .2s; }
+#nav:hover, #nav:focus-within { opacity: 1; }
+#nav button { font: 500 13px var(--font-mono); color: var(--ink); background: var(--stage); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+#nav button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#count { font: 500 13px var(--font-mono); color: var(--muted); padding: 0 6px; font-variant-numeric: tabular-nums; }
+#bar { position: fixed; left: 0; top: 0; height: 3px; background: var(--accent); transition: width .25s; z-index: 5; }
+
+#zoom { position: fixed; inset: 0; z-index: 9; background: rgba(0, 0, 0, .82); display: grid; place-items: center; padding: 16px; cursor: zoom-out; }
+#zoom[hidden] { display: none; }
+#zoom img { max-width: 100%; max-height: 100%; border-radius: 6px; }
+.states { width: 100%; border-collapse: collapse; margin-top: 34px; font-size: 24px; }
+.states th { text-align: left; font: 600 16px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 0 16px 12px 0; border-bottom: 1.5px solid var(--line); }
+.states td { padding: 14px 16px 14px 0; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.states td:first-child { font-weight: 600; }
+.states svg { width: 26px; height: 26px; vertical-align: -6px; margin-right: 10px; }
+.trk { display: inline-flex; gap: 4px; vertical-align: -1px; }
+.trk i { width: 16px; height: 16px; border-radius: 3px; box-shadow: inset 0 0 0 2px var(--muted); opacity: .55; }
+.trk i.f { box-shadow: none; opacity: 1; background: var(--c); }
+.states .w { color: var(--muted); }
+.cmp { font-size: 22px; margin-top: 28px; }
+.cmp td { padding: 12px 16px 12px 0; }
+.cmp td:first-child { white-space: nowrap; }
+.cmp tr.us td { border-top: 1.5px solid var(--ink); border-bottom: none; color: var(--accent); }
+@media (prefers-reduced-motion: reduce) { #bar { transition: none; } }
+</style>
+</head>
+<body>
+
+<div id="bar"></div>
+<div id="deck"><div id="stage">
+
+<section class="slide title-slide" aria-label="Title">
+  <div class="txt">
+    <div class="eyebrow">gitspore · <b>capstone 2026</b></div>
+    <h1>A cozy gardening environment for running AI agents in your repo</h1>
+    <p class="big-q">Each agent grows in its own pot on a greenhouse table.</p>
+  </div>
+  <img src="images/cozy-night-s01.webp" alt="The app at night: greenhouse table with pots, a terminal below, the agents panel on the right">
+</section>
+
+<section class="slide" aria-label="Problem and idea">
+  <div class="eyebrow">The problem</div>
+  <h2>Working with agents made cozy</h2>
+  <p class="sub">Working with agents means a lot of watching text scroll by</p>
+  <div class="cols c2">
+    <div class="card"><h3>Today</h3><ul>
+      <li>AI agents open coding to people who aren't full-time developers</li>
+      <li>Their tools are still terminals: walls of scrolling text</li>
+      <li>While an agent works you wait, and attention drifts</li>
+      <li>Look away and you miss the moment it needs you</li></ul></div>
+    <div class="card"><h3>gitspore</h3><ul>
+      <li>We're exploring a different place to work with agents: pleasant and cozy</li>
+      <li>The plants show what each agent is doing at a glance</li>
+      <li>Zone out, watch the garden, chat with the beetle</li>
+      <li>A plant wilts when its agent needs you, so you miss nothing</li>
+      <li>Stay in the room while the work gets done</li></ul></div>
+  </div>
+  <p class="muted" style="font-size:22px;margin-top:24px">Issues are seed packets, pots are worktrees, a merge makes the plant bloom.</p>
+</section>
+
+<section class="slide" aria-label="Others">
+  <div class="eyebrow">Others</div>
+  <h2>Others run agents in parallel too</h2>
+  <table class="states cmp">
+    <thead><tr><th></th><th>What it is</th><th>Worktrees</th><th>Shows waiting</th><th>For</th></tr></thead>
+    <tbody>
+      <tr><td>Agent Office</td><td>3D cartoon office, one desk per agent, issues on cork boards</td><td>yes</td><td>red beacon</td><td>teams, with voice</td></tr>
+      <tr><td>Conductor</td><td>Mac app: parallel agents, then review and merge</td><td>yes</td><td class="w">–</td><td>one developer</td></tr>
+      <tr><td>herdr</td><td>Server that owns the agents' terminals</td><td class="w">–</td><td>"blocked" state</td><td>one developer</td></tr>
+      <tr><td>Paperclip</td><td>Agents as a company: roles, budgets, approvals</td><td class="w">–</td><td>approvals</td><td>one person as the CEO</td></tr>
+      <tr class="us"><td>gitspore</td><td>A greenhouse table, one plant per agent</td><td>yes</td><td>the plant wilts, worse the longer it waits</td><td>one developer</td></tr>
+    </tbody>
+  </table>
+  <p class="muted" style="font-size:22px;margin-top:22px">Agent Office is the closest. We aim at one developer and a calm room, and waiting gets worse over time instead of a flag that looks the same at 5 seconds and at 5 minutes.</p>
+</section>
+
+<section class="slide" aria-label="Five states">
+  <div class="eyebrow">How to read a pot</div>
+  <h2>Five states, each with a plant, a word, a growth stage and a shape</h2>
+  <table class="states">
+    <thead><tr><th>State</th><th>Plant</th><th>Word</th><th>Growth</th><th>Shape</th></tr></thead>
+    <tbody id="statesBody"></tbody>
+  </table>
+  <p class="muted" style="font-size:22px;margin-top:22px">Waiting is the only red. Error is grey, review yellow, merged pink. Colour never carries a state alone.</p>
+</section>
+
+<section class="slide" aria-label="The layout">
+  <div class="eyebrow">The layout</div>
+  <h2>The scene fills the page, the tools sit on top</h2>
+  <div class="row shot-right">
+    <div class="side">
+      <div class="regions">
+        <span>Top bar</span><span>focused agent, waiting count, online status, settings, help</span>
+        <span>Rail</span><span>agents, issues, branches, scene/focus</span>
+        <span>Main</span><span>the 3D scene, with terminal windows in a band below it</span>
+        <span>Panel</span><span>Agents · Issues · Branches, one fixed width</span>
+        <span>Hotbar</span><span>one slot per pot (keys 1–6) and the overview (0)</span>
+        <span>Notices</span><span>waiting agents, bottom right</span>
+      </div>
+    </div>
+    <figure><img src="images/s01.webp" alt="Default screen: scene, one terminal, agents panel, hotbar"><figcaption><b>S01</b>The default screen: one agent waits, its terminal is open</figcaption></figure>
+  </div>
+</section>
+
+<section class="slide" aria-label="The rules">
+  <div class="eyebrow">The rules</div>
+  <h2>Buttons place the windows, never dragging</h2>
+  <div class="cols c3">
+    <div class="card"><h3>Side panel</h3><ul><li>Agents, Issues, Branches, or closed</li><li>One width (~400 px) for all tabs, so windows never jump</li></ul></div>
+    <div class="card"><h3>Main area</h3><ul><li><b>Scene mode</b>: terminals in a band, scene above</li><li><b>Focus mode</b>: terminals cover the scene, panel closes</li></ul></div>
+    <div class="card"><h3>Windows</h3><ul><li>Tiles by count: 1, 2, 2+1, 2×2</li><li>Each terminal keeps ~80 columns: too narrow, it stacks or becomes a tab</li></ul></div>
+  </div>
+  <div class="row pair compact">
+    <figure><img src="images/s03.webp" alt="Focus mode with one terminal"><figcaption><b>S03</b>Focus: one terminal gets the space</figcaption></figure>
+    <figure><img src="images/s05.webp" alt="Two terminals side by side"><figcaption><b>S05</b>Two terminals side by side, panel closed</figcaption></figure>
+  </div>
+</section>
+
+<section class="slide" aria-label="Attention">
+  <div class="eyebrow">Attention</div>
+  <h2>Another agent waits while you read</h2>
+  <div class="row pair">
+    <figure><img src="images/s12.webp" alt="A notification in the corner while one terminal is focused"><figcaption><b>S12</b>Notice bottom right, red hotbar slot, count in the tab title. Your keyboard stays where it was.</figcaption></figure>
+    <figure><img src="images/s13.webp" alt="Both terminals side by side after Open beside"><figcaption><b>S13</b>"Open beside" puts the waiting agent next to the one you were reading.</figcaption></figure>
+  </div>
+</section>
+
+<section class="slide" aria-label="Start work">
+  <div class="eyebrow">Start work</div>
+  <h2>Issues are seed packets</h2>
+  <div class="row pair">
+    <figure><img src="images/s09.webp" alt="Issues tab with packet-style rows"><figcaption><b>S09</b>The Issues tab: open GitHub issues as packets</figcaption></figure>
+    <figure><img src="images/s10.webp" alt="Issue sheet over the scene"><figcaption><b>S10</b>"Give to agent" plants the issue in the next free pot</figcaption></figure>
+  </div>
+</section>
+
+<section class="slide" aria-label="Overview">
+  <div class="eyebrow">The overview</div>
+  <h2>The beetle: one chat that sees all agents</h2>
+  <div class="row pair">
+    <figure><img src="images/s17.webp" alt="The overview agent maximised"><figcaption><b>S17</b>Hotbar slot 0 or key 0: a Claude Code session in the repo root that knows what every agent did</figcaption></figure>
+    <figure><img src="images/s19.webp" alt="The overview waits: red carving, red hotbar slot and notification"><figcaption><b>S19</b>When it waits, the beetle carved into the table glows red</figcaption></figure>
+  </div>
+</section>
+
+<section class="slide" aria-label="Scope">
+  <div class="eyebrow">What we build · <b>to be revisited</b></div>
+  <h2>Four weeks: the core loop first</h2>
+  <div class="cols c3">
+    <div class="card mvp"><h3>MVP</h3><ul>
+      <li>Issue to pot: worktree, branch, Claude Code</li><li>Agent status from Claude Code hooks, wilting</li><li>Terminal windows, hotbar, side panel</li><li>Waiting notice, title and favicon count</li><li>Merge detection with bloom</li></ul></div>
+    <div class="card should"><h3>Should-have</h3><ul>
+      <li>Branches tab and garden map</li><li>Overview agent and beetle carving</li><li>Tiling 2–4 terminals</li><li>Drag an issue onto a pot</li><li>Agent colours, sound, browser notification</li></ul></div>
+    <div class="card later"><h3>Out</h3><ul>
+      <li>Agents other than Claude Code</li><li>More than one repo, more than six agents</li><li>Merge conflicts in the UI</li></ul></div>
+  </div>
+  <p class="muted" style="font-size:22px;margin-top:24px">Stack: Next.js and React Three Fiber in the browser, a NestJS daemon on your machine (node-pty, git worktrees, Socket.io, SQLite).</p>
+</section>
+
+<section class="slide" aria-label="Questions">
+  <div class="eyebrow">Still open · <b>to be revisited</b></div>
+  <h2>What we still have to decide</h2>
+  <ol class="qlist">
+    <li>Can we detect "waiting for input" reliably from Claude Code hooks?</li>
+    <li>Merge: detect it on GitHub, or a merge button in gitspore?</li>
+    <li>Which key leaves the terminal, now that Esc belongs to Claude Code?</li>
+    <li>Branch naming that links a branch to its issue</li>
+    <li>Overview agent: should-have or MVP?</li>
+    <li>Does a merged pot stay in the list or empty right away?</li>
+  </ol>
+  <p class="muted" style="font-size:22px;margin-top:30px">Full spec: design-docs/design/layout.html · 3D prototype: design-docs/design/prototype.html</p>
+</section>
+
+</div></div>
+
+<nav id="nav" aria-label="Slides">
+  <button type="button" id="prev" aria-label="Previous slide">←</button>
+  <span id="count"></span>
+  <button type="button" id="next" aria-label="Next slide">→</button>
+  <button type="button" id="full" aria-label="Full screen">full screen</button>
+</nav>
+<div id="zoom" hidden><img alt=""></div>
+
+<script>
+(() => {
+  const SHAPE = {
+    work: '<circle cx="8" cy="8" r="5" fill="var(--st-work)"/>',
+    wait: '<path d="M8 2 L14.5 13.5 H1.5 Z" fill="var(--st-wait)"/>',
+    err: '<path d="M3 3 L13 13 M13 3 L3 13" stroke="var(--st-err)" stroke-width="3" stroke-linecap="round"/>',
+    rev: '<path d="M8 1.5 L14.5 8 L8 14.5 L1.5 8 Z" fill="var(--st-rev)"/>',
+    mer: [0, 72, 144, 216, 288].map((a) => `<circle cx="${8 + Math.cos((a - 90) * Math.PI / 180) * 3.6}" cy="${8 + Math.sin((a - 90) * Math.PI / 180) * 3.6}" r="2.6" fill="var(--st-mer)"/>`).join(''),
+    empty: '<circle cx="8" cy="8" r="5" fill="none" stroke="var(--muted)" stroke-width="1.6" stroke-dasharray="2 2"/>',
+  };
+  const ROWS = [
+    ['work', 'Working', 'sprout with two leaves', 'growing', 3, 'circle'],
+    ['wait', 'Waiting for you', 'droops and yellows, rim pulses red', 'a timer', 3, 'triangle'],
+    ['err', 'Error', 'grey bare stalk', 'wilted', 3, 'cross'],
+    ['rev', 'Ready for review', 'closed yellow bud', 'review', 4, 'diamond'],
+    ['mer', 'Merged', 'pink bloom', 'merged', 5, 'five-dot flower'],
+    ['empty', 'Empty pot', 'none', 'pick an issue', 0, 'dashed circle'],
+  ];
+  document.getElementById('statesBody').innerHTML = ROWS.map(([k, name, plant, word, n, shape]) => `<tr><td>${name}</td><td>${plant}</td><td class="w">${word}</td>
+    <td>${n ? `<span class="trk" style="--c:var(--st-${k})">${[1, 2, 3, 4, 5].map((i) => `<i class="${i <= n ? 'f' : ''}"></i>`).join('')}</span>` : '<span class="w">–</span>'}</td>
+    <td><svg viewBox="0 0 16 16" aria-hidden="true">${SHAPE[k]}</svg>${shape}</td></tr>`).join('');
+  const slides = [...document.querySelectorAll('.slide')];
+  const stage = document.getElementById('stage');
+  const n = slides.length;
+  slides.forEach((s, i) => {
+    const f = document.createElement('div'); f.className = 'foot';
+    f.innerHTML = `<span>gitspore</span><span>${i + 1} / ${n}</span>`;
+    s.appendChild(f);
+  });
+  let cur = 0;
+  const fromHash = () => { const m = /^#(\d+)$/.exec(location.hash); return m ? Math.min(n - 1, Math.max(0, +m[1] - 1)) : 0; };
+  function show(i) {
+    cur = Math.min(n - 1, Math.max(0, i));
+    slides.forEach((s, k) => s.classList.toggle('on', k === cur));
+    document.getElementById('count').textContent = `${cur + 1} / ${n}`;
+    document.getElementById('bar').style.width = `${((cur + 1) / n) * 100}%`;
+    try { history.replaceState(null, '', '#' + (cur + 1)); } catch (e) {}
+  }
+  function fit() {
+    const pad = innerWidth < 700 ? 8 : 28;
+    const k = Math.min((innerWidth - pad * 2) / 1600, (innerHeight - pad * 2) / 900);
+    stage.style.transform = `translate(-50%, -50%) scale(${k})`;
+  }
+  addEventListener('resize', fit);
+  const zoom = document.getElementById('zoom');
+  addEventListener('keydown', (e) => {
+    if (!zoom.hidden) { if (e.key === 'Escape' || e.key === ' ') { zoom.hidden = true; e.preventDefault(); } return; }
+    if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); show(cur + 1); }
+    else if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); show(cur - 1); }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(n - 1);
+    else if (e.key.toLowerCase() === 'f') toggleFull();
+  });
+  function toggleFull() {
+    try { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen().catch(() => {}); } catch (e) {}
+  }
+  document.getElementById('prev').onclick = () => show(cur - 1);
+  document.getElementById('next').onclick = () => show(cur + 1);
+  document.getElementById('full').onclick = toggleFull;
+  stage.addEventListener('click', (e) => {
+    const img = e.target.closest('figure img, .title-slide img');
+    if (img) { zoom.querySelector('img').src = img.src; zoom.querySelector('img').alt = img.alt; zoom.hidden = false; }
+  });
+  zoom.onclick = () => { zoom.hidden = true; };
+  let tx = null;
+  addEventListener('touchstart', (e) => { tx = e.touches[0].clientX; }, { passive: true });
+  addEventListener('touchend', (e) => { if (tx === null) return; const dx = e.changedTouches[0].clientX - tx; if (Math.abs(dx) > 50) show(cur + (dx < 0 ? 1 : -1)); tx = null; });
+  fit(); show(fromHash());
+})();
+</script>
+</body>
+</html>
