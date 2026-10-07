@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "dev": "concurrently -n \"WEB,API\" -c \"cyan,magenta\" \"npm run dev:web\" \"npm run dev:api\"",
+    "predev": "npm run build:shared",
     "dev:web": "npm run dev --workspace @gitspore/web",
     "dev:api": "npm run dev --workspace @gitspore/api",
     "build:shared": "npm run build --workspace @gitspore/shared",

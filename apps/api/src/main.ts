@@ -13,7 +13,7 @@ async function bootstrap() {
 
   // Next dev already owns 3000.
   const port = Number(process.env.PORT ?? 3001);
-  await app.listen(port);
+  await app.listen(port, "127.0.0.1");
 
   Logger.log(
     `${PRODUCT_NAME} API daemon listening on http://localhost:${port}`,
