@@ -15,8 +15,8 @@
   --wait: #d8281c;
   --work: #c97f00;
   /* wireframe tokens */
-  --wf-scene: #e7e3da;
-  --wf-bench: #dcd6cb;
+  --wf-scene: #e2ddd1;
+  --wf-bench: #d3ccbe;
   --wf-bar: #fbfaf7;
   --wf-win: #ffffff;
   --wf-line: #9a948a;
@@ -30,13 +30,13 @@
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #161514; --surface: #1f1e1c; --ink: #ece8e1; --muted: #a39d94; --line: #36332f; --accent: #8cc0a2; --wait: #ff5446; --work: #ffa31a;
-  --wf-scene: #262420; --wf-bench: #2f2c28; --wf-bar: #34312d; --wf-win: #3b3833; --wf-line: #8a8378; --wf-ink: #eeebe5; --wf-dim: #5d5852;
+  --wf-scene: #2a2824; --wf-bench: #3a3732; --wf-bar: #34312d; --wf-win: #3b3833; --wf-line: #8a8378; --wf-ink: #eeebe5; --wf-dim: #5d5852;
   --wf-issue: #4a4234; --wf-git: #2f353c; --wf-pot: #45413b;
   color-scheme: dark;
 } }
 :root[data-theme="dark"] {
   --bg: #161514; --surface: #1f1e1c; --ink: #ece8e1; --muted: #a39d94; --line: #36332f; --accent: #8cc0a2; --wait: #ff5446; --work: #ffa31a;
-  --wf-scene: #262420; --wf-bench: #2f2c28; --wf-bar: #34312d; --wf-win: #3b3833; --wf-line: #8a8378; --wf-ink: #eeebe5; --wf-dim: #5d5852;
+  --wf-scene: #2a2824; --wf-bench: #3a3732; --wf-bar: #34312d; --wf-win: #3b3833; --wf-line: #8a8378; --wf-ink: #eeebe5; --wf-dim: #5d5852;
   --wf-issue: #4a4234; --wf-git: #2f353c; --wf-pot: #45413b;
   color-scheme: dark;
 }
@@ -67,7 +67,14 @@ nav.toc a:hover, nav.toc a:focus-visible { border-color: var(--accent); outline:
 .decisions b { display: block; font-weight: 600; }
 
 .region-fig { margin-top: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
-.region-fig svg { display: block; width: 100%; height: auto; max-width: 820px; margin: 0 auto; }
+.region-fig svg { display: block; width: 100%; height: auto; max-width: 1120px; margin: 0 auto; }
+.region-fig .frame { fill: none; stroke: var(--wf-ink); stroke-width: 1.4; }
+.c-name { font-family: var(--font-sans); font-size: 8.5px; font-weight: 600; fill: var(--ink); }
+.c-desc { font-family: var(--font-sans); font-size: 7px; fill: var(--muted); }
+.c-lead { fill: none; stroke: var(--accent); stroke-width: .8; }
+.c-dot { fill: var(--accent); }
+#themeBtn { position: fixed; top: 12px; right: 12px; z-index: 10; font: 500 12.5px var(--font-mono); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+#themeBtn:hover, #themeBtn:focus-visible { border-color: var(--accent); outline: none; }
 
 .rules { counter-reset: r; list-style: none; padding: 0; }
 .rules li { counter-increment: r; padding-left: 2.2em; position: relative; margin: 10px 0; }
@@ -79,14 +86,14 @@ nav.toc a:hover, nav.toc a:focus-visible { border-color: var(--accent); outline:
 .state .id { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--accent); }
 .state h3 { font-size: 15px; }
 .state .board { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
-.state svg { display: block; width: 100%; height: auto; margin-top: 10px; border-radius: 4px; }
+.state svg { display: block; width: 100%; height: auto; margin-top: 10px; border-radius: 4px; outline: 1.5px solid var(--wf-ink); outline-offset: 0; }
 .state dl { margin: 12px 0 0; display: grid; grid-template-columns: 6.5em minmax(0, 1fr); gap: 4px 10px; font-size: 13.5px; }
 .state dt { color: var(--muted); }
 .state dd { margin: 0; }
 
 .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 14px; font-size: 13px; color: var(--muted); align-items: center; }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
-.legend svg { width: 14px; height: 14px; }
+.legend svg { width: 14px; height: 14px; outline: none; }
 
 .tbl { overflow-x: auto; margin-top: 16px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
 table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
@@ -138,6 +145,10 @@ td.nw { white-space: nowrap; }
 .s-line { fill: none; stroke: var(--wf-line); stroke-width: .7; }
 .s-carve { fill: none; stroke: var(--wf-ink); stroke-width: .55; stroke-linecap: round; }
 .s-carve.inv { stroke: var(--wf-bar); }
+.s-icon { fill: none; stroke: var(--wf-ink); stroke-width: .5; stroke-linecap: round; stroke-linejoin: round; }
+.s-icon.inv { stroke: var(--wf-bar); }
+.f-icon { fill: var(--wf-ink); }
+.f-icon.inv { fill: var(--wf-bar); }
 .f-glow-work { fill: var(--work); opacity: .28; }
 .s-annot { fill: none; stroke: var(--accent); stroke-width: .8; stroke-dasharray: 3 2; }
 .t { font-family: var(--font-mono); font-size: 5px; fill: var(--wf-ink); }
@@ -153,6 +164,8 @@ td.nw { white-space: nowrap; }
   @keyframes pulse { 50% { opacity: .25; } }
 }
 </style>
+
+<button type="button" id="themeBtn" aria-label="Colour theme">theme: system</button>
 
 <div class="wrap">
   <header class="prose">
@@ -195,7 +208,7 @@ td.nw { white-space: nowrap; }
 
   <section id="model">
     <h2>Layout model</h2>
-    <p class="prose">Seven regions. The scene fills the whole page behind the others. Everything else is plain HTML on top.</p>
+    <p class="prose">The scene fills the page. Everything else is HTML on top of it, in a CSS grid with gaps. The thick frame is the browser window.</p>
     <figure class="region-fig" id="regionFig" aria-label="Regions of the app"></figure>
 
     <h3 class="group-title">Three independent settings make every state</h3>
@@ -464,12 +477,21 @@ td.nw { white-space: nowrap; }
     return o;
   }
 
+  // Rail icons, drawn around (cx, cy) inside an 8 × 9 button: agents list, seed packet, branch, focus corners.
+  function icon(k, cx, cy, inv) {
+    const s = inv ? 's-icon inv' : 's-icon', f = inv ? 'f-icon inv' : 'f-icon';
+    if (k === 'A') return [-2, 0, 2].map((d) => `<circle cx="${cx - 2}" cy="${cy + d}" r=".55" class="${f}"/><line x1="${cx - .8}" x2="${cx + 2.4}" y1="${cy + d}" y2="${cy + d}" class="${s}"/>`).join('');
+    if (k === 'I') return `<path d="M${cx - 2} ${cy - 2.2} l.67 -.6 l.67 .6 l.67 -.6 l.67 .6 l.67 -.6 l.67 .6 V${cy + 2.8} H${cx - 2} Z" class="${s}"/><circle cx="${cx}" cy="${cy + .6}" r=".8" class="${s}"/>`;
+    if (k === 'G') return `<circle cx="${cx - 1.4}" cy="${cy - 2.4}" r=".7" class="${s}"/><circle cx="${cx - 1.4}" cy="${cy + 2.6}" r=".7" class="${s}"/><circle cx="${cx + 1.8}" cy="${cy - 1.2}" r=".7" class="${s}"/><path d="M${cx - 1.4} ${cy - 1.7} V${cy + 1.9} M${cx + 1.8} ${cy - .5} C${cx + 1.8} ${cy + 1}, ${cx - 1.4} ${cy + .6}, ${cx - 1.4} ${cy + 1.9}" class="${s}"/>`;
+    if (k === 'F') return `<path d="M${cx - 2.6} ${cy - 1} V${cy - 2.8} H${cx - .8} M${cx + .8} ${cy - 2.8} H${cx + 2.6} V${cy - 1} M${cx + 2.6} ${cy + 1} V${cy + 2.8} H${cx + .8} M${cx - .8} ${cy + 2.8} H${cx - 2.6} V${cy + 1}" class="${s}"/>`;
+    return '';
+  }
+
   function rail(on = [], badge) {
     let o = r(4, 18, 12, 68, 'f-bar', 2);
     ['A', 'I', 'G', 'F'].forEach((k, i) => {
       const y = 21 + i * 12.5, active = on.includes(k);
-      o += r(6, y, 8, 9, active ? 'f-ink' : 'f-win', 1.2);
-      o += t(10, y + 6.3, k, active ? 'inv' : '', 'middle');
+      o += r(6, y, 8, 9, active ? 'f-ink' : 'f-win', 1.2) + icon(k, 10, y + 4.5, active);
     });
     o += `<line x1="6" x2="14" y1="70.5" y2="70.5" class="s-line"/>`;
     const ov = on.includes('O');
@@ -727,22 +749,55 @@ td.nw { white-space: nowrap; }
       limit: 'The carving shows only the overview\u2019s status, not the agents\u2019. In focus mode the scene is hidden, so the notice carries it.' },
   ];
 
+  // Technical schematic: the default screen with callouts. Wireframe coordinates (320 × 200) are scaled by K and offset by OX, OY.
   const REGIONS = {
-    name: 'Regions', alt: 'Region diagram: top bar, tool rail, main area, side panel, tray, notifications, scene',
-    pots: { x: 20, y: 16, w: 214, h: 104 }, rail: ['A'], panel: { tab: 'agents', sel: -1 },
-    wins: [{ x: 20, y: 124, w: 214, h: 60, title: '#12 login-redirect · working' }], chips: [{ s: 'wait', label: '#15' }],
-    annot: [
-      { x: 1, y: 1, w: 318, h: 12, label: 'top bar', lx: 70, ly: 9 },
-      { x: 2, y: 16, w: 16, h: 72, label: 'rail', lx: 3, ly: 96 },
-      { x: 18, y: 16, w: 218, h: 182, label: 'main area', lx: 24, ly: 24 },
-      { x: 20, y: 122, w: 214, h: 64, label: 'band (scene mode)', lx: 120, ly: 160 },
-      { x: 18, y: 186, w: 80, h: 12, label: 'tray', lx: 104, ly: 194 },
-      { x: 236, y: 16, w: 82, h: 182, label: 'side panel', lx: 277, ly: 176, anchor: 'middle' },
-      { x: 236, y: 156, w: 82, h: 42, label: 'notifications', lx: 277, ly: 190, anchor: 'middle' },
-    ],
+    name: 'Regions', alt: 'Schematic of the app window with labelled parts',
+    pots: { x: 40, y: 22, w: 180, h: 96 }, rail: ['A'], panel: { tab: 'agents', sel: -1 },
+    wins: [{ x: 20, y: 124, w: 214, h: 60, title: '#12 login-redirect · working', focus: true }], chips: [{ s: 'wait', label: '#15' }],
+    toast: [222, 160],
   };
-  document.getElementById('regionFig').innerHTML = draw(REGIONS) +
-    '<figcaption class="meta">The scene fills everything behind the dashed regions. Main area, side panel and tray are a CSS grid with gaps. Notifications float over the bottom right.</figcaption>';
+  const K = 1.25, OX = 200, OY = 30;
+  const CALLOUTS = [
+    // [side, label y, target x, target y (wireframe coords), name, description lines]
+    ['l', 18, 40, 7, 'Top bar', ['Repo, focused agent, online status, settings, help']],
+    ['l', 54, 13, 30, 'Tool rail', ['Agents, Issues, Branches tabs; focus mode.', 'Beetle button: opens the overview']],
+    ['l', 92, 30, 52, 'Scene', ['3D canvas behind everything. Never resizes;', 'the camera frames the table into the free area']],
+    ['l', 130, 61, 72, 'Pots', ['One per agent, 6 fixed slots.', 'The plant shows the agent’s status']],
+    ['l', 168, 60, 100, 'Packet strip', ['Space for 3D seed packets (later)']],
+    ['l', 206, 124, 100, 'Beetle carving', ['Status of the overview agent. Click opens it']],
+    ['l', 244, 40, 150, 'Terminal band', ['Scene mode: windows in one row.', 'Focus mode: windows cover the main area']],
+    ['l', 284, 30, 192, 'Tray', ['Minimised windows as chips']],
+    ['r', 70, 290, 80, 'Side panel', ['Agents, Issues, Branches.', 'One width, about 400 px']],
+    ['r', 236, 300, 168, 'Notification', ['An agent waits and its', 'window is hidden']],
+  ];
+  function schematic() {
+    const inner = draw(REGIONS).replace('<svg viewBox="0 0 320 200"', `<svg x="${OX}" y="${OY}" width="${320 * K}" height="${200 * K}" viewBox="0 0 320 200"`);
+    let o = '<svg viewBox="0 0 720 306" role="img" aria-label="Schematic of the app window with labelled parts" xmlns="http://www.w3.org/2000/svg">';
+    o += '<defs><marker id="arrow" viewBox="0 0 6 6" refX="5.5" refY="3" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0 L6 3 L0 6 Z" class="c-dot"/></marker></defs>';
+    o += inner + `<rect x="${OX}" y="${OY}" width="${320 * K}" height="${200 * K}" rx="3" class="frame"/>`;
+    CALLOUTS.forEach(([side, ly, tx, ty, name, desc]) => {
+      const X = OX + tx * K, Y = OY + ty * K, left = side === 'l';
+      const lx = left ? 188 : 612, anchor = left ? 'end' : 'start', sx = left ? 191 : 609;
+      o += `<text x="${lx}" y="${ly}" class="c-name" text-anchor="${anchor}">${esc(name)}</text>`;
+      desc.forEach((d, i) => { o += `<text x="${lx}" y="${ly + 9 + i * 8.5}" class="c-desc" text-anchor="${anchor}">${esc(d)}</text>`; });
+      o += `<path d="M${sx} ${ly - 3} L${X} ${Y}" class="c-lead" marker-end="url(#arrow)"/>`;
+    });
+    return o + '</svg>';
+  }
+  document.getElementById('regionFig').innerHTML = schematic() +
+    '<figcaption class="meta">Default screen in scene mode. Top bar, rail, main area and side panel form a CSS grid. The notification floats over the bottom right; the tray sits bottom left.</figcaption>';
+
+  const themeBtn = document.getElementById('themeBtn');
+  const THEMES = ['system', 'light', 'dark'];
+  let theme = 'system';
+  try { theme = localStorage.getItem('gitspore-layout-theme') || 'system'; } catch (e) {}
+  function applyTheme() {
+    if (theme === 'system') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = theme;
+    themeBtn.textContent = 'theme: ' + theme;
+    try { localStorage.setItem('gitspore-layout-theme', theme); } catch (e) {}
+  }
+  themeBtn.onclick = () => { theme = THEMES[(THEMES.indexOf(theme) + 1) % 3]; applyTheme(); };
+  applyTheme();
 
   const legendItems = [['work', 'working'], ['wait', 'waiting for you'], ['err', 'error'], ['done', 'ready for review'], ['empty', 'empty pot']];
   document.getElementById('legend').innerHTML = legendItems.map(([s, l]) =>
@@ -751,6 +806,7 @@ td.nw { white-space: nowrap; }
     `<span><svg viewBox="0 0 14 14" aria-hidden="true"><rect x="1" y="2" width="12" height="10" rx="1" class="f-issue"/></svg>issue</span>` +
     `<span><svg viewBox="0 0 14 14" aria-hidden="true"><rect x="3" y="1.5" width="8" height="11" rx="1" class="s-dash"/></svg>packet space on the table (later)</span>` +
     `<span><svg viewBox="0 0 14 14" aria-hidden="true">${beetle(7, 7.6, 4.4, 'idle')}</svg>beetle: carving and button for the overview</span>` +
+    `<span>rail: ` + [['A', 'agents'], ['I', 'issues'], ['G', 'branches'], ['F', 'focus']].map(([k, l]) => `<svg viewBox="0 0 8 9" aria-hidden="true">${icon(k, 4, 4.5, false)}</svg>${l}`).join(' ') + `</span>` +
     `<span class="mono">– minimise · ◎ focus this · ▢ maximise · × close · ⋯ menu</span>`;
 
   document.getElementById('gallery').innerHTML = STATES.map((s) => `
