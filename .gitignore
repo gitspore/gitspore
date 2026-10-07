@@ -42,5 +42,3 @@ yarn-error.log*
 next-env.d.ts
 .playwright-mcp
 
-# third-party reference material (copyrighted, stays local)
-project-management/**/_assets/

@@ -1,0 +1,913 @@
+<meta charset="utf-8">
+<title>gitspore layout</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Figtree:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout concept: a long working document. Text column for prose, wide grid for the wireframe gallery, tables in scroll boxes. Page and wireframes use the cozy-06 tokens (docs/design/components.md); status markers are the cozy-06 shapes in their colours. */
+:root {
+  --bg: #f4efe3;
+  --surface: #fbf8f0;
+  --ink: #2a2119;
+  --muted: #6b5a44;
+  --line: #ddd4bf;
+  --accent: #2f5446;
+  --wait: #b3372a;
+  --change: #9a6a10;
+  /* the five states */
+  --st-work: #4f9a45; --st-wait: #b3372a; --st-err: #8a8277; --st-rev: #d99a1e; --st-mer: #c2458e;
+  /* wireframe tokens */
+  --wf-scene: #ece3cf;
+  --wf-bench: #dccfb2;
+  --wf-bar: #fbf8f0;
+  --wf-win: #ffffff;
+  --wf-line: #9a8f7c;
+  --wf-ink: #2a2119;
+  --wf-dim: #c9bda7;
+  --wf-issue: #ecdfc2;
+  --wf-git: #e6eae2;
+  --wf-pot: #f6f0e4;
+  --font-sans: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-title: "Fredoka", "Figtree", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #141a17; --surface: #1d2621; --ink: #f3e7cf; --muted: #bba98b; --line: #2f3d36; --accent: #9cc2ad; --wait: #ff6a50; --change: #e9c46a;
+  --st-work: #7cc96b; --st-wait: #ff6a50; --st-err: #9a948a; --st-rev: #f5bd3c; --st-mer: #ff6fc0;
+  --wf-scene: #222b26; --wf-bench: #34403a; --wf-bar: #26332c; --wf-win: #2b3832; --wf-line: #7f948a; --wf-ink: #f3e7cf; --wf-dim: #4c5c54;
+  --wf-issue: #4a4234; --wf-git: #26302c; --wf-pot: #3c4842;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #141a17; --surface: #1d2621; --ink: #f3e7cf; --muted: #bba98b; --line: #2f3d36; --accent: #9cc2ad; --wait: #ff6a50; --change: #e9c46a;
+  --st-work: #7cc96b; --st-wait: #ff6a50; --st-err: #9a948a; --st-rev: #f5bd3c; --st-mer: #ff6fc0;
+  --wf-scene: #222b26; --wf-bench: #34403a; --wf-bar: #26332c; --wf-win: #2b3832; --wf-line: #7f948a; --wf-ink: #f3e7cf; --wf-dim: #4c5c54;
+  --wf-issue: #4a4234; --wf-git: #26302c; --wf-pot: #3c4842;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-sans); font-size: 15px; line-height: 1.6; }
+.wrap { max-width: 1160px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 80px; }
+.prose { max-width: 70ch; }
+h1, h2, h3 { line-height: 1.25; text-wrap: balance; margin: 0; }
+h1 { font-family: var(--font-title); font-size: 38px; font-weight: 600; letter-spacing: -0.01em; }
+h2 { font-family: var(--font-title); font-size: 26px; font-weight: 600; margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--line); }
+h3 { font-size: 16px; font-weight: 600; }
+p { margin: 10px 0 0; }
+a { color: var(--accent); }
+code, .mono { font-family: var(--font-mono); font-size: 0.88em; }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.meta { color: var(--muted); font-size: 14px; margin-top: 8px; }
+ul, ol { padding-left: 1.2em; margin: 10px 0 0; }
+li { margin: 4px 0; }
+li::marker { color: var(--muted); }
+
+nav.toc { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 6px 8px; }
+nav.toc a { font-family: var(--font-mono); font-size: 12.5px; text-decoration: none; color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; background: var(--surface); }
+nav.toc a:hover, nav.toc a:focus-visible { border-color: var(--accent); outline: none; }
+
+.decisions { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 10px; margin-top: 16px; }
+.decisions div { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; font-size: 14px; min-width: 0; }
+.decisions b { display: block; font-weight: 600; }
+
+.region-fig { margin-top: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
+.region-fig svg { display: block; width: 100%; height: auto; max-width: 1120px; margin: 0 auto; }
+.region-fig .frame { fill: none; stroke: var(--wf-ink); stroke-width: 1.4; }
+.c-name { font-family: var(--font-sans); font-size: 8.5px; font-weight: 600; fill: var(--ink); }
+.c-desc { font-family: var(--font-sans); font-size: 7px; fill: var(--muted); }
+.c-lead { fill: none; stroke: var(--accent); stroke-width: .8; }
+.c-dot { fill: var(--accent); }
+#themeBtn { position: fixed; top: 12px; right: 12px; z-index: 10; font: 500 12.5px var(--font-mono); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+#themeBtn:hover, #themeBtn:focus-visible { border-color: var(--accent); outline: none; }
+
+.rules { counter-reset: r; list-style: none; padding: 0; }
+.rules li { counter-increment: r; padding-left: 2.2em; position: relative; margin: 10px 0; }
+.rules li::before { content: "R" counter(r); position: absolute; left: 0; top: 1px; font-family: var(--font-mono); font-size: 12px; color: var(--accent); font-weight: 600; }
+
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 500px), 1fr)); gap: 18px; margin-top: 20px; }
+.state { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px 16px; min-width: 0; scroll-margin-top: 16px; }
+.state header { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.state .id { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--accent); }
+.state h3 { font-size: 15px; }
+.state .board { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.state svg { display: block; width: 100%; height: auto; margin-top: 10px; border-radius: 4px; outline: 1.5px solid var(--wf-ink); outline-offset: 0; }
+.state dl { margin: 12px 0 0; display: grid; grid-template-columns: 6.5em minmax(0, 1fr); gap: 4px 10px; font-size: 13.5px; }
+.state dt { color: var(--muted); }
+.state dd { margin: 0; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 14px; font-size: 13px; color: var(--muted); align-items: center; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend svg { width: 14px; height: 14px; outline: none; }
+
+.tbl { overflow-x: auto; margin-top: 16px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { text-align: left; vertical-align: top; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); background: var(--bg); white-space: nowrap; }
+td.nw { white-space: nowrap; }
+
+.pill { display: inline-block; font-family: var(--font-mono); font-size: 11px; line-height: 1; padding: 4px 6px; border-radius: 3px; border: 1px solid var(--line); white-space: nowrap; }
+.p-mvp { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.p-should { border-color: var(--ink); }
+.p-later { color: var(--muted); border-style: dashed; }
+.p-keep { border-color: var(--accent); color: var(--accent); }
+.p-change { border-color: var(--change); color: var(--change); }
+.p-gone { color: var(--muted); text-decoration: line-through; }
+.p-new { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+.stories { display: grid; gap: 10px; margin-top: 16px; }
+.story { display: grid; grid-template-columns: 4.2em minmax(0, 1fr) auto; gap: 4px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; align-items: baseline; }
+.story .sid { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--accent); }
+.story p { margin: 0; }
+.story .links { grid-column: 2 / 4; font-size: 12.5px; color: var(--muted); }
+.story .links a { font-family: var(--font-mono); }
+@media (max-width: 560px) {
+  .story { grid-template-columns: minmax(0, 1fr); }
+  .story .links { grid-column: auto; }
+  .state dl { grid-template-columns: minmax(0, 1fr); }
+  .state dt { margin-top: 6px; }
+}
+.group-title { margin-top: 26px; }
+.states-tbl td svg { width: 14px; height: 14px; vertical-align: -2px; }
+.states-tbl .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 6px; }
+.states-tbl .trk { display: inline-flex; gap: 2px; vertical-align: 0; }
+.states-tbl .trk i { width: 8px; height: 8px; border-radius: 2px; box-shadow: inset 0 0 0 1.5px var(--muted); opacity: .6; }
+.states-tbl .trk i.f { box-shadow: none; opacity: 1; background: var(--c); }
+
+/* svg classes */
+.f-scene { fill: var(--wf-scene); }
+.f-bench { fill: var(--wf-bench); }
+.f-bar { fill: var(--wf-bar); stroke: var(--wf-line); stroke-width: .5; }
+.f-win { fill: var(--wf-win); stroke: var(--wf-line); stroke-width: .6; }
+.f-win.focus { stroke: var(--wf-ink); stroke-width: 1.3; }
+.f-issue { fill: var(--wf-issue); stroke: var(--wf-line); stroke-width: .5; }
+.f-git { fill: var(--wf-git); }
+.f-pot { fill: var(--wf-pot); stroke: var(--wf-line); stroke-width: .6; }
+.f-ink { fill: var(--wf-ink); }
+.f-dim { fill: var(--wf-dim); }
+.f-work { fill: var(--st-work); }
+.f-wait { fill: var(--st-wait); }
+.f-rev { fill: var(--st-rev); }
+.f-mer { fill: var(--st-mer); }
+.s-err { fill: none; stroke: var(--st-err); stroke-linecap: round; }
+.s-wait { fill: none; stroke: var(--wait); stroke-width: .8; }
+.s-ink { fill: none; stroke: var(--wf-ink); stroke-width: 1.1; }
+.s-dash { fill: none; stroke: var(--wf-line); stroke-width: .7; stroke-dasharray: 2 1.5; }
+.s-drop { fill: none; stroke: var(--accent); stroke-width: 1.2; stroke-dasharray: 2.5 1.5; }
+.s-line { fill: none; stroke: var(--wf-line); stroke-width: .7; }
+.s-carve { fill: none; stroke: var(--wf-ink); stroke-width: .55; stroke-linecap: round; }
+.s-carve.inv { stroke: var(--wf-bar); }
+.s-icon { fill: none; stroke: var(--wf-ink); stroke-width: .5; stroke-linecap: round; stroke-linejoin: round; }
+.s-icon.inv { stroke: var(--wf-bar); }
+.f-icon { fill: var(--wf-ink); }
+.f-icon.inv { fill: var(--wf-bar); }
+.f-glow-work { fill: var(--st-rev); opacity: .3; }
+.s-annot { fill: none; stroke: var(--accent); stroke-width: .8; stroke-dasharray: 3 2; }
+.t { font-family: var(--font-mono); font-size: 5px; fill: var(--wf-ink); }
+.t.b { font-weight: 600; }
+.t.m { fill: var(--wf-line); }
+.t.inv { fill: var(--wf-bar); }
+.t.w { fill: var(--wait); }
+.t.hb { font-size: 3.4px; font-weight: 600; }
+.t.a { fill: var(--accent); font-size: 6px; font-weight: 600; }
+.t.big { font-size: 7px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .pulse { animation: pulse 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  @keyframes pulse { 50% { opacity: .25; } }
+}
+</style>
+
+<button type="button" id="themeBtn" aria-label="Colour theme">theme: system</button>
+
+<div class="wrap">
+  <header class="prose">
+    <div class="eyebrow">gitspore · concept v3 · layout</div>
+    <h1>Layout</h1>
+    <p class="meta">Status: proposed, not agreed by the team yet. Last updated 2026-10-07. Concept: <a href="../concept.md">concept.md</a>. Components and tokens: <a href="components.md">components.md</a>. Every state below runs live in the 3D prototype: <a href="prototype.html">prototype.html</a>. Wireframes of the same states are in Penpot (<code>gitspore_v01</code>, page <code>layout wireframes</code>).</p>
+    <p>This page shows every layout state of the app as a simple wireframe, the ways to reach each action, the user stories, the components we need, the limits, and how all of it maps to the tickets on the board. The wireframes show structure only. Colours and materials come from the chosen visual direction.</p>
+  </header>
+
+  <nav class="toc" aria-label="Sections">
+    <a href="#agreed">Agreed so far</a>
+    <a href="#model">Layout model</a>
+    <a href="#states">States</a>
+    <a href="#ways">Ways to act</a>
+    <a href="#stories">User stories</a>
+    <a href="#components">Components</a>
+    <a href="#limits">Limits</a>
+    <a href="#issues">Ticket mapping</a>
+    <a href="#open">Open questions</a>
+  </nav>
+
+  <section id="agreed">
+    <h2>Agreed so far in the discussion</h2>
+    <div class="decisions">
+      <div><b>Windows sit in fixed slots</b>Size and place change only through buttons (minimise, maximise, focus, close). No dragging, no free resizing.</div>
+      <div><b>The scene is always full size</b>Windows lie on top of it in a CSS grid with gaps. The canvas never resizes; the camera frames the pots into the free area.</div>
+      <div><b>Maximise applies to all visible windows</b>To see one terminal alone, minimise the others, or use <i>Focus this</i>, which does both in one click.</div>
+      <div><b>Maximising closes the side panel</b>Opening it again pushes the windows into a smaller space. Leaving focus mode brings back the panel as it was.</div>
+      <div><b>Panels open and close</b>The side panel (agents, issues) and the tool rail have open/close, not minimise.</div>
+      <div><b>Every terminal is an agent</b>No plain shells for now. A shell tab inside an agent's window, in its worktree, is possible later without changing the model.</div>
+      <div><b>A notification in the bottom right</b>Shows when another agent waits while you work in a terminal. It sits right of the hotbar, so the two never collide.</div>
+      <div><b>The issue list is the MVP entry</b>3D seed packets are a goal, but nothing breaks without them. List rows and packets share one look.</div>
+      <div><b>The branch graph is a side panel tab</b>Agents · Issues · Branches, full height, one fixed panel width of about 400 px. No separate git window. Each branch label shows the agent colour and a status dot, because the tab hides the agents list.</div>
+      <div><b>A hotbar instead of a tray</b>One slot per pot (keys 1–6) and one for the overview (key 0), at the bottom centre of the main area. Each slot shows the plant, the status shape and the agent colour. It replaces the tray of minimised chips: a minimised window is a small mark on its slot. Added 2026-10-07.</div>
+      <div><b>Priority flag dropped</b>The issue window has no priority action.</div>
+      <div><b>Panels are solid or slightly transparent</b>Blur only if it measures fine over the moving scene. A shader version is later polish.</div>
+      <div><b>An overview agent: the beetle</b>One more Claude Code session, in the repo root instead of a worktree, without a pot. It knows what every agent has done, their status and where the whole is going. Later it may orchestrate. Its window is an ordinary window; hotbar slot 0 opens it maximised. Added 2026-10-07.</div>
+      <div><b>The table grows</b>Two rows of three pots at the back, a strip at the front with the seed packets and a beetle carved into the table top between them. The carving shows the overview's status. Added 2026-10-07.</div>
+    </div>
+  </section>
+
+  <section id="model">
+    <h2>Layout model</h2>
+    <p class="prose">The scene fills the page. Everything else is HTML on top of it, in a CSS grid with gaps. The thick frame is the browser window.</p>
+    <figure class="region-fig" id="regionFig" aria-label="Regions of the app"></figure>
+
+    <h3 class="group-title">Three independent settings make every state</h3>
+    <div class="tbl"><table>
+      <thead><tr><th>Setting</th><th>Values</th><th>Changed by</th></tr></thead>
+      <tbody>
+        <tr><td>Side panel</td><td>Agents tab · Issues tab · Branches tab · closed. One fixed width (about 400 px) for all tabs.</td><td>Rail buttons (click the active one again to close), key <code>G</code>, garden map object, entering focus mode</td></tr>
+        <tr><td>Main area mode</td><td><b>Scene mode</b>: windows sit in a band at the bottom, the scene shows above.<br><b>Focus mode</b>: windows cover the whole main area.</td><td>Maximise / restore button on any window, <i>Focus this</i>, rail button</td></tr>
+        <tr><td>Open windows</td><td>An ordered list. Each window is visible or minimised (a mark on its hotbar slot).</td><td>Clicking a pot, an agent row, a hotbar slot or a notification; hotbar slot 0 or the carving (overview); minimise and close buttons</td></tr>
+      </tbody>
+    </table></div>
+    <p class="prose">The grid areas are calculated from these three settings. We don't draw each state by hand; the rules below decide the tiles.</p>
+
+    <h3 class="group-title">Rules</h3>
+    <ol class="rules prose">
+      <li><b>Windows tile by count.</b> 1 fills its zone, 2 sit side by side, 3 make two plus one, 4 make two by two. At most 4 windows are visible; a fifth one opens as a tab in the focused tile.</li>
+      <li><b>A terminal tile is at least about 650 px wide</b> (80 columns of 13 px monospace). If a new column would make tiles narrower, the window stacks below instead. If there is no room below either, it becomes a tab.</li>
+      <li><b>A terminal tile is at least about 350 px tall</b> (about 20 rows). In scene mode the band holds one row of tiles.</li>
+      <li><b>Maximise acts on all visible windows.</b> Minimised windows stay minimised.</li>
+      <li><b>Focus this</b> = focus mode + minimise every other window.</li>
+      <li><b>Entering focus mode closes the side panel.</b> The user can open it again; the windows shrink. Leaving focus mode restores the panel state from before.</li>
+      <li><b>Closing a window doesn't stop the agent.</b> It only hides its terminal. Stopping an agent or freeing a pot is a separate action with a confirmation.</li>
+      <li><b>Minimised terminals stay alive.</b> Their xterm instance keeps running. The hotbar slot shows the agent's status and a mark that its window is open.</li>
+      <li><b>The side panel has one width for all tabs</b>, about 400 px, enough for 7 lanes and commit messages. Switching tabs never moves the windows. The branch graph lives in this panel as the Branches tab, not as a window.</li>
+      <li><b>The issue window is a sheet, not a tile.</b> It opens at the top of the main area, over the scene, and closes when the issue is planted or dismissed. It doesn't take part in tiling.</li>
+      <li><b>Exactly one window has keyboard focus</b> and shows a strong border. App shortcuts only work while no terminal has focus.</li>
+      <li><b>The overview is a window like any terminal.</b> Hotbar slot 0 (or the carving, or key <code>0</code>) runs <i>Focus this</i> on it. Shift-click opens it beside the focused window instead. Restore, minimise, tiling, hotbar slot and notification work as for the agents. It has no pot and doesn't count against the six.</li>
+    </ol>
+  </section>
+
+  <section id="states">
+    <h2>States</h2>
+    <p class="prose">Example data: six pots, issues and agent names are made up. "Board" refers to the frame in Georgios's Penpot board, counted from the left.</p>
+    <h3 class="group-title">Five states and the empty pot</h3>
+    <p class="prose">Each state has a plant, a colour, a word, a growth stage and a shape, so none depends on colour alone. Colours are day / night of cozy-06. Waiting is the only red.</p>
+    <div class="tbl"><table class="states-tbl">
+      <thead><tr><th>State</th><th>Plant</th><th>Colour</th><th>Word</th><th>Growth track</th><th>Shape</th></tr></thead>
+      <tbody id="statesBody"></tbody>
+    </table></div>
+    <div class="legend" id="legend"></div>
+    <div class="gallery" id="gallery"></div>
+  </section>
+
+  <section id="ways">
+    <h2>Ways to act</h2>
+    <p class="prose">Every main action has more than one way in. Each row is a single action in the store, so all entry points behave the same.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Action</th><th>Ways in</th><th>Priority</th><th>States</th></tr></thead>
+      <tbody>
+        <tr><td><b>Plant an issue</b><br>worktree + branch + Claude Code</td><td>
+          1. <i>Give to agent</i> in the issue window (next free pot)<br>
+          2. Click an empty pot: the issues tab opens in pick mode<br>
+          3. Drag a row from the issues tab onto a pot<br>
+          4. Drag a row onto the table: next free pot<br>
+          5. Drag a 3D seed packet onto a pot</td>
+          <td>1–2 <span class="pill p-mvp">MVP</span><br>3–4 <span class="pill p-should">should</span><br>5 <span class="pill p-later">later</span></td><td><a href="#S10">S10</a> <a href="#S14">S14</a></td></tr>
+        <tr><td><b>Open an agent's terminal</b></td><td>Click its pot · click its name tag · click its row in the agents tab · click its hotbar slot · click the notification · keys <code>1</code>–<code>6</code> · click its branch in the branches tab</td><td>all <span class="pill p-mvp">MVP</span>, branches <span class="pill p-should">should</span></td><td><a href="#S01">S01</a> <a href="#S13">S13</a></td></tr>
+        <tr><td><b>Answer an agent</b></td><td>Type in its terminal. Answer buttons in the window header only if spike S3 shows that hooks give us the options.</td><td>terminal <span class="pill p-mvp">MVP</span><br>buttons open</td><td><a href="#S03">S03</a></td></tr>
+        <tr><td><b>Read one terminal in full</b></td><td><i>Focus this</i> in the window header · double-click the pot · key <code>F</code></td><td><span class="pill p-mvp">MVP</span></td><td><a href="#S03">S03</a></td></tr>
+        <tr><td><b>Back to the scene</b></td><td>Restore button · rail scene button · key <code>F</code> again</td><td><span class="pill p-mvp">MVP</span></td><td><a href="#S02">S02</a></td></tr>
+        <tr><td><b>See two agents at once</b></td><td><i>Open beside</i> in the notification · open a second agent while one is visible</td><td><span class="pill p-should">should</span></td><td><a href="#S05">S05</a> <a href="#S13">S13</a></td></tr>
+        <tr><td><b>Open the branch graph</b></td><td>Rail branches button · key <code>G</code> · click the garden map object in the scene. All three open the side panel on the Branches tab.</td><td>button, G <span class="pill p-should">should</span><br>map object <span class="pill p-should">should</span></td><td><a href="#S11">S11</a></td></tr>
+        <tr><td><b>Restart, stop, free a pot</b></td><td><code>⋯</code> menu in the window header · <code>⋯</code> menu on the agent row. Stop and free ask for confirmation.</td><td><span class="pill p-mvp">MVP</span></td><td><a href="#S01">S01</a></td></tr>
+        <tr><td><b>Notice a waiting agent</b></td><td>The plant droops and its rim pulses red · red row with a timer in the agents tab · red hotbar slot that bobs · "1 waiting" badge in the top bar · badge on the rail agents button · bottom-right notification · count in the tab title and favicon · browser notification · sound</td><td>scene, list, chip, notification, title <span class="pill p-mvp">MVP</span><br>browser notification, sound <span class="pill p-should">should</span></td><td><a href="#S12">S12</a></td></tr>
+        <tr><td><b>Ask about all agents</b><br>the overview</td><td>Hotbar slot 0 · click the beetle carving · key <code>0</code> · its notification. All open it maximised (<i>Focus this</i>). Shift-click the slot: open beside the focused window. When it waits, the carving glows red, its slot turns red, and it gets the same notice and title count as an agent.</td><td><span class="pill p-should">should</span></td><td><a href="#S17">S17</a> <a href="#S18">S18</a> <a href="#S19">S19</a></td></tr>
+        <tr><td><b>Leave a terminal with the keyboard</b></td><td>Click anywhere outside it · one key combination still to choose (<kbd>Esc</kbd> is taken: Claude Code uses it to interrupt the agent)</td><td><span class="pill p-mvp">MVP</span></td><td>all</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="stories">
+    <h2>User stories</h2>
+    <p class="prose">The user is a developer who runs three or more Claude Code agents on one repo. The stories are grouped by the job, roughly in the order of a working session.</p>
+    <div class="stories" id="storyList"></div>
+  </section>
+
+  <section id="components">
+    <h2>Components</h2>
+    <p class="prose">Grouped by region. shadcn names where a shadcn component fits. Ticket numbers refer to the mapping below; <span class="pill p-new">N</span> numbers are proposed new tickets.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Component</th><th>What it does</th><th>Priority</th><th>Ticket</th></tr></thead>
+      <tbody>
+        <tr><th colspan="4">Shell</th></tr>
+        <tr><td class="nw"><code>AppShell</code></td><td>The grid: top bar, rail, main area, side panel, hotbar, notification corner. Reads the layout settings from the store.</td><td><span class="pill p-mvp">MVP</span></td><td>N1, #18</td></tr>
+        <tr><td class="nw"><code>TopBar</code></td><td>Logo, focused agent's issue and branch, waiting badge, connection status, settings and help menus. No repo name: gitspore runs on one repo.</td><td><span class="pill p-mvp">MVP</span></td><td>#18</td></tr>
+        <tr><td class="nw"><code>ConnectionStatus</code></td><td>online · reconnecting · offline, from the store.</td><td><span class="pill p-mvp">MVP</span></td><td>#8, #18</td></tr>
+        <tr><td class="nw"><code>SettingsMenu</code></td><td>Theme (light, dark, system), sound, browser notifications. shadcn <code>DropdownMenu</code>.</td><td><span class="pill p-mvp">MVP</span></td><td>#27</td></tr>
+        <tr><td class="nw"><code>HelpPopover</code></td><td>How to read a plant (the five states, their shapes and the growth track), keyboard shortcuts.</td><td><span class="pill p-mvp">MVP</span></td><td>#23</td></tr>
+        <tr><td class="nw"><code>ToolRail</code></td><td>Buttons: agents tab, issues tab, branches tab, scene/focus. The overview is not on the rail; it opens a window, so it lives in the hotbar. Badge with the number of waiting agents. shadcn <code>Button</code> + <code>Tooltip</code>.</td><td><span class="pill p-mvp">MVP</span></td><td>N1</td></tr>
+        <tr><th colspan="4">Main area</th></tr>
+        <tr><td class="nw"><code>WindowGrid</code></td><td>Calculates the tiles from mode, window list and screen width (rules R1–R6). Triggers <code>fit()</code> after each change.</td><td>1 window <span class="pill p-mvp">MVP</span><br>tiling <span class="pill p-should">should</span></td><td>N1, N6</td></tr>
+        <tr><td class="nw"><code>Window</code></td><td>Frame with header: agent colour, title, status, controls (minimise, focus this, maximise/restore, close), <code>⋯</code> menu. Only terminals use it for now; a shell tab inside an agent window is possible later.</td><td><span class="pill p-mvp">MVP</span></td><td>N2</td></tr>
+        <tr><td class="nw"><code>TerminalView</code></td><td>xterm.js with the fit addon, one per agent, kept alive while minimised.</td><td><span class="pill p-mvp">MVP</span></td><td>#11</td></tr>
+        <tr><td class="nw"><code>WindowTabs</code></td><td>Tabs inside a tile when there is no room for another tile (R1, R2). shadcn <code>Tabs</code>.</td><td><span class="pill p-should">should</span></td><td>N6</td></tr>
+        <tr><td class="nw"><code>IssueSheet</code></td><td>Issue title, body, labels, age. Buttons: Give to agent, Open on GitHub, Close.</td><td><span class="pill p-mvp">MVP</span></td><td>N3</td></tr>
+        <tr><td class="nw"><code>Hotbar</code></td><td>Bottom centre of the main area: one slot per pot (keys <code>1</code>–<code>6</code>) and the overview (key <code>0</code>). Each slot shows the plant, the status shape, the agent colour as a band, and the seconds while it waits. The focused window's slot is outlined, a minimised window is a mark at the top of its slot. Click opens that terminal (shift-click: beside). It replaces the tray of minimised chips. The windows tile above it.</td><td><span class="pill p-mvp">MVP</span>, overview slot <span class="pill p-should">should</span></td><td>N1, N11, N14</td></tr>
+        <tr><td class="nw"><code>OverviewWindow</code></td><td><code>Window</code> + <code>TerminalView</code> for the overview agent. Title "overview", no pot number, same status and controls as an agent window.</td><td><span class="pill p-should">should</span></td><td>N13</td></tr>
+        <tr><th colspan="4">Side panel</th></tr>
+        <tr><td class="nw"><code>SidePanel</code></td><td>Tabs <i>Agents</i>, <i>Issues</i> and <i>Branches</i>, one fixed width of about 400 px, so switching tabs never moves the windows.</td><td><span class="pill p-mvp">MVP</span></td><td>#18</td></tr>
+        <tr><td class="nw"><code>AgentRow</code></td><td>The plant in a circle filled with the agent colour, issue number and title, the status word, the growth track (five squares), <code>⋯</code> menu. A waiting row is taller, red, with a timer instead of the word. Click opens the terminal.</td><td><span class="pill p-mvp">MVP</span></td><td>#18</td></tr>
+        <tr><td class="nw"><code>IssueRow</code></td><td>Seed-packet look: crimped edge, seed mark, number, title, age. Click opens the sheet, drag plants. Planted issues stay, dimmed, with the pot's agent colour.</td><td><span class="pill p-mvp">MVP</span>, drag <span class="pill p-should">should</span></td><td>N3, N4</td></tr>
+        <tr><td class="nw"><code>BranchesTab</code></td><td><code>commit-graph</code> over the full panel height (about 28 commits), with the agent-colour adapter and dark CSS. Branch labels show the agent colour and a status dot. Highlights the selected agent's branch; clicking a branch opens its agent.</td><td><span class="pill p-should">should</span></td><td>N7</td></tr>
+        <tr><td class="nw"><code>IssueSearch</code></td><td>Filter field over the issue list. shadcn <code>Command</code>.</td><td><span class="pill p-should">should</span></td><td>N3</td></tr>
+        <tr><th colspan="4">Scene</th></tr>
+        <tr><td class="nw"><code>SceneCanvas</code></td><td>Full-page canvas, loaded with <code>next/dynamic</code>, inside an error boundary (S16).</td><td><span class="pill p-mvp">MVP</span></td><td>#5</td></tr>
+        <tr><td class="nw"><code>CameraRig</code></td><td>Frames the pots into the largest free rectangle of the main area with a camera view offset. No canvas resize.</td><td><span class="pill p-mvp">MVP</span></td><td>#5, #14</td></tr>
+        <tr><td class="nw"><code>Bench</code>, <code>Pot</code>, <code>Plant</code>, <code>NameTag</code></td><td>A larger table: six fixed slots in two rows at the back, a front strip for seed packets and the carving. Plant states and wilt stages, hover and selected state, drop target.</td><td><span class="pill p-mvp">MVP</span></td><td>#5, #13→pots, #14</td></tr>
+        <tr><td class="nw"><code>BeetleCarving</code></td><td>A beetle carved into the table top in the front strip, between the seed packets, about the size of two packets: a decal or texture area with an emissive mask, no extra model. The glow shows the overview's status: dim when idle, slow pulse when working, red when waiting, flicker on error. Click (raycast on its plane) opens the overview. Engraved and lit plate in lab-05, glowing wood carving in cozy-06.</td><td><span class="pill p-should">should</span></td><td>N14</td></tr>
+        <tr><td class="nw"><code>DropHandler</code></td><td>Takes HTML drag events over the canvas, raycasts to find the pot under the pointer.</td><td><span class="pill p-should">should</span></td><td>N4</td></tr>
+        <tr><td class="nw"><code>GardenMap</code></td><td>Object in the scene that opens the Branches tab.</td><td><span class="pill p-should">should</span></td><td>N9</td></tr>
+        <tr><td class="nw"><code>SeedPacket</code></td><td>3D packets for the first few issues, same look as the rows. They lie in the front strip of the table, left and right of the carving.</td><td><span class="pill p-later">later</span></td><td>N10</td></tr>
+        <tr><th colspan="4">Attention and system</th></tr>
+        <tr><td class="nw"><code>NotificationStack</code></td><td>Bottom-right cards for waiting agents. Stay until the agent no longer waits, never take keyboard focus. Buttons: Open, Open beside. shadcn <code>Sonner</code>.</td><td><span class="pill p-mvp">MVP</span></td><td>N5</td></tr>
+        <tr><td class="nw"><code>AttentionSignals</code></td><td>Waiting count in the tab title and favicon, browser notification, sound. No visible UI.</td><td>title, favicon <span class="pill p-mvp">MVP</span><br>rest <span class="pill p-should">should</span></td><td>N5</td></tr>
+        <tr><td class="nw"><code>ConfirmDialog</code></td><td>Stop agent, free pot, remove worktree. shadcn <code>AlertDialog</code>.</td><td><span class="pill p-mvp">MVP</span></td><td>N2</td></tr>
+        <tr><td class="nw"><code>ConnectScreen</code></td><td>Daemon not reachable, token missing, no GitHub access.</td><td><span class="pill p-mvp">MVP</span></td><td>N12</td></tr>
+        <tr><td class="nw"><code>EmptyStates</code></td><td>No agents yet, no open issues, all six pots taken.</td><td><span class="pill p-mvp">MVP</span></td><td>N12</td></tr>
+        <tr><td class="nw"><code>ShortcutHandler</code></td><td>1–6, 0 (overview), F, G and the leave-terminal key, active only when no terminal has focus.</td><td><span class="pill p-mvp">MVP</span></td><td>N11</td></tr>
+        <tr><td class="nw"><code>AgentColorPicker</code></td><td>8 swatches in the window <code>⋯</code> menu, taken colours disabled.</td><td><span class="pill p-should">should</span></td><td>N8</td></tr>
+        <tr><th colspan="4">Daemon (for the overview)</th></tr>
+        <tr><td class="nw"><code>OverviewAgent</code></td><td>Starts Claude Code in the repo root instead of a worktree. Read-only at first: it reads <code>git log --all</code>, the worktrees' diffs and the status file, and doesn't commit.</td><td><span class="pill p-should">should</span></td><td>N13, #16</td></tr>
+        <tr><td class="nw"><code>StatusFile</code></td><td>The daemon writes agents, issues, states, waiting times and branches to a file the overview reads, outside the repo or ignored by git.</td><td><span class="pill p-should">should</span></td><td>N13</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="limits">
+    <h2>Limits</h2>
+    <ul class="prose">
+      <li><b>Screen width.</b> Minimum 1280 px. No phone or tablet layout. Below 1280 a message asks for a wider window.</li>
+      <li><b>Tiles.</b> On a 1440 × 900 laptop: two terminals side by side only with the side panel closed (about 670 px each). With the panel open (about 950 px left) they stack. At most 4 visible terminal tiles; more become tabs.</li>
+      <li><b>Pots.</b> One repo, six pots, fixed slots (v3 scope).</li>
+      <li><b>Camera framing.</b> The view offset can only frame the pots into a rectangle. When the free area is an L-shape, it uses the largest rectangle, so the pots get smaller.</li>
+      <li><b>Animation.</b> Browsers animate changes of grid column and row sizes, but not of <code>grid-template-areas</code>. Smooth moves between states need the View Transitions API; check the Next.js docs in the repo before relying on it. xterm needs <code>fit()</code> when a transition ends, not on every frame.</li>
+      <li><b>Keyboard.</b> <kbd>Esc</kbd> belongs to the terminal (Claude Code uses it to interrupt). App shortcuts only work when no terminal has focus.</li>
+      <li><b>Panel backgrounds.</b> <code>backdrop-filter: blur</code> over a WebGL canvas is recalculated every frame. Measure it on our laptops before using it; solid panels are the default.</li>
+      <li><b>Answer buttons.</b> Depend on spike S3. Until then, answers go through the terminal.</li>
+      <li><b>Table size.</b> The larger table has to fit the same free rectangle, so the pots get a bit smaller. The camera rig frames pots and front strip together, so the carving stays visible in scene mode.</li>
+      <li><b>Overview context.</b> The overview only knows what git and the status file tell it, not the other agents' terminal output. Until it can act through the daemon, it can only advise.</li>
+      <li><b>Drag from HTML onto the scene.</b> Needs our own drop handling and raycast. It is a should-have; the button path works without it.</li>
+    </ul>
+  </section>
+
+  <section id="issues">
+    <h2>Ticket mapping</h2>
+    <p class="prose">Open tickets in <code>gitspore/gitspore</code> on 2026-10-06, and what this layout means for each. Several tickets were written for the v1/v2 terrarium (vines, beetles); they only change once the team adopts v3.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Ticket</th><th>Effect</th><th>What changes</th></tr></thead>
+      <tbody>
+        <tr><td class="nw">#2 GS-01 Shared contracts</td><td><span class="pill p-change">change</span></td><td>Agent gets a pot slot (0–5), an agent colour index and the time it started waiting. Add the merged state. Allow an agent without a pot (slot <code>null</code>) for the overview. The layout state stays in the web app, not in shared.</td></tr>
+        <tr><td class="nw">#5 GS-04 R3F scene scaffold</td><td><span class="pill p-change">change</span></td><td>Bench and pots instead of the terrarium, on a larger table with a front strip for the packets and the beetle carving between them. Full-page canvas under the HTML. Fixed camera with a view offset instead of free <code>OrbitControls</code> (or very tight limits).</td></tr>
+        <tr><td class="nw">#6 GS-05 Mock event server</td><td><span class="pill p-change">change</span></td><td>Six pots, a list of open issues, waiting transitions with timestamps, so the layout can be built before the daemon.</td></tr>
+        <tr><td class="nw">#8 GS-07 Socket client and store</td><td><span class="pill p-change">change</span></td><td>Add a UI slice: side panel, main area mode, ordered window list (visible or minimised), focused window, selected agent. A list from day one, so tiling can be added later without a refactor. Windows refer to agents, not to pots, so the overview window fits in.</td></tr>
+        <tr><td class="nw">#11 GS-10 xterm terminal panel</td><td><span class="pill p-change">change</span></td><td>A window in the grid, not a drawer. Not closed by <kbd>Esc</kbd>. Disposed on close, kept alive when minimised. <code>fit()</code> after layout transitions.</td></tr>
+        <tr><td class="nw">#12 GS-11 Vine rendering</td><td><span class="pill p-gone">superseded</span></td><td>Under v3, branches show in the Branches tab of the side panel, not as vines.</td></tr>
+        <tr><td class="nw">#13 GS-12 Gardener beetles</td><td><span class="pill p-gone">superseded</span></td><td>Pots and plants show the agents. The status list carries over to the plant, as five states: working, waiting, error, review, merged. The beetle stays as the carving for the overview agent (N14).</td></tr>
+        <tr><td class="nw">#14 GS-13 Hover and click</td><td><span class="pill p-change">change</span></td><td>Hover and click on pots and name tags. "New shell on a branch" is out. Camera fly-to becomes framing by the camera rig.</td></tr>
+        <tr><td class="nw">#16 GS-14 Agent spawning</td><td><span class="pill p-change">change</span></td><td>Input is an issue and a pot slot. Status from hooks stays as written. Can also start one agent in the repo root, without a pot, for the overview (N13).</td></tr>
+        <tr><td class="nw">#18 GS-15 HUD overlay</td><td><span class="pill p-change">change</span></td><td>Becomes top bar + side panel + connection status. The "New Gardener" modal is replaced by the issue list and <i>Give to agent</i>. Its acceptance criterion (works without the scene) is state S16.</td></tr>
+        <tr><td class="nw">#21 GS-16 Issue sync</td><td><span class="pill p-keep">keep</span></td><td>Feeds the issues tab. The branch naming rule that links issues to branches needs agreeing.</td></tr>
+        <tr><td class="nw">#23 Info box</td><td><span class="pill p-change">change</span></td><td>Becomes the help popover with the plant legend.</td></tr>
+        <tr><td class="nw">#25 GS-19 Scene feasibility</td><td><span class="pill p-change">change</span></td><td>Add four tests: camera view offset framing of the larger table, HTML drag dropped on the canvas, cost of panels (and blur) over the canvas, an emissive decal with animated states.</td></tr>
+        <tr><td class="nw">#26 GS-20 Choose direction</td><td><span class="pill p-change">change</span></td><td>Decide v3 vs v1/v2 first, then cozy-06 vs lab-05.</td></tr>
+        <tr><td class="nw">#27 GS-21 Theme tokens</td><td><span class="pill p-change">change</span></td><td>Add the cozy-06 interface tokens (panel, plate, accent, wait, line), issue paper, the five status colours, the 8 agent colours per theme.</td></tr>
+        <tr><td class="nw">#3, #4, #7, #9, #10, #24, #28</td><td><span class="pill p-keep">keep</span></td><td>Backend, setup and research; the layout doesn't touch them.</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3 class="group-title">Proposed new tickets</h3>
+    <div class="tbl"><table>
+      <thead><tr><th>N</th><th>Ticket</th><th>Priority</th><th>Stories</th></tr></thead>
+      <tbody>
+        <tr><td>N1</td><td>App shell and layout grid: regions, scene/focus mode, side panel state, hotbar, rules R4–R7</td><td><span class="pill p-mvp">MVP</span></td><td>US-04, US-06</td></tr>
+        <tr><td>N2</td><td>Window component: header, controls, <code>⋯</code> menu, confirm dialog</td><td><span class="pill p-mvp">MVP</span></td><td>US-06, US-15</td></tr>
+        <tr><td>N3</td><td>Issues tab, issue rows with the packet look, issue sheet, <i>Give to agent</i></td><td><span class="pill p-mvp">MVP</span></td><td>US-07, US-09</td></tr>
+        <tr><td>N4</td><td>Drag an issue row onto a pot or the table</td><td><span class="pill p-should">should</span></td><td>US-08</td></tr>
+        <tr><td>N5</td><td>Attention: notification stack, tab title and favicon count, browser notification, sound</td><td><span class="pill p-mvp">MVP</span> / <span class="pill p-should">should</span></td><td>US-02, US-03</td></tr>
+        <tr><td>N6</td><td>Tiling: 2–4 tiles, width and height rules, tabs fallback, <i>Open beside</i></td><td><span class="pill p-should">should</span></td><td>US-05</td></tr>
+        <tr><td>N7</td><td>Branches tab with <code>commit-graph</code>, colour adapter, dark CSS</td><td><span class="pill p-should">should</span></td><td>US-11</td></tr>
+        <tr><td>N8</td><td>Agent colours: palette, band, tag dot, picker, colour in rows, hotbar slots, windows, graph</td><td><span class="pill p-should">should</span></td><td>US-10</td></tr>
+        <tr><td>N9</td><td>Garden map object in the scene</td><td><span class="pill p-should">should</span></td><td>US-11</td></tr>
+        <tr><td>N10</td><td>3D seed packets</td><td><span class="pill p-later">later</span></td><td>US-08, US-09</td></tr>
+        <tr><td>N11</td><td>Keyboard: shortcuts, focus handling, leave-terminal key</td><td><span class="pill p-mvp">MVP</span></td><td>US-06</td></tr>
+        <tr><td>N12</td><td>Connect screen, empty states, scene fallback</td><td><span class="pill p-mvp">MVP</span></td><td>US-13, US-14</td></tr>
+        <tr><td>N13</td><td>Overview agent: start Claude Code in the repo root, status file, overview window, key <code>0</code></td><td><span class="pill p-should">should</span></td><td>US-17</td></tr>
+        <tr><td>N14</td><td>Beetle: hotbar slot 0, carving on the table top with emissive states, click to open</td><td><span class="pill p-should">should</span></td><td>US-17</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="open">
+    <h2>Open questions</h2>
+    <ol class="prose">
+      <li><b>Issue window placement.</b> A sheet over the top of the main area (as on board frame 7, used here), or a tile in the band like the other windows?</li>
+      <li><b>Band width with one terminal.</b> Full width of the main area (used here, simpler framing) or half width as on the board?</li>
+      <li><b>Leave-terminal key.</b> <kbd>Esc</kbd> is taken by Claude Code. Candidates: <kbd>Ctrl</kbd>+<kbd>`</kbd>, <kbd>F6</kbd>.</li>
+      <li><b>Merge.</b> Detect a merge made on GitHub, or offer a merge button in gitspore? The second brings merge conflicts, which are out of scope.</li>
+      <li><b>Branch naming.</b> Which name links an agent's branch to its issue (<code>GSP-&lt;n&gt;_…</code>, <code>issue-&lt;n&gt;-…</code>)?</li>
+      <li><b>Seed mark.</b> Chosen from the issue number (8 symbols) or from GitHub labels?</li>
+      <li><b>Overview: MVP or should-have?</b> Most of it reuses MVP parts (window, terminal, spawning, attention). Decide at the end of week 2, once terminals and spawning work.</li>
+      <li><b>Overview permissions.</b> Read-only at first? Orchestration later would go through an MCP server on the daemon (plant an issue, stop an agent, read status).</li>
+      <li><b>Status file.</b> Written on every hook event, or only when the overview asks?</li>
+      <li><b>v3 adoption.</b> The ticket mapping assumes the team adopts v3. Until then, #12 and #13 stay as they are.</li>
+    </ol>
+  </section>
+</div>
+
+<script>
+(() => {
+  // five states (cozy-06) and the empty pot: state, plant, colour day / night, word, growth stage (squares filled), shape
+  const STATES5 = [
+    ['work', 'Working', 'sprout with two leaves', '#4f9a45', '#7cc96b', 'growing', 3, 'circle'],
+    ['wait', 'Waiting for you', 'drooping, yellowed; the rim pulses', '#b3372a', '#ff6a50', 'a timer instead of a word', 3, 'triangle'],
+    ['err', 'Error', 'grey bare stalk', '#8a8277', '#9a948a', 'wilted', 3, 'cross'],
+    ['rev', 'Ready for review', 'closed yellow bud', '#d99a1e', '#f5bd3c', 'review', 4, 'diamond'],
+    ['mer', 'Merged', 'pink bloom', '#c2458e', '#ff6fc0', 'merged', 5, 'five-dot flower'],
+    ['empty', 'Empty pot', 'none, dashed circle', '', '', 'pick an issue', 0, 'dashed circle'],
+  ];
+  const POTS = [
+    { n: 12, s: 'work' }, { n: 15, s: 'wait' }, { n: 18, s: 'err' },
+    { n: 21, s: 'rev' }, { n: 9, s: 'mer' }, { n: null, s: 'empty' },
+  ];
+  const AGENTS = [
+    ['work', '#12 login-redirect', ''], ['wait', '#15 avatar-upload', '55s'], ['err', '#18 flaky-ci', ''],
+    ['rev', '#21 dark-mode', ''], ['mer', '#9 readme-setup', ''], ['empty', 'empty pot', ''],
+  ];
+  const ISSUES = ['#23 theme tokens', '#24 search bar', '#27 rate limit', '#30 i18n setup', '#31 avatar crop', '#33 logout bug', '#35 docs: api'];
+
+  const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const r = (x, y, w, h, cls, rx = 0, extra = '') => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" class="${cls}" ${extra}/>`;
+  const t = (x, y, s, cls = '', anchor = 'start') => `<text x="${x}" y="${y}" class="t ${cls}" text-anchor="${anchor}">${esc(s)}</text>`;
+  const crimp = (x, y, w) => { let d = `M${x} ${y}`; for (let i = 0; i < w; i += 3) d += ` l1.5 -1.2 l1.5 1.2`; return `<path d="${d}" class="s-line"/>`; };
+
+  // cozy-06 shapes: circle, triangle, cross, diamond, five-dot flower, dashed circle
+  function marker(s, cx, cy, k, pulse) {
+    if (s === 'work') return `<circle cx="${cx}" cy="${cy}" r="${k}" class="f-work"/>`;
+    if (s === 'wait') return `<path d="M${cx} ${cy - k * 1.15} L${cx + k * 1.2} ${cy + k * .9} H${cx - k * 1.2} Z" class="f-wait"/>` + (pulse ? `<circle cx="${cx}" cy="${cy}" r="${k * 1.9}" class="s-wait pulse"/>` : '');
+    if (s === 'err') return `<path d="M${cx - k * .8} ${cy - k * .8} L${cx + k * .8} ${cy + k * .8} M${cx + k * .8} ${cy - k * .8} L${cx - k * .8} ${cy + k * .8}" class="s-err" style="stroke-width:${k * .55}"/>`;
+    if (s === 'rev') return `<path d="M${cx} ${cy - k * 1.15} L${cx + k * 1.15} ${cy} L${cx} ${cy + k * 1.15} L${cx - k * 1.15} ${cy} Z" class="f-rev"/>`;
+    if (s === 'mer') return [0, 72, 144, 216, 288].map((a) => `<circle cx="${cx + Math.cos((a - 90) * Math.PI / 180) * k * .7}" cy="${cy + Math.sin((a - 90) * Math.PI / 180) * k * .7}" r="${k * .5}" class="f-mer"/>`).join('');
+    return `<circle cx="${cx}" cy="${cy}" r="${k}" class="s-dash"/>`;
+  }
+
+  // Beetle glyph: the carving on the table, hotbar slot 0 and the overview window.
+  function beetle(cx, cy, k, s, inv) {
+    const c = inv ? 's-carve inv' : 's-carve';
+    let o = '';
+    if (s === 'work') o += `<ellipse cx="${cx}" cy="${cy}" rx="${k * 1.5}" ry="${k * 1.75}" class="f-glow-work pulse"/>`;
+    if (s === 'wait') o += `<ellipse cx="${cx}" cy="${cy}" rx="${k * 1.5}" ry="${k * 1.75}" class="s-wait pulse"/>`;
+    o += `<ellipse cx="${cx}" cy="${cy + k * .15}" rx="${k * .62}" ry="${k * .85}" class="${c}"/>`;
+    o += `<circle cx="${cx}" cy="${cy - k * .98}" r="${k * .3}" class="${c}"/>`;
+    o += `<path d="M${cx} ${cy - k * .7} V${cy + k}` +
+      [-1, 1].map((d) => ` M${cx + d * k * .6} ${cy - k * .3} l${d * k * .45} ${-k * .3} M${cx + d * k * .62} ${cy + k * .1} h${d * k * .5} M${cx + d * k * .58} ${cy + k * .5} l${d * k * .45} ${k * .35}`).join('') +
+      `" class="${c}"/>`;
+    return o;
+  }
+
+  // Larger table: pots in two rows at the back, a front strip with packet space and the beetle carving.
+  function pots(a, sel, drop, carving = 'idle') {
+    let o = r(a.x + a.w * .03, a.y + a.h * .04, a.w * .94, a.h * .94, 'f-bench', 3);
+    const cw = a.w / 3, ch = a.h * .64 / 2, rad = Math.min(cw, ch) * .3;
+    const sy = a.y + a.h * .7, sh = a.h * .22, pw = Math.min(a.w * .07, sh * .7), ph = sh * .78;
+    o += `<line x1="${a.x + a.w * .05}" x2="${a.x + a.w * .95}" y1="${sy - 2}" y2="${sy - 2}" class="s-dash"/>`;
+    [.1, .2, .3, .62, .72, .82].forEach((f) => { o += r(a.x + a.w * f, sy + (sh - ph) / 2, pw, ph, 's-dash', 1); });
+    o += beetle(a.x + a.w * .5, sy + sh / 2, Math.min(sh * .46, 11.5), carving);
+    POTS.forEach((p, i) => {
+      const cx = a.x + cw * (i % 3 + .5), cy = a.y + a.h * .04 + ch * (Math.floor(i / 3) + .5);
+      o += `<circle cx="${cx}" cy="${cy}" r="${rad}" class="${p.s === 'empty' ? 's-dash' : 'f-pot'}"/>`;
+      o += marker(p.s, cx, cy, rad * .32, true);
+      if (i === sel) o += `<circle cx="${cx}" cy="${cy}" r="${rad * 1.28}" class="s-ink"/>`;
+      if (i === drop) o += `<circle cx="${cx}" cy="${cy}" r="${rad * 1.28}" class="s-drop"/>`;
+      if (rad > 7) o += t(cx + rad + 3, cy + 2, p.n ? '#' + p.n : 'free', 'm');
+    });
+    return o;
+  }
+
+  function topbar(tb = {}) {
+    let o = r(0, 0, 320, 14, 'f-bar');
+    o += t(6, 9.3, 'gitspore', 'b');
+    o += t(160, 9.3, tb.mid || '#15 avatar-upload · gsp-15', 'm', 'middle');
+    o += tb.offline ? t(314, 9.3, '● offline   ⚙  ?', 'w', 'end') : t(314, 9.3, '● online   ⚙  ?', '', 'end');
+    return o;
+  }
+
+  // Rail icons, drawn around (cx, cy) inside an 8 × 9 button: agents list, seed packet, branch, focus corners.
+  function icon(k, cx, cy, inv) {
+    const s = inv ? 's-icon inv' : 's-icon', f = inv ? 'f-icon inv' : 'f-icon';
+    if (k === 'A') return [-2, 0, 2].map((d) => `<circle cx="${cx - 2}" cy="${cy + d}" r=".55" class="${f}"/><line x1="${cx - .8}" x2="${cx + 2.4}" y1="${cy + d}" y2="${cy + d}" class="${s}"/>`).join('');
+    if (k === 'I') return `<path d="M${cx - 2} ${cy - 2.2} l.67 -.6 l.67 .6 l.67 -.6 l.67 .6 l.67 -.6 l.67 .6 V${cy + 2.8} H${cx - 2} Z" class="${s}"/><circle cx="${cx}" cy="${cy + .6}" r=".8" class="${s}"/>`;
+    if (k === 'G') return `<circle cx="${cx - 1.4}" cy="${cy - 2.4}" r=".7" class="${s}"/><circle cx="${cx - 1.4}" cy="${cy + 2.6}" r=".7" class="${s}"/><circle cx="${cx + 1.8}" cy="${cy - 1.2}" r=".7" class="${s}"/><path d="M${cx - 1.4} ${cy - 1.7} V${cy + 1.9} M${cx + 1.8} ${cy - .5} C${cx + 1.8} ${cy + 1}, ${cx - 1.4} ${cy + .6}, ${cx - 1.4} ${cy + 1.9}" class="${s}"/>`;
+    if (k === 'F') return `<path d="M${cx - 2.6} ${cy - 1} V${cy - 2.8} H${cx - .8} M${cx + .8} ${cy - 2.8} H${cx + 2.6} V${cy - 1} M${cx + 2.6} ${cy + 1} V${cy + 2.8} H${cx + .8} M${cx - .8} ${cy + 2.8} H${cx - 2.6} V${cy + 1}" class="${s}"/>`;
+    return '';
+  }
+
+  function rail(on = [], badge) {
+    let o = r(4, 18, 12, 54, 'f-bar', 2);
+    ['A', 'I', 'G', 'F'].forEach((k, i) => {
+      const y = 21 + i * 12.5, active = on.includes(k);
+      o += r(6, y, 8, 9, active ? 'f-ink' : 'f-win', 1.2) + icon(k, 10, y + 4.5, active);
+    });
+    if (badge) o += `<circle cx="14.5" cy="21" r="2.8" class="f-wait"/>` + t(14.5, 22.7, badge, 'inv', 'middle');
+    return o;
+  }
+
+  function panel(p) {
+    let o = r(238, 18, 78, 178, 'f-win', 2);
+    const TABS = [['agents', 'Agents', 242, 18], ['issues', 'Issues', 263, 18], ['branches', 'Branches', 284, 24]];
+    TABS.forEach(([k, label, x, w]) => {
+      o += t(x, 26.5, label, p.tab === k ? 'b' : 'm');
+      if (p.tab === k) o += `<line x1="${x}" x2="${x + w}" y1="28.5" y2="28.5" class="s-ink"/>`;
+    });
+    if (p.tab === 'branches') {
+      o += r(239, 31, 76, 164, 'f-git', 1);
+      const lanes = 6, lx = (l) => 244 + l * 3.2, rows = 28;
+      // lane lines: main (0) full height, agent lanes start at their fork row
+      for (let l = 0; l < lanes; l++) {
+        const top = 35, bottom = l === 0 ? 35 + (rows - 1) * 5.6 : 35 + (8 + l * 2.5) * 5.6;
+        o += `<line x1="${lx(l)}" x2="${lx(l)}" y1="${top}" y2="${bottom}" class="s-line" ${l === p.hl ? 'style="stroke:var(--wf-ink);stroke-width:1.2"' : ''}/>`;
+      }
+      for (let i = 0; i < rows; i++) {
+        const y = 35 + i * 5.6, lane = i < 16 ? (i * 5) % lanes : 0, on = lane === p.hl;
+        o += `<circle cx="${lx(lane)}" cy="${y}" r="1.25" class="${on ? 'f-ink' : lane === 0 ? 'f-ink' : 'f-dim'}"/>`;
+        o += r(267, y - 1, 18 + ((i * 13) % 11), 2, on ? 'f-ink' : 'f-dim', 1);
+        if (i < 5) o += r(298, y - 2.2, 15, 4.4, on ? 'f-win focus' : 'f-win', 1) + marker(AGENTS[i][0], 301, y, 1.1, false) + r(304, y - .7, 7, 1.4, 'f-dim', .5);
+      }
+      o += t(277, 192, 'main + 5 agent branches', 'm', 'middle');
+    } else if (p.tab === 'agents') {
+      AGENTS.forEach(([s, name, time], i) => {
+        const y = 33 + i * 14;
+        const w = s === 'wait'; // cozy-06: the waiting row is filled red, with a timer
+        o += r(242, y, 70, 11, w ? 'f-wait' : i === p.sel ? 'f-win focus' : 'f-win', 1.5);
+        o += w ? `<path d="M247 ${y + 3.3} L249 ${y + 7.4} H245 Z" class="f-icon inv"/>` : marker(s, 247, y + 5.5, 1.8, false);
+        o += t(252, y + 7.2, w ? name.slice(0, 13) + '…' : name, w ? 'inv' : '') + (time ? t(310, y + 7.2, time, 'inv b', 'end') : '');
+      });
+    } else {
+      ISSUES.forEach((name, i) => {
+        const y = 34 + i * 15;
+        o += r(242, y, 70, 12, i === p.sel ? 'f-issue focus' : 'f-issue', 1) + crimp(242, y + 1.6, 70);
+        o += `<circle cx="247" cy="${y + 7.5}" r="1.6" class="s-line"/>` + t(251, y + 9, name);
+        if (i === p.sel) o += r(242, y, 70, 12, 's-ink', 1);
+      });
+      o += r(242, 140, 70, 4, 'f-dim', 1) + t(244, 152, '+ 21 more · search', 'm');
+    }
+    return o;
+  }
+
+  function win(w0) {
+    const w = { ...w0, h: Math.min(w0.h, 184 - w0.y) }; // the hotbar takes the bottom of the main area
+    let o = r(w.x, w.y, w.w, w.h, w.focus ? 'f-win focus' : 'f-win', 2);
+    o += r(w.x, w.y, w.w, 10, 'f-bar', 2);
+    if (w.tabs) {
+      let tx = w.x + 3;
+      w.tabs.forEach((tb, i) => {
+        const tw = tb.length * 3 + 8;
+        o += r(tx, w.y + 1.5, tw, 7.5, i === 0 ? 'f-win focus' : 'f-win', 1) + t(tx + 4, w.y + 6.8, tb);
+        tx += tw + 2;
+      });
+    } else {
+      o += (w.overview ? beetle(w.x + 5, w.y + 5.2, 2.6, 'idle') : r(w.x + 3, w.y + 3, 4, 4, 'f-ink', .6)) + t(w.x + 9.5, w.y + 6.8, w.title, w.wait ? 'w' : '');
+    }
+    o += t(w.x + w.w - 3, w.y + 6.8, '–  ◎  ▢  ×  ⋯', 'm', 'end');
+    const bx = w.x + 5, by = w.y + 16, bw = w.w - 10;
+    const lines = Math.max(1, Math.floor((w.h - 18) / 7));
+    if (w.lines) {
+      w.lines.slice(0, lines - 1).forEach((l, i) => { o += t(bx, by + i * 7 + 1.8, l, l.startsWith('>') ? 'b' : l.includes('waits') ? 'w' : ''); });
+      return o + r(bx, by + Math.min(w.lines.length, lines - 1) * 7, 3, 4, 'f-ink');
+    }
+    for (let i = 0; i < lines; i++) {
+      const last = i === lines - 1;
+      if (w.wait && i === lines - 2) o += t(bx, by + i * 7 + 1.8, '? How should I store the uploads?', 'w');
+      else if (last) o += r(bx, by + i * 7, 3, 4, 'f-ink');
+      else o += r(bx, by + i * 7, bw * (.35 + ((i * 37) % 50) / 100), 2.4, 'f-dim', 1);
+    }
+    return o;
+  }
+
+  function sheet(s) {
+    let o = r(s.x, s.y, s.w, s.h, 'f-issue focus', 2) + crimp(s.x, s.y + 2, s.w);
+    o += `<circle cx="${s.x + 8}" cy="${s.y + 11}" r="2.5" class="s-line"/>` + t(s.x + 14, s.y + 13, '#24 search bar', 'b big') + t(s.x + s.w - 4, s.y + 12, '×', 'm', 'end');
+    for (let i = 0; i < 4; i++) o += r(s.x + 8, s.y + 21 + i * 7, (s.w - 16) * (.9 - i * .15), 2.4, 'f-dim', 1);
+    const bw = (s.w - 22) / 3, y = s.y + s.h - 13;
+    ['Give to agent', 'Open on GitHub', 'Close'].forEach((label, i) => {
+      o += r(s.x + 8 + i * (bw + 3), y, bw, 9, i === 0 ? 'f-ink' : 'f-win', 1.5) + t(s.x + 8 + i * (bw + 3) + bw / 2, y + 6, label, i === 0 ? 'inv' : '', 'middle');
+    });
+    return o;
+  }
+
+  // Hotbar: bottom centre of the main area. Six pot slots (keys 1–6), a divider, the overview (key 0). The focused window's slot is outlined.
+  function hotbar(st) {
+    const right = st.panel ? 234 : 316, cx = (20 + right) / 2, sw = 8, gap = 1.6, w = 6 * (sw + gap) + 3 + sw + 4;
+    const x0 = cx - w / 2, y = 187;
+    const fw = (st.wins || []).find((x) => x.focus);
+    const hot = fw ? (fw.overview ? 6 : POTS.findIndex((p) => p.n && ((fw.title || '') + (fw.tabs ? fw.tabs[0] : '')).startsWith('#' + p.n))) : -1;
+    let o = r(x0, y, w, 11, 'f-bar', 2);
+    POTS.forEach((p, i) => {
+      const sx = x0 + 2 + i * (sw + gap);
+      o += r(sx, y + 1.5, sw, sw, p.s === 'wait' ? 'f-wait' : p.s === 'empty' ? 's-dash' : 'f-win', 1.2);
+      o += p.s === 'wait' ? `<path d="M${sx + 4} ${y + 3.3} L${sx + 6} ${y + 6.8} H${sx + 2} Z" class="f-icon inv"/>` : marker(p.s, sx + sw / 2, y + 5.5, 1.5, false);
+      o += t(sx + 1, y + 4.6, String(i + 1), p.s === 'wait' ? 'hb inv' : 'hb m');
+      if (i === hot) o += r(sx - .8, y + .7, sw + 1.6, sw + 1.6, 's-ink', 1.6);
+      if ((st.min || []).includes(i)) o += r(sx + 2.5, y + 2.1, 3, .9, p.s === 'wait' ? 'f-icon inv' : 'f-ink', .4);
+    });
+    const dx = x0 + 2 + 6 * (sw + gap);
+    o += `<line x1="${dx + .5}" x2="${dx + .5}" y1="${y + 2}" y2="${y + 9}" class="s-line"/>`;
+    const ox = dx + 3, ov = st.carving === 'wait';
+    o += r(ox, y + 1.5, sw, sw, ov ? 'f-wait' : 'f-win', 1.2) + beetle(ox + sw / 2, y + 5.7, 2.2, 'idle', ov);
+    if (hot === 6) o += r(ox - .8, y + .7, sw + 1.6, sw + 1.6, 's-ink', 1.6);
+    if ((st.min || []).includes(6)) o += r(ox + 2.5, y + 2.1, 3, .9, ov ? 'f-icon inv' : 'f-ink', .4);
+    return o;
+  }
+
+  function toast(x, y, label = '#15 avatar-upload waits') {
+    let o = r(x, y, 92, 30, 'f-win', 2) + r(x, y, 92, 30, 's-wait', 2);
+    o += marker('wait', x + 7, y + 8, 1.8, true) + t(x + 13, y + 9.8, label, 'b') + t(x + 13, y + 16.5, 'for 40 s', 'm');
+    o += r(x + 5, y + 20, 36, 7, 'f-ink', 1.5) + t(x + 23, y + 24.8, 'Open beside', 'inv', 'middle');
+    o += r(x + 44, y + 20, 22, 7, 'f-win', 1.5) + t(x + 55, y + 24.8, 'Open', '', 'middle');
+    return o;
+  }
+
+  function dialog(d) {
+    let o = r(85, 64, 150, 60, 'f-win focus', 3);
+    o += t(160, 80, d.title, 'b big', 'middle') + t(160, 91, d.line1, 'm', 'middle') + t(160, 99, d.line2, 'm', 'middle');
+    o += r(135, 107, 50, 10, 'f-ink', 2) + t(160, 113.6, d.button, 'inv', 'middle');
+    return o;
+  }
+
+  function ghost(gx, gy, fromY) {
+    let o = `<path d="M240 ${fromY} C 215 ${fromY}, ${gx + 20} ${gy - 20}, ${gx + 8} ${gy}" class="s-drop"/>`;
+    o += r(gx, gy, 16, 20, 'f-issue focus', 1) + crimp(gx, gy + 2, 16) + t(gx + 8, gy + 13, '#24', 'b', 'middle');
+    return o;
+  }
+
+  function draw(st) {
+    let o = `<svg viewBox="0 0 320 200" role="img" aria-label="${esc(st.alt || st.name)}" xmlns="http://www.w3.org/2000/svg">`;
+    o += r(0, 0, 320, 200, 'f-scene');
+    if (st.pots) o += pots(st.pots, st.sel, st.drop, st.carving);
+    if (st.noScene) o += t(st.noScene.x, st.noScene.y, '3D view could not start', 'b big', 'middle') + t(st.noScene.x, st.noScene.y + 9, 'agents and terminals still work', 'm', 'middle');
+    if (st.dim) o += r(0, 14, 320, 186, 'f-scene', 0, 'opacity=".75"');
+    o += topbar(st.top);
+    o += rail(st.rail, st.badge);
+    if (st.panel) o += panel(st.panel);
+    (st.wins || []).forEach((w) => { o += win(w); });
+    if (st.sheet) o += sheet(st.sheet);
+    o += hotbar(st);
+    if (st.toast) o += toast(...st.toast);
+    if (st.ghost) o += ghost(...st.ghost);
+    if (st.dialog) o += dialog(st.dialog);
+    (st.annot || []).forEach((a) => { o += r(a.x, a.y, a.w, a.h, 's-annot', 2) + t(a.lx ?? a.x + 3, a.ly ?? a.y + 8, a.label, 'a', a.anchor || 'start'); });
+    return o + '</svg>';
+  }
+
+  const T15 = '#15 avatar-upload · waiting';
+  const STATES = [
+    { id: 'S01', name: 'Default: scene with one terminal', board: 'board 1',
+      pots: { x: 20, y: 16, w: 214, h: 104 }, sel: 1, rail: ['A'], panel: { tab: 'agents', sel: 1 },
+      wins: [{ x: 20, y: 124, w: 214, h: 72, title: T15, wait: true, focus: true }],
+      get: 'Start of the app once an agent exists. Click a pot or an agent row.',
+      see: 'Scene above the band, one terminal in the band, agents tab, the hotbar below. The table: pots at the back, packet space and the beetle carving at the front.',
+      limit: 'The pots shrink into the space above the band.' },
+    { id: 'S02', name: 'Scene only', board: 'board 2',
+      pots: { x: 20, y: 16, w: 296, h: 168 }, rail: [], min: [1],
+      get: 'Close the side panel, minimise the terminal.',
+      see: 'Largest pots. The minimised terminal is a mark on its hotbar slot, which shows its status.',
+      limit: 'No text about the agents except the hotbar. Rely on the plants.' },
+    { id: 'S03', name: 'Focus: one terminal', board: 'board 3',
+      rail: ['F'], badge: '', wins: [{ x: 20, y: 18, w: 296, h: 178, title: T15, wait: true, focus: true }],
+      get: 'Maximise or Focus this on a terminal. The side panel closes.',
+      see: 'The terminal fills the main area. Scene hidden.',
+      limit: 'Other agents only reach you through the rail badge and the notification (S12).' },
+    { id: 'S04', name: 'Focus with the panel open', board: 'board 3',
+      rail: ['A', 'F'], panel: { tab: 'agents', sel: 1 }, wins: [{ x: 20, y: 18, w: 214, h: 178, title: T15, wait: true, focus: true }],
+      get: 'From S03, open the agents tab from the rail.',
+      see: 'The terminal shrinks to make room for the panel.',
+      limit: 'About 960 px left for the terminal on a 1440 px laptop. Fine for one.' },
+    { id: 'S05', name: 'Scene with two terminals', board: 'board 5',
+      pots: { x: 20, y: 16, w: 296, h: 104 }, sel: 1, rail: [],
+      wins: [{ x: 20, y: 124, w: 146, h: 72, title: '#12 login-redirect · growing' }, { x: 170, y: 124, w: 146, h: 72, title: T15, wait: true, focus: true }],
+      get: 'Open a second agent while one is in the band, panel closed.',
+      see: 'Two tiles side by side, scene above.',
+      limit: 'About 670 px per tile. Only works with the side panel closed.' },
+    { id: 'S06', name: 'Two terminals, panel open: tabs', board: '–',
+      pots: { x: 20, y: 16, w: 214, h: 104 }, sel: 1, rail: ['A'], panel: { tab: 'agents', sel: 1 },
+      wins: [{ x: 20, y: 124, w: 214, h: 72, tabs: ['#15 waiting', '#12'], wait: true, focus: true }],
+      get: 'As S05, but the side panel is open.',
+      see: 'Side by side would be under 650 px per tile, and the band has no room to stack, so the second terminal is a tab (R2).',
+      limit: 'Only one terminal readable at a time.' },
+    { id: 'S07', name: 'Focus: three terminals tiled', board: 'board 4',
+      rail: ['F'], wins: [
+        { x: 20, y: 18, w: 146, h: 87, title: '#12 login-redirect' },
+        { x: 170, y: 18, w: 146, h: 87, title: T15, wait: true, focus: true },
+        { x: 20, y: 109, w: 296, h: 87, title: '#9 readme-setup' }],
+      get: 'Three visible terminals, then maximise.',
+      see: 'Two on top, one across the bottom (R1).',
+      limit: 'About 22 rows per tile on a 900 px screen. Four is the maximum (2 × 2).' },
+    { id: 'S08', name: 'Focus: two terminals, panel open', board: '–',
+      rail: ['A', 'F'], panel: { tab: 'agents', sel: 1 }, wins: [
+        { x: 20, y: 18, w: 214, h: 87, title: '#12 login-redirect' },
+        { x: 20, y: 109, w: 214, h: 87, title: T15, wait: true, focus: true }],
+      get: 'From a two-terminal focus, open the side panel.',
+      see: 'Not enough width for side by side, so the tiles stack (R2).',
+      limit: 'Each tile has about 20 rows. A third terminal becomes a tab.' },
+    { id: 'S09', name: 'Issues tab', board: 'board 6',
+      pots: { x: 20, y: 16, w: 214, h: 104 }, rail: ['I'], panel: { tab: 'issues', sel: -1 },
+      wins: [{ x: 20, y: 124, w: 214, h: 72, title: '#12 login-redirect · growing', focus: true }],
+      get: 'Rail issues button, or click an empty pot (opens in pick mode).',
+      see: 'Open issues as packet-like rows: crimped edge, seed mark, number, title.',
+      limit: 'Scrolls. Search field is a should-have.' },
+    { id: 'S10', name: 'Issue sheet', board: 'board 7',
+      pots: { x: 20, y: 16, w: 214, h: 104 }, rail: ['I'], panel: { tab: 'issues', sel: 1 },
+      sheet: { x: 30, y: 20, w: 194, h: 82 },
+      wins: [{ x: 20, y: 124, w: 214, h: 72, title: '#12 login-redirect · growing' }],
+      get: 'Click an issue row (or a seed packet, later).',
+      see: 'Issue details over the top of the scene. Give to agent plants it in the next free pot.',
+      limit: 'One sheet at a time. It doesn’t tile (R10).' },
+    { id: 'S11', name: 'Branches tab', board: '–',
+      pots: { x: 20, y: 16, w: 214, h: 104 }, sel: 1, rail: ['G'], panel: { tab: 'branches', hl: 2 },
+      wins: [{ x: 20, y: 124, w: 214, h: 72, title: T15, wait: true, focus: true }],
+      get: 'Rail branches button, key G, or the garden map object.',
+      see: 'main and every agent branch over the full panel height, about 28 commits. Each branch label has a status dot. The selected pot\u2019s branch is highlighted; clicking a branch opens its agent.',
+      limit: 'Agents list and graph are not visible together; the status dots on the labels make up for it. The panel keeps one width.' },
+    { id: 'S12', name: 'Another agent waits while you focus', board: '–',
+      rail: ['F'], badge: '1', wins: [{ x: 20, y: 18, w: 296, h: 178, title: '#12 login-redirect · growing', focus: true }],
+      toast: [220, 160],
+      get: 'Any agent starts waiting while its terminal isn’t visible.',
+      see: 'Notification bottom right, badge on the rail, count in the tab title. Keyboard focus stays in #12.',
+      limit: 'The notification covers the bottom-right corner of the window until handled.' },
+    { id: 'S13', name: 'After "Open beside"', board: 'board 4',
+      rail: ['F'], wins: [{ x: 20, y: 18, w: 146, h: 178, title: '#12 login-redirect' }, { x: 170, y: 18, w: 146, h: 178, title: T15, wait: true, focus: true }],
+      get: 'Click Open beside in the notification.',
+      see: 'The waiting agent tiles next to the one you were reading. Focus moves to it.',
+      limit: 'If tiles would get too narrow, it opens as a tab instead (R2).' },
+    { id: 'S14', name: 'Drag an issue onto a pot', board: '–',
+      pots: { x: 20, y: 16, w: 214, h: 168 }, drop: 5, rail: ['I'], panel: { tab: 'issues', sel: 1 }, min: [1],
+      ghost: [207, 108, 56],
+      get: 'Drag a row from the issues tab. Should-have; the button path in S10 is the MVP.',
+      see: 'The drag preview is a seed packet. The target pot gets a dashed ring.',
+      limit: 'Dropping on a taken pot does nothing. Dropping on the table uses the next free pot.' },
+    { id: 'S15', name: 'Daemon not reachable', board: '–',
+      pots: { x: 20, y: 16, w: 214, h: 168 }, dim: true, top: { offline: true, mid: 'main · 6 pots' }, rail: [], panel: { tab: 'agents', sel: -1 },
+      dialog: { title: 'Can’t reach the gitspore daemon', line1: 'It should run on this computer.', line2: 'Start it, then try again.', button: 'Try again' },
+      get: 'At start or when the connection drops.',
+      see: 'Last known state, dimmed, and what to do.',
+      limit: 'Terminals can’t be typed into while offline.' },
+    { id: 'S16', name: 'Scene failed', board: '–',
+      noScene: { x: 127, y: 64 }, rail: ['A'], panel: { tab: 'agents', sel: 1 },
+      wins: [{ x: 20, y: 124, w: 214, h: 72, title: T15, wait: true, focus: true }],
+      get: 'WebGL missing or the scene throws an error.',
+      see: 'Message in place of the scene. The agents tab and terminals work as usual.',
+      limit: 'No plants, so the agents tab is the only status view.' },
+    { id: 'S17', name: 'Overview, opened from the beetle', board: '–',
+      rail: ['F'], wins: [{ x: 20, y: 18, w: 296, h: 178, title: 'overview · all agents', overview: true, focus: true, lines: [
+        '> where do we stand?',
+        '#12 login-redirect: tests pass, 3 commits, almost done',
+        '#15 avatar-upload waits 40 s: asks where to store uploads',
+        '#18 flaky-ci: failed twice on the same test, needs a look',
+        '#21 dark-mode: in review · #9 readme-setup: merged',
+        'Suggestion: answer #15 first, then review #21.',
+        '> what does #12 touch that #21 also changes?',
+        'Both edit src/styles/theme.ts. Merge #21 first.'] }],
+      get: 'Hotbar slot 0, click the carving, or key 0.',
+      see: 'The overview agent maximised (Focus this): one Claude Code session in the repo root that sees every agent, its status and branch.',
+      limit: 'Read-only at first. It knows what git and the status file tell it, not the other agents\u2019 terminal output.' },
+    { id: 'S18', name: 'Overview beside an agent', board: '–',
+      rail: ['F'], wins: [
+        { x: 20, y: 18, w: 146, h: 178, title: T15, wait: true },
+        { x: 170, y: 18, w: 146, h: 178, title: 'overview', overview: true, focus: true, lines: ['> what is #15 stuck on?', 'It asks: resize uploads', 'or keep the originals.', '#12 already resizes', 'avatars to 256 px.', 'Answer 1 keeps it the same.'] }],
+      get: 'Shift-click hotbar slot 0 while an agent is open, or Open beside in its notification.',
+      see: 'The overview tiles next to the agent you ask about (R1, R2).',
+      limit: 'Same width rule as terminals: with the side panel open it stacks or becomes a tab.' },
+    { id: 'S19', name: 'The overview waits', board: '–',
+      pots: { x: 20, y: 16, w: 296, h: 168 }, carving: 'wait', rail: [], badge: '1', min: [6],
+      toast: [222, 112, 'overview waits'],
+      get: 'The overview asks something while its window isn\u2019t visible.',
+      see: 'The beetle carving between the seed packets glows red, and hotbar slot 0 turns red. Same notice and title count as an agent.',
+      limit: 'The carving shows only the overview\u2019s status, not the agents\u2019. In focus mode the scene is hidden, so the notice carries it.' },
+  ];
+
+  // Technical schematic: the default screen with callouts. Wireframe coordinates (320 × 200) are scaled by K and offset by OX, OY.
+  const REGIONS = {
+    name: 'Regions', alt: 'Schematic of the app window with labelled parts',
+    pots: { x: 40, y: 22, w: 180, h: 96 }, rail: ['A'], panel: { tab: 'agents', sel: -1 },
+    wins: [{ x: 20, y: 124, w: 214, h: 58, title: '#12 login-redirect · growing', focus: true }], min: [1],
+    toast: [222, 160],
+  };
+  const K = 1.25, OX = 200, OY = 30;
+  const CALLOUTS = [
+    // [side, label y, target x, target y (wireframe coords), name, description lines]
+    ['l', 18, 40, 7, 'Top bar', ['Focused agent, waiting count, online status, settings, help']],
+    ['l', 54, 13, 30, 'Tool rail', ['Agents, Issues, Branches tabs; focus mode']],
+    ['l', 92, 30, 52, 'Scene', ['3D canvas behind everything. Never resizes;', 'the camera frames the table into the free area']],
+    ['l', 130, 61, 72, 'Pots', ['One per agent, 6 fixed slots.', 'The plant shows the agent’s status']],
+    ['l', 168, 60, 100, 'Packet strip', ['Space for 3D seed packets (later)']],
+    ['l', 206, 124, 100, 'Beetle carving', ['Status of the overview agent. Click opens it']],
+    ['l', 244, 40, 150, 'Terminal band', ['Scene mode: windows in one row.', 'Focus mode: windows cover the main area']],
+    ['l', 284, 150, 192, 'Hotbar', ['Pots on keys 1–6, overview on 0.', 'A mark on a slot: its window is minimised']],
+    ['r', 70, 290, 80, 'Side panel', ['Agents, Issues, Branches.', 'One width, about 400 px']],
+    ['r', 226, 300, 168, 'Notification', ['An agent waits and its', 'window is hidden']],
+  ];
+  function schematic() {
+    const inner = draw(REGIONS).replace('<svg viewBox="0 0 320 200"', `<svg x="${OX}" y="${OY}" width="${320 * K}" height="${200 * K}" viewBox="0 0 320 200"`);
+    let o = '<svg viewBox="0 0 720 306" role="img" aria-label="Schematic of the app window with labelled parts" xmlns="http://www.w3.org/2000/svg">';
+    o += '<defs><marker id="arrow" viewBox="0 0 6 6" refX="5.5" refY="3" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0 L6 3 L0 6 Z" class="c-dot"/></marker></defs>';
+    o += inner + `<rect x="${OX}" y="${OY}" width="${320 * K}" height="${200 * K}" rx="3" class="frame"/>`;
+    CALLOUTS.forEach(([side, ly, tx, ty, name, desc]) => {
+      const X = OX + tx * K, Y = OY + ty * K, left = side === 'l';
+      const lx = left ? 188 : 612, anchor = left ? 'end' : 'start', sx = left ? 191 : 609;
+      o += `<text x="${lx}" y="${ly}" class="c-name" text-anchor="${anchor}">${esc(name)}</text>`;
+      desc.forEach((d, i) => { o += `<text x="${lx}" y="${ly + 9 + i * 8.5}" class="c-desc" text-anchor="${anchor}">${esc(d)}</text>`; });
+      o += `<path d="M${sx} ${ly - 3} L${X} ${Y}" class="c-lead" marker-end="url(#arrow)"/>`;
+    });
+    return o + '</svg>';
+  }
+  document.getElementById('regionFig').innerHTML = schematic() +
+    '<figcaption class="meta">Default screen in scene mode. Top bar, rail, main area and side panel form a CSS grid. The hotbar sits at the bottom centre of the main area, the notification floats over the bottom right.</figcaption>';
+
+  const themeBtn = document.getElementById('themeBtn');
+  const THEMES = ['system', 'light', 'dark'];
+  let theme = 'system';
+  try { theme = localStorage.getItem('gitspore-layout-theme') || 'system'; } catch (e) {}
+  function applyTheme() {
+    if (theme === 'system') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = theme;
+    themeBtn.textContent = 'theme: ' + theme;
+    try { localStorage.setItem('gitspore-layout-theme', theme); } catch (e) {}
+  }
+  themeBtn.onclick = () => { theme = THEMES[(THEMES.indexOf(theme) + 1) % 3]; applyTheme(); };
+  applyTheme();
+
+  const legendItems = [['work', 'growing'], ['wait', 'waiting for you'], ['err', 'wilted (error)'], ['rev', 'review'], ['mer', 'merged'], ['empty', 'empty pot']];
+  document.getElementById('statesBody').innerHTML = STATES5.map(([k, name, plant, day, night, word, n, shape]) => `<tr>
+    <td>${name}</td><td>${plant}</td>
+    <td class="nw">${day ? `<span class="sw" style="background:${day}"></span><code>${day}</code> / <code>${night}</code>` : 'muted text'}</td>
+    <td>${word}</td>
+    <td class="nw">${n ? `<span class="trk" style="--c:var(--st-${k === 'mer' ? 'mer' : k})">${[1, 2, 3, 4, 5].map((i) => `<i class="${i <= n ? 'f' : ''}"></i>`).join('')}</span> ${n} filled${k === 'wait' ? ', the third blinks' : k === 'err' ? ', grey' : ''}` : 'none'}</td>
+    <td class="nw"><svg viewBox="0 0 14 14" aria-hidden="true">${marker(k, 7, 7, 3.6, false)}</svg> ${shape}</td></tr>`).join('');
+  document.getElementById('legend').innerHTML = legendItems.map(([s, l]) =>
+    `<span><svg viewBox="0 0 14 14" aria-hidden="true">${marker(s, 7, 7, 3.4, false)}</svg>${l}</span>`).join('') +
+    `<span><svg viewBox="0 0 14 14" aria-hidden="true"><rect x="1" y="2" width="12" height="10" rx="1.5" class="f-win focus"/></svg>focused window</span>` +
+    `<span><svg viewBox="0 0 14 14" aria-hidden="true"><rect x="1" y="2" width="12" height="10" rx="1" class="f-issue"/></svg>issue</span>` +
+    `<span><svg viewBox="0 0 14 14" aria-hidden="true"><rect x="3" y="1.5" width="8" height="11" rx="1" class="s-dash"/></svg>packet space on the table (later)</span>` +
+    `<span><svg viewBox="0 0 14 14" aria-hidden="true">${beetle(7, 7.6, 4.4, 'idle')}</svg>beetle: carving and hotbar slot 0 for the overview</span>` +
+    `<span>rail: ` + [['A', 'agents'], ['I', 'issues'], ['G', 'branches'], ['F', 'focus']].map(([k, l]) => `<svg viewBox="0 0 8 9" aria-hidden="true">${icon(k, 4, 4.5, false)}</svg>${l}`).join(' ') + `</span>` +
+    `<span class="mono">– minimise · ◎ focus this · ▢ maximise · × close · ⋯ menu</span>`;
+
+  document.getElementById('gallery').innerHTML = STATES.map((s) => `
+    <article class="state" id="${s.id}">
+      <header><span class="id">${s.id}</span><h3>${esc(s.name)}</h3><span class="board">${s.board}</span></header>
+      ${draw(s)}
+      <dl><dt>Get here</dt><dd>${esc(s.get)}</dd><dt>Shows</dt><dd>${esc(s.see)}</dd><dt>Limit</dt><dd>${esc(s.limit)}</dd></dl>
+    </article>`).join('');
+
+  const STORIES = [
+    ['Notice', [
+      ['US-01', 'I want to see at a glance which agent waits for me, so I can unblock it before it loses time.', 'mvp', 'S01 S02', '#5 #13→pots #16'],
+      ['US-02', 'When I work in another tab or app, I want the tab title, the favicon and a notification to tell me an agent waits.', 'mvp', '–', 'N5'],
+      ['US-03', 'While I read one terminal, I want a notice in the corner when another agent waits, without losing my keyboard focus.', 'mvp', 'S12', 'N5'],
+      ['US-15', 'I want to see when an agent crashed and restart it from its window or row.', 'mvp', 'S01', '#16 N2'],
+    ]],
+    ['Answer and read', [
+      ['US-04', 'I want to click the waiting plant and answer in the agent’s real terminal.', 'mvp', 'S01 S03', '#11 #14 N1'],
+      ['US-06', 'I want to give one terminal the whole space, and get back to the scene in one click.', 'mvp', 'S03 S02', 'N1 N2 N11'],
+      ['US-05', 'I want to answer a second agent while the first one stays in view.', 'should', 'S05 S07 S13', 'N6'],
+    ]],
+    ['Start work', [
+      ['US-07', 'I want to pick an open issue and give it to a free pot, so gitspore creates the worktree and branch and starts Claude Code on it.', 'mvp', 'S09 S10', '#16 #21 N3'],
+      ['US-08', 'I want to drag an issue onto a pot, so starting an agent feels like planting.', 'should', 'S14', 'N4 N10'],
+      ['US-09', 'I want to recognise an issue in the list, as a packet and on its pot’s name tag by the same number and seed mark.', 'mvp', 'S09 S14', 'N3'],
+    ]],
+    ['Overview', [
+      ['US-10', 'I want each agent to keep one colour in the scene, the list, its window and the graph, so I can tell them apart.', 'should', 'S01 S11', 'N8'],
+      ['US-11', 'I want to open the branch graph and see where each agent’s branch stands against main.', 'should', 'S11', 'N7 N9'],
+      ['US-12', 'I want to see when a branch is merged: the plant blooms and the pot is free again.', 'mvp', 'S01', '#16 + merge detection'],
+      ['US-16', 'I want a short explanation of the plant states, so I can read the scene on day one.', 'mvp', '–', '#23'],
+      ['US-17', 'I want to ask one chat what all agents have done, where each one stands and where the whole project is going.', 'should', 'S17 S18 S19', 'N13 N14'],
+    ]],
+    ['When things go wrong', [
+      ['US-13', 'If the 3D view fails, I still want to see my agents and use their terminals.', 'mvp', 'S16', '#18 N12'],
+      ['US-14', 'When the daemon isn’t running, I want to be told what to do instead of seeing an empty page.', 'mvp', 'S15', '#4 #8 N12'],
+    ]],
+  ];
+  const pill = (p) => p === 'mvp' ? '<span class="pill p-mvp">MVP</span>' : '<span class="pill p-should">should</span>';
+  const links = (s) => s === '–' ? '–' : s.split(' ').map((id) => `<a href="#${id}">${id}</a>`).join(' ');
+  document.getElementById('storyList').innerHTML = STORIES.map(([group, list]) =>
+    `<h3 class="group-title">${group}</h3>` + list.map(([id, text, prio, states, tickets]) => `
+      <div class="story"><span class="sid">${id}</span><p>As a developer running several agents, ${esc(text.startsWith('I ') ? text : text.charAt(0).toLowerCase() + text.slice(1))}</p>${pill(prio)}
+      <div class="links">States: ${links(states)} · Tickets: ${esc(tickets)}</div></div>`).join('')).join('');
+})();
+</script>

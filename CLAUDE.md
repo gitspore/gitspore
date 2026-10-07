@@ -2,14 +2,15 @@
 
 # gitspore
 
-gitspore shows a git repository as a living 3D terrarium. Capstone project, 2026-10-05 to the presentation on 2026-11-04. The concept is still moving; current versions are in `project-management/concept/`.
+gitspore shows each AI coding agent as a plant on a 3D greenhouse table; a plant that wilts is an agent waiting for you. Capstone project, 2026-10-05 to the presentation on 2026-11-04. The current concept, scope, decisions and design are in `docs/` (start with `docs/README.md`).
 
 ## Where things live
 
 - `apps/web`: Next.js frontend (React Three Fiber scene, terminal UI).
 - `apps/api`: NestJS daemon, runs locally (terminals with node-pty, git worktrees, Socket.io, SQLite via Drizzle).
 - `packages/shared`: types shared by web and api.
-- `project-management/`: concept, research, scope and records. Not part of the app. Never import from it or include it in a build. It has its own `CLAUDE.md`; read it only when a task is about concept or planning.
+- `docs/`: concept, scope, decisions (ADRs), layout, components and tokens, the 3D prototype, a presentation. Not part of the app. Never import from it or include it in a build. It has its own `CLAUDE.md`; read it for any concept, design or planning task.
+- Design values come from the Penpot file `gitspore_v01` (`docs/design/penpot.md`). Research and process records are in the `gitspore/workbench` repo.
 
 ## Git workflow
 
