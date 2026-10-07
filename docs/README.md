@@ -15,6 +15,7 @@ These docs describe the current state: what we build and how it looks. They are 
 | [design/components.md](design/components.md) | Tokens, type, the five states, every component with sizes and variants |
 | [design/prototype.html](design/prototype.html) | The live 3D prototype of all states, day and night |
 | [design/penpot.md](design/penpot.md) | The Penpot design file: setup, what each page holds, rules |
+| [design/competitors.md](design/competitors.md) | Agent Office, Conductor, herdr and Paperclip next to gitspore, and where we differ |
 | [presentation/index.html](presentation/index.html) | A 10-slide introduction for other teams |
 
 Open the HTML files directly in a browser. They load fonts and three.js from CDNs, so they need a connection.
