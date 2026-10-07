@@ -14,6 +14,6 @@ gitspore shows each AI coding agent as a plant on a 3D greenhouse table; a plant
 
 ## Git workflow
 
-- Never commit to `main`. One branch per ticket, named `GSP-<issue number>_<Short-Name>`, for example `GSP-1_Project-Management-Setup`.
-- Merge only through a pull request after a teammate's review. Put `Closes #<issue number>` in the PR description.
+- Never commit to `main`. One branch per ticket, named `GSP-<card number>_<Short-Name>`. The card number is the GS number in the card title, not the GitHub issue number: card "GS-22 …" (issue #28) → `GSP-22_Monorepo-CI`. A card without a GS number uses its issue number (`GSP-1_Project-Management-Setup`).
+- Merge only through a pull request after a teammate's review. Put `Closes #<GitHub issue number>` in the PR description (for GS-22: `Closes #28`).
 - Tickets live on the board: https://github.com/orgs/gitspore/projects/1
