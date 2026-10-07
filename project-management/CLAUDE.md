@@ -13,6 +13,7 @@ We are in the research phase. Expect files to move and get renamed.
 | `research/inspiration/` | Moodboard: visual references and aesthetics | `research/inspiration/CONTEXT.md` |
 | `records/` | Decisions, meeting notes, work log, retrospectives | `records/CONTEXT.md` |
 | `scope.md` | What we build in 4 weeks, in what order, what gets cut | this file |
+| `penpot.md` | The Penpot design file: MCP setup, what each page holds, rules for sessions | `penpot.md` |
 
 ## Conventions
 
