@@ -6,7 +6,7 @@
 <style>
   /* Layout: the 3D scene fills the page. On top, a grid: top bar, tool rail, main area (terminal windows, hotbar, issue sheet), side panel
      with Agents / Issues / Branches. Windows are placed by buttons, never dragged. The camera frames the pots into the free part of the main area.
-     Spec: docs/design/layout.html. Two styles: cozy-06 (default; tokens in docs/design/components.md) and lab-05, the earlier
+     Spec: design-docs/design/layout.html. Two styles: cozy-06 (default; tokens in design-docs/design/components.md) and lab-05, the earlier
      alternative, still selectable in the settings. Reference until apps/web shows the real scene, then remove. */
   :root {
     --bg: #f6ead1; --panel: rgba(236, 230, 214, .8); --panel-solid: #ece6d6; --panel-2: #ddd4bf; --term-bg: #fbf7ec;
@@ -1829,7 +1829,7 @@ addEventListener('pointerup', (e) => {
   downAt = null;
 });
 
-// ---------------------------------------------------------------- demo states (same ids as docs/design/layout.html)
+// ---------------------------------------------------------------- demo states (same ids as design-docs/design/layout.html)
 const STATES = [
   ['S01', 'Default: scene with one terminal', { panel: 'agents', mode: 'scene', wins: [[1]], focus: 1 }],
   ['S02', 'Scene only', { panel: null, mode: 'scene', wins: [[1, true]], focus: 1 }],

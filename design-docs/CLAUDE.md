@@ -1,6 +1,6 @@
-# Docs
+# Design docs
 
-`docs/` describes the current state of gitspore: concept, scope, decisions, design. It is not part of the app; never import from it or include it in a build. Start with `README.md`.
+`design-docs/` describes the current state of gitspore: concept, scope, decisions, design. It is not part of the app; never import from it or include it in a build. Start with `README.md`.
 
 ## Rules
 
