@@ -108,6 +108,10 @@ figcaption b { color: var(--ink); font-weight: 600; font-family: var(--font-mono
 .trk i { width: 16px; height: 16px; border-radius: 3px; box-shadow: inset 0 0 0 2px var(--muted); opacity: .55; }
 .trk i.f { box-shadow: none; opacity: 1; background: var(--c); }
 .states .w { color: var(--muted); }
+.cmp { font-size: 22px; margin-top: 28px; }
+.cmp td { padding: 12px 16px 12px 0; }
+.cmp td:first-child { white-space: nowrap; }
+.cmp tr.us td { border-top: 1.5px solid var(--ink); border-bottom: none; color: var(--accent); }
 @media (prefers-reduced-motion: reduce) { #bar { transition: none; } }
 </style>
 </head>
@@ -143,6 +147,22 @@ figcaption b { color: var(--ink); font-weight: 600; font-family: var(--font-mono
       <li>Stay in the room while the work gets done</li></ul></div>
   </div>
   <p class="muted" style="font-size:22px;margin-top:24px">Issues are seed packets, pots are worktrees, a merge makes the plant bloom.</p>
+</section>
+
+<section class="slide" aria-label="Others">
+  <div class="eyebrow">Others</div>
+  <h2>Others run agents in parallel too</h2>
+  <table class="states cmp">
+    <thead><tr><th></th><th>What it is</th><th>Worktrees</th><th>Shows waiting</th><th>For</th></tr></thead>
+    <tbody>
+      <tr><td>Agent Office</td><td>3D cartoon office, one desk per agent, issues on cork boards</td><td>yes</td><td>red beacon</td><td>teams, with voice</td></tr>
+      <tr><td>Conductor</td><td>Mac app: parallel agents, then review and merge</td><td>yes</td><td class="w">–</td><td>one developer</td></tr>
+      <tr><td>herdr</td><td>Server that owns the agents' terminals</td><td class="w">–</td><td>"blocked" state</td><td>one developer</td></tr>
+      <tr><td>Paperclip</td><td>Agents as a company: roles, budgets, approvals</td><td class="w">–</td><td>approvals</td><td>one person as the CEO</td></tr>
+      <tr class="us"><td>gitspore</td><td>A greenhouse table, one plant per agent</td><td>yes</td><td>the plant wilts, worse the longer it waits</td><td>one developer</td></tr>
+    </tbody>
+  </table>
+  <p class="muted" style="font-size:22px;margin-top:22px">Agent Office is the closest. We aim at one developer and a calm room, and waiting gets worse over time instead of a flag that looks the same at 5 seconds and at 5 minutes.</p>
 </section>
 
 <section class="slide" aria-label="Five states">
