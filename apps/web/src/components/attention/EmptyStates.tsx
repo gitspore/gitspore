@@ -1,5 +1,3 @@
 export default function EmptyStates() {
-	return (
-		<div>EmptyStates</div>
-	)
+  return <div>EmptyStates</div>;
 }

@@ -1,5 +1,3 @@
 export default function TerminalView() {
-	return (
-		<div>TerminalView</div>
-	)
+  return <div>TerminalView</div>;
 }

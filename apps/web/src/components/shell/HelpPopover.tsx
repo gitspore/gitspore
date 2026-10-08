@@ -1,5 +1,3 @@
 export default function HelpPopover() {
-	return (
-		<div>HelpPopover</div>
-	)
+  return <div>HelpPopover</div>;
 }

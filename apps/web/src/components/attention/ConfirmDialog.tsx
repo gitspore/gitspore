@@ -1,5 +1,3 @@
 export default function ConfirmDialog() {
-	return (
-		<div>ConfirmDialog</div>
-	)
+  return <div>ConfirmDialog</div>;
 }

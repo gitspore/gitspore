@@ -1,5 +1,3 @@
 export default function Window() {
-	return (
-		<div>Window</div>
-	)
+  return <div>Window</div>;
 }

@@ -1,5 +1,3 @@
 export default function NotificationStack() {
-	return (
-		<div>NotificationStack</div>
-	)
+  return <div>NotificationStack</div>;
 }

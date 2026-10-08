@@ -1,5 +1,3 @@
 export default function SidePanel() {
-	return (
-		<div>SidePanel</div>
-	)
+  return <div>SidePanel</div>;
 }

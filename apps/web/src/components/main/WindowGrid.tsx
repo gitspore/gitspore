@@ -1,5 +1,3 @@
 export default function WindowGrid() {
-	return (
-		<div>WindowGrid</div>
-	)
+  return <div>WindowGrid</div>;
 }

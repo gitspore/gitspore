@@ -1,5 +1,3 @@
 export default function ToolRail() {
-	return (
-		<div>ToolRail</div>
-	)
+  return <div>ToolRail</div>;
 }

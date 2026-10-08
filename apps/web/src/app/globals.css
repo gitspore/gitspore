@@ -1,55 +1,51 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "./tokens.css";
+@import "../theme/tailwind.css";
+@import "../theme/tokens.css";
 
 @custom-variant dark (&:is(.dark *));
 
 html,
 body {
-    height: 100%;
-    overflow: hidden;
+  height: 100%;
+  overflow: hidden;
 }
 
 /*
-  The cozy-06 tokens and their utilities are in tokens.css.
-  Fonts: next/font sets --font-fredoka, --font-figtree, --font-jetbrains-mono
-  (app/layout.tsx); these lines turn them into font-title, font-ui / font-sans
-  and font-mono.
+  Tokens and their utilities are generated in src/theme/ (npm run tokens), including
+  font-title, font-ui and font-mono. These lines point shadcn's font names at our fonts.
 */
 @theme inline {
-    --font-title: var(--font-fredoka);
-    --font-heading: var(--font-fredoka);
-    --font-ui: var(--font-figtree);
-    --font-sans: var(--font-figtree);
-    --font-mono: var(--font-jetbrains-mono);
+  --font-heading: var(--font-fredoka);
+  --font-sans: var(--font-figtree);
 
-    /* shadcn */
-    --color-ring: var(--ring);
-    --color-input: var(--input);
-    --color-border: var(--border);
-    --color-destructive: var(--destructive);
-    --color-accent-foreground: var(--accent-foreground);
-    --color-accent: var(--accent);
-    --color-muted-foreground: var(--muted-foreground);
-    --color-muted: var(--muted);
-    --color-secondary-foreground: var(--secondary-foreground);
-    --color-secondary: var(--secondary);
-    --color-primary-foreground: var(--primary-foreground);
-    --color-primary: var(--primary);
-    --color-popover-foreground: var(--popover-foreground);
-    --color-popover: var(--popover);
-    --color-card-foreground: var(--card-foreground);
-    --color-card: var(--card);
-    --color-foreground: var(--foreground);
-    --color-background: var(--background);
-    --radius-sm: calc(var(--radius) * 0.6);
-    --radius-md: calc(var(--radius) * 0.8);
-    --radius-lg: var(--radius);
-    --radius-xl: calc(var(--radius) * 1.4);
-    --radius-2xl: calc(var(--radius) * 1.8);
-    --radius-3xl: calc(var(--radius) * 2.2);
-    --radius-4xl: calc(var(--radius) * 2.6);
+  /* shadcn */
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
 /*
@@ -57,53 +53,53 @@ body {
   follows day and night without changes.
 */
 :root {
-    --background: var(--color-panel);
-    --foreground: var(--color-ink);
-    --card: var(--color-panel);
-    --card-foreground: var(--color-ink);
-    --popover: var(--color-panel);
-    --popover-foreground: var(--color-ink);
-    --primary: var(--color-accent);
-    --primary-foreground: var(--color-accent-ink);
-    --secondary: var(--color-panel-2);
-    --secondary-foreground: var(--color-ink);
-    --muted: var(--color-panel-2);
-    --muted-foreground: var(--color-muted);
-    --accent: var(--color-hover);
-    --accent-foreground: var(--color-ink);
-    /* Red means only "needs you" (ADR 0006), so destructive actions stay ink. Open question for design. */
-    --destructive: var(--color-ink);
-    --border: var(--color-panel-2);
-    --input: var(--color-panel-2);
-    --ring: var(--color-line);
-    --radius: var(--radius-button);
+  --background: var(--color-panel);
+  --foreground: var(--color-ink);
+  --card: var(--color-panel);
+  --card-foreground: var(--color-ink);
+  --popover: var(--color-panel);
+  --popover-foreground: var(--color-ink);
+  --primary: var(--color-accent);
+  --primary-foreground: var(--color-accent-ink);
+  --secondary: var(--color-panel-2);
+  --secondary-foreground: var(--color-ink);
+  --muted: var(--color-panel-2);
+  --muted-foreground: var(--color-muted);
+  --accent: var(--color-hover);
+  --accent-foreground: var(--color-ink);
+  /* Red means only "needs you" (ADR 0006), so destructive actions stay ink. Open question for design. */
+  --destructive: var(--color-ink);
+  --border: var(--color-panel-2);
+  --input: var(--color-panel-2);
+  --ring: var(--color-line);
+  --radius: var(--radius-button);
 }
 
 @layer base {
-    * {
-        @apply border-border outline-ring/50;
-    }
-    body {
-        @apply bg-background text-foreground;
-    }
-    html {
-        @apply font-sans;
-    }
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
 }
 
 :root {
-    --space-gap: 12px;
-    --size-terminal-band: 392px;
+  /* Not a token yet, see #34 */
+  --size-terminal-band: 392px;
 }
 
 .app-shell {
-    display: grid;
-    grid-template-rows: var(--size-top-bar) 1fr;
-    gap: var(--space-gap);
-    padding: var(--space-gap);
+  display: grid;
+  grid-template-rows: var(--size-top-bar) 1fr;
+  gap: var(--space-layout-edge);
+  padding: var(--space-layout-edge);
 }
 
 .hotbar-slot {
-    width: var(--size-hotbar-slot);
-    height: var(--size-hotbar-slot);
+  width: var(--size-hotbar-slot);
+  height: var(--size-hotbar-slot);
 }
