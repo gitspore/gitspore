@@ -1,8 +1,9 @@
-import { PRODUCT_NAME, WS_EVENTS } from "@gitspore/shared";
+import { BRANCH_PREFIX, MAX_SLOTS, PRODUCT_NAME } from "@gitspore/shared";
 
 describe("@gitspore/shared", () => {
   it("resolves from the API workspace", () => {
     expect(PRODUCT_NAME).toBe("GitSpore");
-    expect(WS_EVENTS.TERMINAL_DATA).toBe("terminal:data");
+    expect(MAX_SLOTS).toBe(6);
+    expect(BRANCH_PREFIX).toBe("spore/");
   });
 });

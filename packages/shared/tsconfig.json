@@ -6,6 +6,8 @@
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "target": "ES2023",
+    // TypeScript 6 includes no global types by default; the spec needs these.
+    "types": ["node", "jest"],
     "declaration": true,
     "sourceMap": true,
     "rootDir": "./src",
