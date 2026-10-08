@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { mainGrid, shellGrid, type LayoutSettings } from "@/lib/layout";
 import { Button } from "../ui/button";
+import ThemeToggle from "./ThemeToggle";
 
 const HOTBAR_SLOTS = ["1", "2", "3", "4", "5", "6"];
 
@@ -45,6 +46,7 @@ export default function AppShell() {
 					Toggle Terminal
 				</Button>
 
+				<ThemeToggle />
 			</header>
 
 			{/* 
