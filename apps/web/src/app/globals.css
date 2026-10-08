@@ -145,13 +145,10 @@ body {
 
 .app-shell {
     display: grid;
-    grid-template-columns: var(--size-bookmark-width) 1fr var(--size-panel-width);
     grid-template-rows: var(--size-top-bar) 1fr;
-    grid-template-areas:
-        "topbar topbar topbar"
-        "rail   main   panel";
     gap: var(--space-gap);
     padding: var(--space-gap);
+    --size-terminal-band: 392px;
 }
 
 .hotbar-slot {
