@@ -3,19 +3,39 @@
   "version": "0.1.0",
   "private": true,
   "workspaces": [
-    "apps/*",
-    "packages/*"
+    "packages/*",
+    "apps/*"
   ],
   "scripts": {
     "dev": "concurrently -n \"WEB,API\" -c \"cyan,magenta\" \"npm run dev:web\" \"npm run dev:api\"",
+    "predev": "npm run build:shared",
     "dev:web": "npm run dev --workspace @gitspore/web",
+    "dev:api": "npm run dev --workspace @gitspore/api",
+    "build:shared": "npm run build --workspace @gitspore/shared",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run build:shared && npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present && prettier --check .",
+    "test": "npm run build:shared && npm run test --workspaces --if-present",
+    "format": "prettier --write .",
+    "postinstall": "node scripts/fix-node-pty-permissions.mjs",
     "build:web": "npm run build --workspace @gitspore/web",
     "lint:web": "npm run lint --workspace @gitspore/web",
-    "dev:api": "npm run dev --workspace @gitspore/api",
     "build:api": "npm run build --workspace @gitspore/api",
     "test:api": "npm run test --workspace @gitspore/api"
   },
   "devDependencies": {
-    "concurrently": "^10.0.5"
+    "@eslint/js": "^9.39.5",
+    "concurrently": "^10.0.5",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.9",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.71.1"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "allowScripts": {
+    "node-pty@1.1.0": true
   }
 }

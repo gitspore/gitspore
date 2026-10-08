@@ -1,0 +1,12 @@
+{
+  // Options every workspace shares. Module system, target and output
+  // settings stay in each workspace's tsconfig because they differ
+  // (Next bundles, the API and shared emit CommonJS).
+  "compilerOptions": {
+    "strict": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true
+  }
+}

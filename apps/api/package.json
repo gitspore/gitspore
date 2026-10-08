@@ -27,7 +27,8 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "simple-git": "^4.0.2",
-    "socket.io": "^4.8.4"
+    "socket.io": "^4.8.4",
+    "@gitspore/shared": "*"
   },
   "scripts": {
     "build": "nest build",
@@ -36,6 +37,8 @@
     "start:prod": "node dist/main",
     "test": "node --experimental-vm-modules jest.runner.mjs",
     "test:watch": "node --experimental-vm-modules jest.runner.mjs --watch",
-    "test:cov": "node --experimental-vm-modules jest.runner.mjs --coverage"
+    "test:cov": "node --experimental-vm-modules jest.runner.mjs --coverage",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint ."
   }
 }

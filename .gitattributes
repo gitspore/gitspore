@@ -1,0 +1,5 @@
+# Check out LF on every OS so Prettier (endOfLine: lf) passes on Windows too.
+* text=auto eol=lf
+*.ico binary
+*.png binary
+*.svg text

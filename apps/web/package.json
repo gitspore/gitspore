@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.9",
@@ -20,15 +20,14 @@
     "react-dom": "19.2.8",
     "socket.io-client": "^4.8.4",
     "three": "^0.186.1",
-    "zustand": "^5.0.15"
+    "zustand": "^5.0.15",
+    "@gitspore/shared": "*"
   },
   "devDependencies": {
     "@types/node": "^26.6.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@types/three": "^0.186.0",
-    "eslint": "^9",
-    "eslint-config-next": "16.3.7",
-    "typescript": "^6.0.3"
+    "eslint-config-next": "16.3.7"
   }
 }
