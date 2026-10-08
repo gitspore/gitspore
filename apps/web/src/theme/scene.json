@@ -1,0 +1,443 @@
+{
+  "$description": "3D scene values (cozy-06), taken from design-docs/design/prototype.html on 2026-10-08. Not in Penpot; this file is the source. Geometry stays in the scene code.",
+  "scene/shared": {
+    "color": {
+      "wood": {
+        "1": {
+          "$value": "#8d5c36",
+          "$type": "color",
+          "$description": "bench planks in turn; 2 is the shelf, 3 the apron"
+        },
+        "2": {
+          "$value": "#97653c",
+          "$type": "color"
+        },
+        "3": {
+          "$value": "#83552f",
+          "$type": "color"
+        },
+        "4": {
+          "$value": "#9a6a42",
+          "$type": "color"
+        },
+        "leg": {
+          "$value": "#6e4628",
+          "$type": "color"
+        }
+      },
+      "scene": {
+        "glass": {
+          "$value": "#d8ecec",
+          "$type": "color"
+        },
+        "soil": {
+          "$value": "#3b2a1e",
+          "$type": "color"
+        },
+        "pot": {
+          "$value": "#b8613a",
+          "$type": "color"
+        },
+        "stick": {
+          "$value": "#c7a575",
+          "$type": "color"
+        },
+        "leaf": {
+          "$value": "#5f9e3f",
+          "$type": "color"
+        },
+        "stem": {
+          "$value": "#4f8a34",
+          "$type": "color"
+        },
+        "heart": {
+          "$value": "#ffd34a",
+          "$type": "color"
+        },
+        "drop": {
+          "$value": "#9fd4ff",
+          "$type": "color"
+        },
+        "watering-can": {
+          "$value": "#6e9aa3",
+          "$type": "color"
+        },
+        "shelf-plant": {
+          "1": {
+            "$value": "#5d8a42",
+            "$type": "color"
+          },
+          "2": {
+            "$value": "#6f9a4a",
+            "$type": "color"
+          }
+        },
+        "carving-glow": {
+          "$value": "#ffb347",
+          "$type": "color"
+        },
+        "star": {
+          "$value": "#ffffff",
+          "$type": "color"
+        },
+        "leaf-waiting": {
+          "1": {
+            "$value": "#8aa53e",
+            "$type": "color",
+            "$description": "waiting stage 1 (0–15 s), 2 (15–60 s), 3 (over 60 s)"
+          },
+          "2": {
+            "$value": "#b4a23a",
+            "$type": "color"
+          },
+          "3": {
+            "$value": "#9a7432",
+            "$type": "color"
+          }
+        },
+        "stem-waiting": {
+          "1": {
+            "$value": "#6d7a2c",
+            "$type": "color"
+          },
+          "2": {
+            "$value": "#7a6a2e",
+            "$type": "color"
+          },
+          "3": {
+            "$value": "#7a5a2e",
+            "$type": "color"
+          }
+        }
+      },
+      "light": {
+        "fill": {
+          "$value": "#cfe0ff",
+          "$type": "color"
+        },
+        "lamp": {
+          "$value": "#ffb35c",
+          "$type": "color"
+        },
+        "lamp-front": {
+          "$value": "#ffc78a",
+          "$type": "color"
+        },
+        "lamp-bulb": {
+          "$value": "#ffcf7a",
+          "$type": "color"
+        },
+        "lamp-glow": {
+          "$value": "#ffb347",
+          "$type": "color"
+        },
+        "lamp-wire": {
+          "$value": "#1a1714",
+          "$type": "color"
+        }
+      },
+      "tag": {
+        "paper": {
+          "$value": "#e6cf9f",
+          "$type": "color",
+          "$description": "the name tag is paper in both modes, so it keeps the day status colours"
+        },
+        "line": {
+          "$value": "#b8955c",
+          "$type": "color"
+        },
+        "ink": {
+          "$value": "#3a2a1c",
+          "$type": "color"
+        },
+        "muted": {
+          "$value": "#5c4630",
+          "$type": "color"
+        },
+        "empty": {
+          "$value": "#8a6a44",
+          "$type": "color"
+        },
+        "status": {
+          "working": {
+            "$value": "#4f9a45",
+            "$type": "color"
+          },
+          "waiting": {
+            "$value": "#b3372a",
+            "$type": "color"
+          },
+          "error": {
+            "$value": "#8a8277",
+            "$type": "color"
+          },
+          "review": {
+            "$value": "#c48a12",
+            "$type": "color"
+          },
+          "merged": {
+            "$value": "#c2458e",
+            "$type": "color"
+          }
+        }
+      },
+      "packet": {
+        "paper": {
+          "$value": "#e2c793",
+          "$type": "color",
+          "$description": "seed packet (an issue in the scene)"
+        },
+        "title": {
+          "$value": "#fff8e8",
+          "$type": "color"
+        },
+        "leaf": {
+          "$value": "#4f8a34",
+          "$type": "color"
+        },
+        "ink": {
+          "$value": "#3a2a1c",
+          "$type": "color"
+        },
+        "muted": {
+          "$value": "#5c4630",
+          "$type": "color"
+        }
+      }
+    }
+  },
+  "scene/day": {
+    "color": {
+      "scene": {
+        "sky-top": {
+          "$value": "#8fbad9",
+          "$type": "color"
+        },
+        "sky-horizon": {
+          "$value": "#f3e4c6",
+          "$type": "color"
+        },
+        "sky-bottom": {
+          "$value": "#c8b896",
+          "$type": "color"
+        },
+        "fog": {
+          "$value": "#e8dcc2",
+          "$type": "color"
+        },
+        "floor": {
+          "$value": "#b5a88e",
+          "$type": "color"
+        },
+        "frame": {
+          "$value": "#efe9dc",
+          "$type": "color"
+        },
+        "foliage": {
+          "$value": "#6f9356",
+          "$type": "color"
+        }
+      },
+      "light": {
+        "hemi-sky": {
+          "$value": "#fff4e0",
+          "$type": "color"
+        },
+        "hemi-ground": {
+          "$value": "#6b5a40",
+          "$type": "color"
+        },
+        "key": {
+          "$value": "#fff0d2",
+          "$type": "color"
+        }
+      }
+    },
+    "scene": {
+      "exposure": {
+        "$value": "1.0",
+        "$type": "number",
+        "$description": "renderer.toneMappingExposure (ACES filmic)"
+      },
+      "bloom": {
+        "strength": {
+          "$value": "0",
+          "$type": "number"
+        },
+        "threshold": {
+          "$value": "1",
+          "$type": "number"
+        }
+      },
+      "glow": {
+        "$value": "0.45",
+        "$type": "number",
+        "$description": "emissive intensity of rims and glowing parts"
+      },
+      "environment": {
+        "$value": "0.25",
+        "$type": "number",
+        "$description": "scene.environmentIntensity (RoomEnvironment)"
+      },
+      "light": {
+        "hemi": {
+          "$value": "1.0",
+          "$type": "number"
+        },
+        "key": {
+          "$value": "2.6",
+          "$type": "number"
+        },
+        "fill": {
+          "$value": "0.35",
+          "$type": "number"
+        }
+      },
+      "fog": {
+        "near": {
+          "$value": "16",
+          "$type": "number"
+        },
+        "far": {
+          "$value": "55",
+          "$type": "number"
+        }
+      },
+      "lamps": {
+        "$value": "0",
+        "$type": "number",
+        "$description": "1 = string lights on"
+      },
+      "stars": {
+        "$value": "0",
+        "$type": "number",
+        "$description": "1 = stars on"
+      }
+    },
+    "opacity": {
+      "scene": {
+        "glass": {
+          "$value": "0.08",
+          "$type": "opacity"
+        }
+      }
+    }
+  },
+  "scene/night": {
+    "color": {
+      "scene": {
+        "sky-top": {
+          "$value": "#060a1a",
+          "$type": "color"
+        },
+        "sky-horizon": {
+          "$value": "#1b1f36",
+          "$type": "color"
+        },
+        "sky-bottom": {
+          "$value": "#0b0a10",
+          "$type": "color"
+        },
+        "fog": {
+          "$value": "#0d0e18",
+          "$type": "color"
+        },
+        "floor": {
+          "$value": "#29231d",
+          "$type": "color"
+        },
+        "frame": {
+          "$value": "#6b6153",
+          "$type": "color"
+        },
+        "foliage": {
+          "$value": "#142019",
+          "$type": "color"
+        }
+      },
+      "light": {
+        "hemi-sky": {
+          "$value": "#4a5480",
+          "$type": "color"
+        },
+        "hemi-ground": {
+          "$value": "#1a120c",
+          "$type": "color"
+        },
+        "key": {
+          "$value": "#9fb0ff",
+          "$type": "color"
+        }
+      }
+    },
+    "scene": {
+      "exposure": {
+        "$value": "1.05",
+        "$type": "number",
+        "$description": "renderer.toneMappingExposure (ACES filmic)"
+      },
+      "bloom": {
+        "strength": {
+          "$value": "0.55",
+          "$type": "number"
+        },
+        "threshold": {
+          "$value": "0.8",
+          "$type": "number"
+        }
+      },
+      "glow": {
+        "$value": "1.7",
+        "$type": "number",
+        "$description": "emissive intensity of rims and glowing parts"
+      },
+      "environment": {
+        "$value": "0.08",
+        "$type": "number",
+        "$description": "scene.environmentIntensity (RoomEnvironment)"
+      },
+      "light": {
+        "hemi": {
+          "$value": "0.5",
+          "$type": "number"
+        },
+        "key": {
+          "$value": "0.55",
+          "$type": "number"
+        },
+        "fill": {
+          "$value": "0",
+          "$type": "number"
+        }
+      },
+      "fog": {
+        "near": {
+          "$value": "12",
+          "$type": "number"
+        },
+        "far": {
+          "$value": "42",
+          "$type": "number"
+        }
+      },
+      "lamps": {
+        "$value": "1",
+        "$type": "number",
+        "$description": "1 = string lights on"
+      },
+      "stars": {
+        "$value": "1",
+        "$type": "number",
+        "$description": "1 = stars on"
+      }
+    },
+    "opacity": {
+      "scene": {
+        "glass": {
+          "$value": "0.05",
+          "$type": "opacity"
+        }
+      }
+    }
+  }
+}

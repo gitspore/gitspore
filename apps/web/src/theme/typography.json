@@ -1,0 +1,145 @@
+{
+  "$description": "Penpot library typographies of gitspore_v01 (not tokens in Penpot). Sizes and letter spacing in px, line height unitless.",
+  "ui": {
+    "meta": {
+      "fontFamily": "{font.ui}",
+      "fontSize": 14,
+      "fontWeight": 500,
+      "lineHeight": 1.2,
+      "letterSpacing": 0,
+      "textTransform": "none"
+    },
+    "row": {
+      "fontFamily": "{font.ui}",
+      "fontSize": 16,
+      "fontWeight": 600,
+      "lineHeight": 1.2,
+      "letterSpacing": 0,
+      "textTransform": "none"
+    },
+    "body": {
+      "fontFamily": "{font.ui}",
+      "fontSize": 15,
+      "fontWeight": 500,
+      "lineHeight": 1.4,
+      "letterSpacing": 0,
+      "textTransform": "none"
+    },
+    "count": {
+      "fontFamily": "{font.ui}",
+      "fontSize": 12,
+      "fontWeight": 700,
+      "lineHeight": 1.2,
+      "letterSpacing": 0,
+      "textTransform": "none"
+    },
+    "badge": {
+      "fontFamily": "{font.ui}",
+      "fontSize": 13,
+      "fontWeight": 700,
+      "lineHeight": 1.2,
+      "letterSpacing": 0.52,
+      "textTransform": "uppercase"
+    },
+    "row-wait": {
+      "fontFamily": "{font.ui}",
+      "fontSize": 19,
+      "fontWeight": 600,
+      "lineHeight": 1.2,
+      "letterSpacing": 0,
+      "textTransform": "none"
+    },
+    "tab": {
+      "fontFamily": "{font.ui}",
+      "fontSize": 15,
+      "fontWeight": 600,
+      "lineHeight": 1.2,
+      "letterSpacing": 0,
+      "textTransform": "none"
+    },
+    "button": {
+      "fontFamily": "{font.ui}",
+      "fontSize": 15,
+      "fontWeight": 700,
+      "lineHeight": 1.2,
+      "letterSpacing": 0,
+      "textTransform": "none"
+    },
+    "window-title": {
+      "fontFamily": "{font.ui}",
+      "fontSize": 14,
+      "fontWeight": 600,
+      "lineHeight": 1.2,
+      "letterSpacing": 0,
+      "textTransform": "none"
+    },
+    "small": {
+      "fontFamily": "{font.ui}",
+      "fontSize": 12.5,
+      "fontWeight": 600,
+      "lineHeight": 1.2,
+      "letterSpacing": 0,
+      "textTransform": "none"
+    }
+  },
+  "mono": {
+    "key": {
+      "fontFamily": "{font.mono}",
+      "fontSize": 13,
+      "fontWeight": 700,
+      "lineHeight": 1,
+      "letterSpacing": 0,
+      "textTransform": "none"
+    },
+    "terminal": {
+      "fontFamily": "{font.mono}",
+      "fontSize": 13,
+      "fontWeight": 400,
+      "lineHeight": 1.2,
+      "letterSpacing": 0,
+      "textTransform": "none"
+    },
+    "timer": {
+      "fontFamily": "{font.mono}",
+      "fontSize": 22,
+      "fontWeight": 700,
+      "lineHeight": 1,
+      "letterSpacing": 0,
+      "textTransform": "none"
+    },
+    "slot-timer": {
+      "fontFamily": "{font.mono}",
+      "fontSize": 12,
+      "fontWeight": 700,
+      "lineHeight": 1.2,
+      "letterSpacing": 0,
+      "textTransform": "none"
+    }
+  },
+  "title": {
+    "logo": {
+      "fontFamily": "{font.title}",
+      "fontSize": 23,
+      "fontWeight": 600,
+      "lineHeight": 1,
+      "letterSpacing": 0,
+      "textTransform": "none"
+    },
+    "panel": {
+      "fontFamily": "{font.title}",
+      "fontSize": 29,
+      "fontWeight": 600,
+      "lineHeight": 1,
+      "letterSpacing": 0,
+      "textTransform": "none"
+    },
+    "notification": {
+      "fontFamily": "{font.title}",
+      "fontSize": 22,
+      "fontWeight": 600,
+      "lineHeight": 1.2,
+      "letterSpacing": 0,
+      "textTransform": "none"
+    }
+  }
+}
