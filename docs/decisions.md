@@ -13,15 +13,13 @@ April 2028) und entspricht der lokal genutzten Version, sodass lokale Läufe
 und CI dieselbe Hauptversion testen. Festgelegt in `.nvmrc`, `engines` im Root
 und der CI-Matrix.
 
-### better-sqlite3 entfernt
+### Datenbank-Dependencies entfernt
 
-`better-sqlite3` (und `@types/better-sqlite3`) wurde aus `apps/api` entfernt,
-weil es ungenutzt war und die Installation unter Windows ohne
-C++-Build-Tools scheitert: npm 11.16 führt trotz mitgelieferter Prebuilds
-`node-gyp rebuild` aus. Die Speicher-Entscheidung (SQLite, `node:sqlite` oder
-JSON-Event-Log) ist offen und wird im Team getroffen. `drizzle-orm` und
-`drizzle-kit` bleiben vorerst drin; `better-sqlite3` ist dort nur ein
-optionaler Peer und wird nicht mitinstalliert.
+`better-sqlite3`, `drizzle-orm` und `drizzle-kit` wurden aus `apps/api`
+entfernt, weil sie ungenutzt waren. `better-sqlite3` scheiterte auf Windows
+ohne C++-Build-Tools. Die Speicher-Entscheidung (SQLite, `node:sqlite` oder
+JSON-Event-Log) ist noch offen und wird im Team getroffen. Sie werden
+hinzugefügt, sobald die Entscheidung fällt.
 
 ### Nur npm Workspaces, keine zusätzlichen Build-Tools
 
