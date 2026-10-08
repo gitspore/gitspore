@@ -1,0 +1,12 @@
+package-lock.json
+node_modules/
+dist/
+coverage/
+.next/
+out/
+next-env.d.ts
+design-docs/
+
+# Generated/maintained by `next dev`
+AGENTS.md
+CLAUDE.md

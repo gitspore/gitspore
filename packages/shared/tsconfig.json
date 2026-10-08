@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Emitted as CommonJS because apps/api compiles to CommonJS and loads
+    // this package at runtime; Next bundles either format.
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "target": "ES2023",
+    // TypeScript 6 includes no global types by default; the spec needs these.
+    "types": ["node", "jest"],
+    "declaration": true,
+    "sourceMap": true,
+    "rootDir": "./src",
+    "outDir": "./dist"
+  },
+  "include": ["src"]
+}

@@ -76,7 +76,11 @@ export default function Scene() {
       <Float speed={2} floatIntensity={1.5}>
         <mesh position={[1.5, 0, 0]}>
           <sphereGeometry args={[0.7, 32, 32]} />
-          <meshStandardMaterial color="#38bdf8" roughness={0.2} metalness={0.5} />
+          <meshStandardMaterial
+            color="#38bdf8"
+            roughness={0.2}
+            metalness={0.5}
+          />
         </mesh>
       </Float>
 

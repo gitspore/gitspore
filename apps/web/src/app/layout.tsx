@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { PRODUCT_NAME } from "@gitspore/shared";
 import { Figtree, Fredoka, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
@@ -22,7 +23,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-	title: "gitspore",
+	title: PRODUCT_NAME,
 	description: "Each AI coding agent as a plant on a greenhouse table",
 };
 
