@@ -44,4 +44,12 @@ Alle Skripte werden im Repo-Root ausgeführt:
 
 Einzelne Workspaces: `npm run <skript> --workspace @gitspore/<name>`.
 
+### Daemon-Sicherheit
+
+Der Daemon bindet nur an `127.0.0.1`. Bei jedem Start erzeugt er einen zufälligen Session-Token und gibt ihn einmal im Log aus (`Session token: …`). Der Web-Client schickt ihn als `auth.token` im Socket.io-Handshake. Verbindungen ohne gültigen Token, mit unbekanntem `Origin` oder mit einem `Host`, der nicht `localhost`, `127.0.0.1` oder `[::1]` ist, werden abgelehnt.
+
+| Variable     | Standard                | Wirkung                                                                                                                                                              |
+| ------------ | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `WEB_ORIGIN` | `http://localhost:3000` | Erlaubte `Origin`-Werte des Web-Clients, mehrere kommagetrennt. Der Vergleich ist exakt: `http://127.0.0.1:3000` ist ein anderer Origin als `http://localhost:3000`. |
+
 Konfigurationsentscheidungen stehen in [docs/decisions.md](docs/decisions.md).
