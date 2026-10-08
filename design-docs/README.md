@@ -12,7 +12,8 @@ These docs describe the current state: what we build and how it looks. They are 
 | [scope.md](scope.md) | What we build in four weeks, what comes later, what's out |
 | [decisions/](decisions/) | Why things are the way they are, one short record per decision |
 | [design/layout.html](design/layout.html) | The layout: regions, rules, all 19 states, components per region, ticket mapping |
-| [design/components.md](design/components.md) | Tokens, type, the five states, every component with sizes and variants |
+| [design/components.md](design/components.md) | Token names, type, the five states, every component with sizes and variants |
+| [design/tokens.html](design/tokens.html) | Every token value, day and night, as CSS variable, Tailwind class and TS path (generated) |
 | [design/prototype.html](design/prototype.html) | The live 3D prototype of all states, day and night |
 | [design/penpot.md](design/penpot.md) | The Penpot design file: setup, what each page holds, rules |
 | [design/competitors.md](design/competitors.md) | Agent Office, Conductor, herdr and Paperclip next to gitspore, and where we differ |
@@ -37,5 +38,6 @@ Open the HTML files directly in a browser. They load fonts and three.js from CDN
 | [0005](decisions/0005-hotbar-replaces-tray.md) | A hotbar replaces the tray of minimised windows | proposed |
 | [0006](decisions/0006-visual-direction-cozy-06.md) | Visual direction cozy-06 | proposed |
 | [0007](decisions/0007-penpot-is-the-source-of-design-values.md) | Penpot is the source of design values | proposed |
+| [0008](decisions/0008-generated-theme-files.md) | Theme files are generated from a copy of the Penpot tokens | proposed |
 
 "Proposed" means not yet agreed by the team. When the team agrees, the status changes to "accepted".

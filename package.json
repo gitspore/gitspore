@@ -21,7 +21,9 @@
     "build:web": "npm run build --workspace @gitspore/web",
     "lint:web": "npm run lint --workspace @gitspore/web",
     "build:api": "npm run build --workspace @gitspore/api",
-    "test:api": "npm run test --workspace @gitspore/api"
+    "test:api": "npm run test --workspace @gitspore/api",
+    "tokens": "npm run tokens --workspace @gitspore/web",
+    "tokens:check": "npm run tokens:check --workspace @gitspore/web"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

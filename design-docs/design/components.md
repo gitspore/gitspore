@@ -1,111 +1,42 @@
 # Components and tokens
 
-Status: proposed (visual direction cozy-06, [ADR 0006](../decisions/0006-visual-direction-cozy-06.md)). Values copied from Penpot on 2026-10-07.
+Status: proposed (visual direction cozy-06, [ADR 0006](../decisions/0006-visual-direction-cozy-06.md)).
 
 How the interface looks and how to build it: the tokens, the type, the five agent states and every component with its size, tokens and variants. Where each component appears and when is in [layout.html](layout.html). All of it runs in [prototype.html](prototype.html).
 
-**Penpot is the source** (file `gitspore_v01`, see [penpot.md](penpot.md)). If this file and Penpot disagree, Penpot is right; fix this file. Once `apps/web` defines the tokens in code, the code becomes the source and the value tables here go; the rest of this file stays as the guide.
+**Penpot is the source** (file `gitspore_v01`, see [penpot.md](penpot.md)). If this file and Penpot disagree, Penpot is right; fix this file. This file doesn't list values. [tokens.html](tokens.html) has every token with its day and night value, CSS variable, Tailwind class and TS path. The script generates it from the Penpot copy in `apps/web/src/theme/` ([ADR 0008](../decisions/0008-generated-theme-files.md)).
 
 ## Tokens
 
 ### Names
 
-Lowercase, dot-separated, kebab-case inside a segment: `<group>.<name>` or `<group>.<subgroup>.<name>`. The first segment is the kind: `color`, `radius`, `size`, `border`, `opacity`, `font`. A name never contains the mode; day and night share it.
+Lowercase, dot-separated, kebab-case inside a segment: `<group>.<name>` or `<group>.<subgroup>.<name>`. The first segment is the kind: `color`, `space`, `size`, `radius`, `border`, `shadow`, `opacity`, `font`. A name never contains the mode; day and night share it.
 
-- **CSS:** dots become hyphens, prefix `--`. `color.panel-2` → `--color-panel-2`, `color.status.waiting` → `--color-status-waiting`. Day values on `:root`, night values under the app's night selector.
-- **R3F:** the exported token JSON nests by the dots: `tokens.color.status.waiting` or `tokens.color.pot.clay` goes straight into `new THREE.Color(...)`. Sizes are numbers in px.
+- **CSS:** dots become hyphens, prefix `--`. `color.panel-2` → `--color-panel-2`, `space.button.x` → `--space-button-x`. Day values on `:root`, night values under `.dark`.
+- **Tailwind:** the same names without the group for sizes and spacing: `bg-panel`, `text-status-waiting`, `rounded-row`, `shadow-window`, `h-button`, `px-button-x`, `gap-row-gap`, `text-ui-row`. `color.muted` and `color.accent` have no utility because shadcn uses those names: `text-muted-foreground`, `bg-primary`.
+- **TS (R3F, xterm):** `tokens[mode]` nests by the dots: `tokens.night.color.status.waiting`, `tokens.day.size.row` (a number in px). `xtermTheme.light` / `.dark` and `typography.mono.terminal` are ready to pass to xterm.js.
+- **Spacing** is named per component, and the last segment is the CSS property: `space.button.x` (padding left and right), `space.row.left`, `space.notification.title-gap` (a margin). `space.layout.*` are the distances to the screen edge.
 - **Status tokens** use the state names from the code: `working`, `waiting`, `error`, `review`, `merged`, `empty`. The words on screen ("growing", "wilted") are copy, not token names.
 - **Agent colours** are numbered by slot: `color.agent.1` … `color.agent.8`.
 
 Penpot has three token sets: `cozy-06/shared` (both modes), `cozy-06/day` and `cozy-06/night` (same names, different values), switched by the theme group `mode`.
 
-### Interface colours
+### Groups
 
-| Token | Day | Night | Used for |
-|---|---|---|---|
-| `color.panel` | `#ece6d6` | `#1d2621` | side panel, top bar, terminal header, hotbar |
-| `color.panel-2` | `#ddd4bf` | `#26332c` | tab track, hotbar slots |
-| `color.ink` | `#2a2119` | `#f3e7cf` | text |
-| `color.muted` | `#6b5a44` | `#bba98b` | secondary text, status words |
-| `color.line` | `#2f5446` | `#9cc2ad` | 2 px lines: terminal outline and header, hotbar separator |
-| `color.plate` | `#2f5446` | `#2f5446` | logo plate, rail bookmarks, active tab |
-| `color.plate-ink` | `#f6eedb` | `#f3ead6` | text and icons on `plate` |
-| `color.accent` | `#e8b04a` | `#e8b04a` | open bookmark, selected hotbar slot, primary button |
-| `color.accent-ink` | `#2a2119` | `#2a2119` | text on `accent` |
-| `color.hover` | `rgba(47,84,70,.08)` | `rgba(156,194,173,.08)` | hover, odd rows, icon buttons |
-| `color.wait` | `#b3372a` | `#c4402f` | waiting row, wait badge, notification, waiting hotbar slot |
-| `color.wait-ink` | `#fff3e8` | `#fff3e8` | text on `wait` |
-| `color.sky-top` / `color.sky-bottom` | `#f6ead1` / `#e2c796` | `#2a3047` / `#12151f` | gradient behind the scene |
+| Group | Holds |
+|---|---|
+| `color.*` | interface colours, `status.*`, `agent.1`–`8`, `branch-main`, issue paper (`paper`, `paper-line`, `paper-ink`), `focus` |
+| `color.terminal.*` | the terminal in use: light by day, dark at night; a window's sun/moon switch overrides it with `.terminal-light` / `.terminal-dark` |
+| `color.terminal-light.*`, `-dark.*` | the two terminal palettes: background, text, the colours Claude Code's output uses, 16 ANSI colours, cursor, selection |
+| `color.plant.*`, `color.pot.*` | the colours of the 2D plant icons (`plantSvg()`); the 3D scene uses `scene.json` |
+| `color.logo.*` | the beetle on and off its plate |
+| `space.*`, `size.*`, `radius.*`, `border.*` | spacing per component, fixed sizes, corner radii, line widths, all in px |
+| `shadow.*` | panel, window, hotbar, notification, bookmark; warm by day, black at night |
+| `opacity.*` | agent circle, empty track square, logo glow, `disabled` (.45) |
+| `font.*` | `title` Fredoka, `ui` Figtree, `mono` JetBrains Mono |
+| 3D (`scene.json`) | sky, fog, floor, frame, glass, foliage, wood, soil, pot, leaves and stems with the three waiting stages, lights, name tag, seed packet, and the renderer numbers |
 
-### Status colours
-
-| Token | Day | Night |
-|---|---|---|
-| `color.status.working` | `#4f9a45` | `#7cc96b` |
-| `color.status.waiting` | `#b3372a` | `#ff6a50` |
-| `color.status.error` | `#8a8277` | `#9a948a` |
-| `color.status.review` | `#d99a1e` | `#f5bd3c` |
-| `color.status.merged` | `#c2458e` | `#ff6fc0` |
-| `color.status.empty` | `{color.muted}` | `{color.muted}` |
-
-### Agent colours
-
-Eight per mode, cool hues plus ink and umber, so none reads as a status. Every pair is at least 22 ΔE apart (CIELAB), every colour at least 25 ΔE from the status colours.
-
-| Slot | Day | Night |
-|---|---|---|
-| `color.agent.1` blue | `#2f6db3` | `#4f86de` |
-| `color.agent.2` sky | `#7ab6e6` | `#a9d6f5` |
-| `color.agent.3` navy | `#1c2a55` | `#2f3f8f` |
-| `color.agent.4` teal | `#168a8f` | `#3fc1c4` |
-| `color.agent.5` violet | `#6a4cc2` | `#8d6ff0` |
-| `color.agent.6` lavender | `#b7a3e6` | `#d6c8fa` |
-| `color.agent.7` ink | `#2b2622` | `#f1ebe0` |
-| `color.agent.8` umber | `#6b4a2e` | `#b88a62` |
-
-### Terminal
-
-Light by day, dark at night. The sun/moon switch in each window's header overrides the mode for that window. `color.terminal.*` points to `color.terminal-light.*` in day mode and to `color.terminal-dark.*` in night mode.
-
-| Token | Light | Dark | Used for |
-|---|---|---|---|
-| `color.terminal.bg` | `#fbf7ec` | `#171916` | background |
-| `color.terminal.fg` | `#2a2119` | `#e4e0d4` | text |
-| `color.terminal.dim` | `#857862` | `#8d9085` | tool results, hints |
-| `color.terminal.prompt` | `#b24f22` | `#e8956b` | tool call bullets, prompt |
-| `color.terminal.ok` | `#3d7a37` | `#9fc98a` | input line, success |
-| `color.terminal.question` / `-bg` | `#8a5b00` on `#f2e3c0` | `#e9c46a` on `#2a2c25` | the selected answer |
-| `color.terminal.box` | `#5e7189` | `#a9b5c9` | the question box |
-| `color.terminal.error` | `#b3372a` | `#ff6a50` | errors |
-
-### Scene colours (shared by both modes)
-
-| Token | Value | | Token | Value |
-|---|---|---|---|---|
-| `color.plant.leaf` | `#79c05a` | | `color.plant.bud` | `#e8b04a` |
-| `color.plant.stem` | `#3f7a2c` | | `color.plant.bud-line` | `#8a5b00` |
-| `color.plant.droop-leaf` | `#c4b54e` | | `color.plant.petal` | `#f4a6c4` |
-| `color.plant.droop-stem` | `#6d7a2c` | | `color.plant.heart` | `#ffd166` |
-| `color.plant.bare` | `#8a8277` | | `color.pot.clay` | `#c8693d` |
-| `color.pot.line` | `#5a2e15` | | `color.pot.empty` | `#c88b62` |
-
-### Radii, sizes, borders, opacity
-
-| Token | Value | | Token | Value |
-|---|---|---|---|---|
-| `radius.panel` | 12 | | `size.top-bar` | 56 |
-| `radius.tab-track` / `radius.tab` | 8 / 5 | | `size.panel-width` | 400 |
-| `radius.row` / `radius.row-wait` | 8 / 10 | | `size.tab` | 38 |
-| `radius.badge` / `radius.tag` | 5 / 2 | | `size.row` / `size.row-wait` | 52 / 76 |
-| `radius.button` / `radius.icon-button` | 6 / 7 | | `size.plant-circle` / `size.plant-in-row` | 38 / 30 |
-| `radius.terminal` / `radius.window-button` | 12 / 6 | | `size.button` / `size.icon-button` / `size.icon` | 40 / 36 / 20 |
-| `radius.hotbar` / `radius.slot` | 14 / 10 | | `size.terminal-header` / `size.window-button` | 42 / 32 |
-| `radius.bookmark` | 9 (right corners only) | | `size.hotbar-slot` / `size.plant-in-slot` | 68 / 46 |
-| `radius.notification` | 10 | | `size.marker` / `size.agent-band` | 13 / 4 |
-| `radius.track` / `radius.logo-plate` | 2 / 8 | | `size.bookmark-width` / `-open` / `-height` | 58 / 72 / 52 |
-| `border.line` / `border.selected` | 2 / 3 | | `size.logo-plate` / `size.logo` | 32 / 25 |
-| `opacity.agent-circle` | 0.33 | | `size.track-square` | 8 |
-| `opacity.track-empty` | 0.55 | | `opacity.logo-glow` | 0 day, 1 night |
+The terminal sizes are measured, not estimated: JetBrains Mono 13 px is 7.8 px per column in xterm.js, line height 1.2 gives 20 px per row, the screen has 12 px padding top and bottom and 10 px left and right, and addon-fit reserves 14 px for the scrollbar. So 80 columns need `size.terminal-min-width` (660 px).
 
 ## Type
 
@@ -113,9 +44,9 @@ Light by day, dark at night. The sun/moon switch in each window's header overrid
 |---|---|---|
 | `font.title` | Fredoka 600 | logo wordmark, panel titles ("Your pots"), notification titles |
 | `font.ui` | Figtree 400–800 | everything else in the interface |
-| `font.mono` | JetBrains Mono | terminal (13 px), timers, hotbar key numbers |
+| `font.mono` | JetBrains Mono | terminal (13 px, line height 1.2), timers, hotbar key numbers |
 
-Penpot typographies are named by where they appear: `title/panel`, `ui/row`, `mono/timer`.
+Penpot typographies are named by where they appear: `title/panel`, `ui/row`, `mono/timer`. All 17 with size, weight and line height are in [tokens.html](tokens.html#typography). In CSS `font: var(--type-ui-row)`, in Tailwind `text-ui-row font-ui`, in TS `typography.ui.row`.
 
 ## The five states
 
@@ -167,7 +98,7 @@ The Penpot name comes first, the code name second. Sizes in px at a 1440 × 900 
 
 ### Main area
 
-**`terminal-window` / `TerminalWindow`.** A card: `radius.terminal`, 2 px `color.line` outline, no other frame. Header `size.terminal-header` in `color.panel` with a 2 px `color.line` underneath: status dot, issue and branch, the sun/moon switch, then the window buttons (minimise, focus this, maximise, close, ⋯) as `icon-button` at `size.window-button`, `radius.window-button`. Body: xterm.js in `font.mono` 13 px with the `color.terminal.*` colours. The screen inside must stay at least 650 × 350 px (80 columns, 20 rows).
+**`terminal-window` / `TerminalWindow`.** A card: `radius.terminal`, 2 px `color.line` outline, no other frame. Header `size.terminal-header` in `color.panel` with a 2 px `color.line` underneath: status dot, issue and branch, the sun/moon switch, then the window buttons (minimise, focus this, maximise, close, ⋯) as `icon-button` at `size.window-button`, `radius.window-button`. Body: xterm.js with `typography.mono.terminal` and `xtermTheme`. The screen has 12 px padding top and bottom, 10 px left and right (`space.terminal.screen-y`, `-x`). A tile is at least `size.terminal-min-width` (660 px) wide, so 80 columns fit; the number of rows follows from the layout state.
 
 **`hotbar-slot` / `HotbarSlot`, in `Hotbar`.** The hotbar sits at the bottom centre of the main area: `color.panel`, `radius.hotbar`. Slots 1–6 (pots) and 0 (overview, after a `color.line` separator): `size.hotbar-slot`, `radius.slot`, `color.panel-2`. Each shows the plant (`size.plant-in-slot`), the key number in `font.mono`, the marker top right and the agent colour as a `size.agent-band` band at the bottom. A minimised window shows as a mark at the top of its slot. Variants `state` × `selected`: selected has a `border.selected` outline in `color.accent`; `waiting` is filled `color.wait`, shows the seconds and bobs.
 
@@ -208,3 +139,5 @@ On the plate: BODY `color.logo.body`, SEAM `color.logo.seam`, LEAF `color.logo.l
 - Fredoka or Figtree for the name tags in the scene (Fredoka may blur at small sizes).
 - Whether a merged pot stays in the list or empties at once.
 - `IssueRow`, `IssueSheet`, `BranchesTab` and the connect screen are not yet components in Penpot.
+- The ANSI colours: all 16 per terminal reach 4.5 : 1, so `white` is dark on the light terminal and `black` light on the dark one. If programs that paint black or white backgrounds (inverse bars) look wrong, change `ansi.white` and `ansi.bright-white` (light) and `ansi.black` (dark) back ([ADR 0008](../decisions/0008-generated-theme-files.md)). Check with real Claude Code output in #11.
+- shadcn's destructive colour: red means only "needs you" (ADR 0006), so destructive actions use ink for now (#34).

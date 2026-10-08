@@ -37,6 +37,8 @@ jobs:
           cache: npm
 
       - run: npm ci
+      # Generated theme files must match apps/web/src/theme/*.json.
+      - run: npm run tokens:check
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run build
