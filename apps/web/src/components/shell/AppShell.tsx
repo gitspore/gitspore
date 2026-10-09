@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { mainGrid, shellGrid, type LayoutSettings } from "@/lib/layout";
 import { Button } from "../ui/button";
+import SidePanel from "../side-panel/SidePanel";
 import ThemeToggle from "./ThemeToggle";
 
 const HOTBAR_SLOTS = ["1", "2", "3", "4", "5", "6"];
@@ -119,7 +120,7 @@ export default function AppShell() {
 			*/}
       {layout.sidePanel && (
         <aside className="pointer-events-auto rounded-xl bg-panel p-2 text-ink [grid-area:panel]">
-          side panel · {layout.sidePanel}
+          <SidePanel />
         </aside>
       )}
     </div>
