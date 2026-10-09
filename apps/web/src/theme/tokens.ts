@@ -57,6 +57,8 @@ export const tokens = {
       "count-badge": 22,
       "bookmark-width-hover": 64,
       "status-dot": 7,
+      "meter-width": 44,
+      "meter-height": 6,
     },
     border: {
       line: 2,
@@ -466,6 +468,8 @@ export const tokens = {
       "count-badge": 22,
       "bookmark-width-hover": 64,
       "status-dot": 7,
+      "meter-width": 44,
+      "meter-height": 6,
     },
     border: {
       line: 2,

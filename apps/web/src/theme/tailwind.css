@@ -259,6 +259,8 @@
   --spacing-count-badge: var(--size-count-badge);
   --spacing-bookmark-width-hover: var(--size-bookmark-width-hover);
   --spacing-status-dot: var(--size-status-dot);
+  --spacing-meter-width: var(--size-meter-width);
+  --spacing-meter-height: var(--size-meter-height);
   --spacing-top-bar-left: var(--space-top-bar-left);
   --spacing-top-bar-right: var(--space-top-bar-right);
   --spacing-top-bar-gap: var(--space-top-bar-gap);

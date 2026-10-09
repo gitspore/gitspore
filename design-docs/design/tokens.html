@@ -61,6 +61,8 @@
   --size-count-badge: 22px;
   --size-bookmark-width-hover: 64px;
   --size-status-dot: 7px;
+  --size-meter-width: 44px;
+  --size-meter-height: 6px;
   --border-line: 2px;
   --border-selected: 3px;
   --border-focus: 2px;
@@ -2275,7 +2277,7 @@ const term = new Terminal({
 <td><button class="copy" data-copy="*-focus-offset" title="Copy">*-focus-offset</button></td>
 <td><button class="copy" data-copy="tokens[mode].space.focus.offset" title="Copy">tokens[mode].space.focus.offset</button></td>
 </tr></tbody></table></section>
-<section id="sizes"><h2>Sizes <small>26</small></h2>
+<section id="sizes"><h2>Sizes <small>28</small></h2>
 <table><thead><tr><th>Token</th><th></th><th>Day</th><th>Night</th><th>CSS</th><th>Tailwind</th><th>TS</th></tr></thead>
 <tbody><tr>
 <td><code>size.top-bar</code></td>
@@ -2510,6 +2512,24 @@ const term = new Terminal({
 <td><button class="copy" data-copy="var(--size-status-dot)" title="Copy">var(--size-status-dot)</button></td>
 <td><button class="copy" data-copy="*-status-dot" title="Copy">*-status-dot</button></td>
 <td><button class="copy" data-copy="tokens[mode].size[&quot;status-dot&quot;]" title="Copy">tokens[mode].size[&quot;status-dot&quot;]</button></td>
+</tr>
+<tr>
+<td><code>size.meter-width</code></td>
+<td class="pv"><span class="bar" style="width:min(var(--size-meter-width),160px)"></span></td>
+<td><code>44px</code></td>
+<td><span class="same">same</span></td>
+<td><button class="copy" data-copy="var(--size-meter-width)" title="Copy">var(--size-meter-width)</button></td>
+<td><button class="copy" data-copy="*-meter-width" title="Copy">*-meter-width</button></td>
+<td><button class="copy" data-copy="tokens[mode].size[&quot;meter-width&quot;]" title="Copy">tokens[mode].size[&quot;meter-width&quot;]</button></td>
+</tr>
+<tr>
+<td><code>size.meter-height</code></td>
+<td class="pv"><span class="bar" style="width:min(var(--size-meter-height),160px)"></span></td>
+<td><code>6px</code></td>
+<td><span class="same">same</span></td>
+<td><button class="copy" data-copy="var(--size-meter-height)" title="Copy">var(--size-meter-height)</button></td>
+<td><button class="copy" data-copy="*-meter-height" title="Copy">*-meter-height</button></td>
+<td><button class="copy" data-copy="tokens[mode].size[&quot;meter-height&quot;]" title="Copy">tokens[mode].size[&quot;meter-height&quot;]</button></td>
 </tr></tbody></table></section>
 <section id="radii"><h2>Radii <small>17</small></h2>
 <table><thead><tr><th>Token</th><th></th><th>Day</th><th>Night</th><th>CSS</th><th>Tailwind</th><th>TS</th></tr></thead>
