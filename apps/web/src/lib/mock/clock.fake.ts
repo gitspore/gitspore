@@ -1,5 +1,5 @@
 import type { Clock } from "./clock";
-type FakeClock = Clock & { advance(ms: number): void };
+export type FakeClock = Clock & { advance(ms: number): void };
 
 export function createFakeClock(start = 0): FakeClock {
   let current = start;
