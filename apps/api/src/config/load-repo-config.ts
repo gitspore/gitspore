@@ -3,6 +3,9 @@ import { RepoConfig } from "./repo-config";
 import { stat } from "node:fs/promises";
 import { simpleGit } from "simple-git";
 
+//
+//
+//
 export async function loadRepoConfig(
   env: NodeJS.ProcessEnv,
 ): Promise<RepoConfig> {
@@ -29,5 +32,15 @@ export async function loadRepoConfig(
     );
   }
 
-  return new RepoConfig(resolve(topLevel), env.GITSPORE_BASE_BRANCH ?? "main");
+  const top = resolve(topLevel);
+  const base = env.GITSPORE_BASE_BRANCH ?? "main";
+  try {
+    await simpleGit(top).raw(["show-ref", "--verify", `refs/heads/${base}`]);
+  } catch {
+    throw new Error(
+      `Base branch "${base}" does not exist in ${top}. Set GITSPORE_BASE_BRANCH to the branch new worktrees should start from (master or main etc.).`,
+    );
+  }
+
+  return new RepoConfig(top, base);
 }

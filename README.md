@@ -48,8 +48,10 @@ Einzelne Workspaces: `npm run <skript> --workspace @gitspore/<name>`.
 
 Der Daemon bindet nur an `127.0.0.1`. Bei jedem Start erzeugt er einen zufälligen Session-Token und gibt ihn einmal im Log aus (`Session token: …`). Der Web-Client schickt ihn als `auth.token` im Socket.io-Handshake. Verbindungen ohne gültigen Token, mit unbekanntem `Origin` oder mit einem `Host`, der nicht `localhost`, `127.0.0.1` oder `[::1]` ist, werden abgelehnt.
 
-| Variable     | Standard                | Wirkung                                                                                                                                                              |
-| ------------ | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `WEB_ORIGIN` | `http://localhost:3000` | Erlaubte `Origin`-Werte des Web-Clients, mehrere kommagetrennt. Der Vergleich ist exakt: `http://127.0.0.1:3000` ist ein anderer Origin als `http://localhost:3000`. |
+| Variable               | Standard                | Wirkung                                                                                                                                                              |
+| ---------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `WEB_ORIGIN`           | `http://localhost:3000` | Erlaubte `Origin`-Werte des Web-Clients, mehrere kommagetrennt. Der Vergleich ist exakt: `http://127.0.0.1:3000` ist ein anderer Origin als `http://localhost:3000`. |
+| `GITSPORE_REPO`        | – (Pflicht)             | Pfad zum Git-Repository, in dem gitspore Worktrees anlegt. Ein Unterordner wird auf den Repo-Stamm aufgelöst. Ohne gültiges Repo startet der Daemon nicht.           |
+| `GITSPORE_BASE_BRANCH` | `main`                  | Lokaler Branch, von dem neue Worktrees abzweigen. Muss lokal existieren.                                                                                             |
 
 Konfigurationsentscheidungen stehen in [docs/decisions.md](docs/decisions.md).
