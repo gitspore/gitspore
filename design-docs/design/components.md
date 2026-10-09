@@ -164,7 +164,7 @@ Offline is red because you have to act (start the daemon). The offline dialog op
 
 **Dialog backdrop.** `color.backdrop` covers the screen behind the confirm and offline dialogs: warm ink at 25 % by day, black at 50 % at night.
 
-Penpot shows all of these on the board "states (GS-34)" below the components, with the day values. `top-bar` and `side-panel` are components too, so S01 day and night can't drift apart.
+Penpot shows all of these on the board "states (GS-34)" below the components, with the day values. `top-bar`, `rail`, `side-panel` and `hotbar` are components too, so S01 day and night are built from the same parts and can't drift apart.
 
 ### Motion
 
