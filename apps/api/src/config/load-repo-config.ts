@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import { RepoConfig } from "./repo-config";
 import { stat } from "node:fs/promises";
+import { simpleGit } from "simple-git";
 
 export async function loadRepoConfig(
   env: NodeJS.ProcessEnv,
@@ -19,5 +20,14 @@ export async function loadRepoConfig(
     );
   }
 
-  return new RepoConfig(repo, repoPath);
+  let topLevel: string;
+  try {
+    topLevel = await simpleGit(repoPath).revparse(["--show-toplevel"]);
+  } catch {
+    throw new Error(
+      `GITSPORE_REPO points to ${repoPath} which is not inside a git repository.`,
+    );
+  }
+
+  return new RepoConfig(resolve(topLevel), env.GITSPORE_BASE_BRANCH ?? "main");
 }
