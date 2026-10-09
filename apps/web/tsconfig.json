@@ -10,6 +10,8 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "jsx": "react-jsx",
+    // TypeScript 6 includes no global types by default; the specs need these.
+    "types": ["node", "jest"],
     "plugins": [
       {
         "name": "next"
