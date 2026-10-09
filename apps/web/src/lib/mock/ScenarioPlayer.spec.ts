@@ -1,33 +1,7 @@
-import type { Agent } from "@gitspore/shared";
 import { createFakeClock } from "./clock.fake";
-import type { Scenario, ScenarioEntry } from "./scenario";
+import type { ScenarioEntry } from "./scenario";
+import { ANCHOR, data, makeScenario } from "./scenarioFixtures";
 import { ScenarioPlayer } from "./ScenarioPlayer";
-
-const agent: Agent = {
-  id: "a1",
-  slotIndex: 0,
-  issueNumber: 1,
-  branch: "spore/1-x",
-  worktreePath: "/w",
-  status: "working",
-  statusSince: "2026-10-09T09:00:00.000Z",
-  startedAt: "2026-10-09T09:00:00.000Z",
-};
-
-const ANCHOR = "2026-10-09T09:30:00.000Z";
-
-function data(at: number, chunk: string): ScenarioEntry {
-  return { at, event: "terminal:data", payload: { sessionId: "s", chunk } };
-}
-
-function makeScenario(events: ScenarioEntry[] = []): Scenario {
-  return {
-    name: "test",
-    anchor: ANCHOR,
-    snapshot: { version: 1, agents: [agent], issues: [] },
-    events,
-  };
-}
 
 function setup(events: ScenarioEntry[] = []) {
   const clock = createFakeClock(Date.parse(ANCHOR));
