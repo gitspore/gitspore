@@ -13,7 +13,7 @@ export default function ThemeToggle() {
     <Button
       variant="ghost"
       size="icon"
-      aria-label={isNight ? "Switch to day" : "Switch to night"}
+      aria-label="Switch between day and night"
       onClick={() => setTheme(isNight ? "light" : "dark")}
     >
       {/* Both icons render; CSS shows the right one, so server and client markup match */}
