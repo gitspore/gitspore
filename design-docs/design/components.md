@@ -71,7 +71,7 @@ The Penpot name comes first, the code name second. Sizes in px at a 1440 × 900 
 
 **`logo-lockup` / `Logo`.** Beetle on the plate (`size.logo-plate`, `radius.logo-plate`, `color.logo.plate`) plus "gitspore" in `font.title`, always lowercase. At night the seam glows (`color.logo.seam`, `color.logo.glow`, `opacity.logo-glow`). Variants of `logo-mark`: `plate`, `bare` (no plate), `slot` (in the hotbar). SVG source below.
 
-**`TopBar`.** Height `size.top-bar`, background `color.panel`. Left: logo. Then the focused agent's issue and branch (`font.ui`, issue in 700). Right: `wait-badge`, two `usage-meter`s for the plan limits ("5 h" and "week"), connection status (see States) and vitality in `color.muted`, help and settings as `icon-button`. No repo name.
+**`top-bar` / `TopBar`.** Height `size.top-bar`, background `color.panel`. Left: logo. Then the focused agent's issue and branch (`font.ui`, issue in 700). Right: `wait-badge`, two `usage-meter`s for the plan limits ("5 h" and "week"), connection status (see States) and vitality in `color.muted`, help and settings as `icon-button`. No repo name.
 
 **`wait-badge` / `WaitBadge`.** "1 waiting", uppercase, `color.wait` with `color.wait-ink`, `radius.badge`. A square dot blinks. Hidden when nothing waits.
 
@@ -81,7 +81,7 @@ The Penpot name comes first, the code name second. Sizes in px at a 1440 × 900 
 
 ### Side panel
 
-**`SidePanel`.** `size.panel-width`, `radius.panel`, `color.panel`, soft shadow, no border. Title in `font.title` ("Your pots") with the close button on the right; below it, aligned left, the count in `ui/meta` `color.muted` ("5 of 6 planted"). Optional: the project's token total on the same line ("5 of 6 planted · 20.8M tokens"), see Usage.
+**`side-panel` / `SidePanel`.** `size.panel-width`, `radius.panel`, `color.panel`, soft shadow, no border. Title in `font.title` ("Your pots") with the close button on the right; below it, aligned left, the count in `ui/meta` `color.muted` ("5 of 6 planted"). Optional: the project's token total on the same line ("5 of 6 planted · 20.8M tokens"), see Usage.
 
 **`segmented-tabs` / `SegmentedTabs`.** Track `color.panel-2`, `radius.tab-track`; tabs `size.tab` high, `radius.tab`; active tab `color.plate` with `color.plate-ink`. Agents · Issues · Branches.
 
@@ -164,7 +164,7 @@ Offline is red because you have to act (start the daemon). The offline dialog op
 
 **Dialog backdrop.** `color.backdrop` covers the screen behind the confirm and offline dialogs: warm ink at 25 % by day, black at 50 % at night.
 
-Penpot shows all of these on the board "states (GS-34)" below the components, with the day values.
+Penpot shows all of these on the board "states (GS-34)" below the components, with the day values. `top-bar` and `side-panel` are components too, so S01 day and night can't drift apart.
 
 ### Motion
 
