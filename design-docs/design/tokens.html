@@ -58,6 +58,11 @@
   --size-logo-plate: 32px;
   --size-logo: 25px;
   --size-terminal-min-width: 660px;
+  --size-count-badge: 22px;
+  --size-bookmark-width-hover: 64px;
+  --size-status-dot: 7px;
+  --size-meter-width: 44px;
+  --size-meter-height: 6px;
   --border-line: 2px;
   --border-selected: 3px;
   --border-focus: 2px;
@@ -135,6 +140,7 @@
   --opacity-agent-circle: 0.33;
   --opacity-track-empty: 0.55;
   --opacity-disabled: 0.45;
+  --opacity-window-unfocused: 0.35;
   --space-top-bar-left: 16px;
   --space-top-bar-right: 20px;
   --space-top-bar-gap: 18px;
@@ -245,6 +251,7 @@
   --color-paper: #e2c793;
   --color-paper-line: #b8955c;
   --color-paper-ink: #3a2a1c;
+  --color-backdrop: rgba(42, 33, 25, 0.25);
   --opacity-logo-glow: 0;
   --shadow-panel: 0px 12px 30px 0px rgba(60, 45, 25, 0.22);
   --shadow-window: 0px 16px 34px 0px rgba(60, 45, 25, 0.25);
@@ -405,6 +412,7 @@
   --color-paper: #4a3d28;
   --color-paper-line: #7a6440;
   --color-paper-ink: #f1e6d2;
+  --color-backdrop: rgba(0, 0, 0, 0.5);
   --opacity-logo-glow: 1;
   --shadow-panel: 0px 12px 30px 0px rgba(0, 0, 0, 0.45);
   --shadow-window: 0px 16px 34px 0px rgba(0, 0, 0, 0.5);
@@ -481,6 +489,7 @@
     --color-paper: #4a3d28;
     --color-paper-line: #7a6440;
     --color-paper-ink: #f1e6d2;
+    --color-backdrop: rgba(0, 0, 0, 0.5);
     --opacity-logo-glow: 1;
     --shadow-panel: 0px 12px 30px 0px rgba(0, 0, 0, 0.45);
     --shadow-window: 0px 16px 34px 0px rgba(0, 0, 0, 0.5);
@@ -614,7 +623,7 @@ const term = new Terminal({
 <details><summary>Mode and per-window terminal</summary><pre><code class="html">&lt;html class=&quot;dark&quot;&gt;  &lt;!-- night, set by next-themes; no class = follow the system --&gt;
 &lt;div class=&quot;terminal-light&quot;&gt; &lt;!-- this window's terminal stays light --&gt;</code></pre></details>
 </div>
-<section id="interface-colours"><h2>Interface colours <small>19</small></h2>
+<section id="interface-colours"><h2>Interface colours <small>20</small></h2>
 <table><thead><tr><th>Token</th><th></th><th>Day</th><th>Night</th><th>CSS</th><th>Tailwind</th><th>TS</th></tr></thead>
 <tbody><tr>
 <td><code>color.focus</code><div class="ref">→ color.accent</div></td>
@@ -786,6 +795,15 @@ const term = new Terminal({
 <td><button class="copy" data-copy="var(--color-paper-ink)" title="Copy">var(--color-paper-ink)</button></td>
 <td><button class="copy" data-copy="*-paper-ink" title="Copy">*-paper-ink</button></td>
 <td><button class="copy" data-copy="tokens[mode].color[&quot;paper-ink&quot;]" title="Copy">tokens[mode].color[&quot;paper-ink&quot;]</button></td>
+</tr>
+<tr>
+<td><code>color.backdrop</code></td>
+<td class="pv"><span class="sw" style="background:var(--color-backdrop)"></span></td>
+<td><span class="sw" style="background:rgba(42, 33, 25, 0.25)"></span><code>rgba(42, 33, 25, 0.25)</code></td>
+<td><span class="sw" style="background:rgba(0, 0, 0, 0.5)"></span><code>rgba(0, 0, 0, 0.5)</code></td>
+<td><button class="copy" data-copy="var(--color-backdrop)" title="Copy">var(--color-backdrop)</button></td>
+<td><button class="copy" data-copy="*-backdrop" title="Copy">*-backdrop</button></td>
+<td><button class="copy" data-copy="tokens[mode].color.backdrop" title="Copy">tokens[mode].color.backdrop</button></td>
 </tr></tbody></table></section>
 <section id="status-colours"><h2>Status colours <small>6</small></h2>
 <table><thead><tr><th>Token</th><th></th><th>Day</th><th>Night</th><th>CSS</th><th>Tailwind</th><th>TS</th></tr></thead>
@@ -2259,7 +2277,7 @@ const term = new Terminal({
 <td><button class="copy" data-copy="*-focus-offset" title="Copy">*-focus-offset</button></td>
 <td><button class="copy" data-copy="tokens[mode].space.focus.offset" title="Copy">tokens[mode].space.focus.offset</button></td>
 </tr></tbody></table></section>
-<section id="sizes"><h2>Sizes <small>23</small></h2>
+<section id="sizes"><h2>Sizes <small>28</small></h2>
 <table><thead><tr><th>Token</th><th></th><th>Day</th><th>Night</th><th>CSS</th><th>Tailwind</th><th>TS</th></tr></thead>
 <tbody><tr>
 <td><code>size.top-bar</code></td>
@@ -2467,6 +2485,51 @@ const term = new Terminal({
 <td><button class="copy" data-copy="var(--size-terminal-min-width)" title="Copy">var(--size-terminal-min-width)</button></td>
 <td><button class="copy" data-copy="*-terminal-min-width" title="Copy">*-terminal-min-width</button></td>
 <td><button class="copy" data-copy="tokens[mode].size[&quot;terminal-min-width&quot;]" title="Copy">tokens[mode].size[&quot;terminal-min-width&quot;]</button></td>
+</tr>
+<tr>
+<td><code>size.count-badge</code></td>
+<td class="pv"><span class="bar" style="width:min(var(--size-count-badge),160px)"></span></td>
+<td><code>22px</code></td>
+<td><span class="same">same</span></td>
+<td><button class="copy" data-copy="var(--size-count-badge)" title="Copy">var(--size-count-badge)</button></td>
+<td><button class="copy" data-copy="*-count-badge" title="Copy">*-count-badge</button></td>
+<td><button class="copy" data-copy="tokens[mode].size[&quot;count-badge&quot;]" title="Copy">tokens[mode].size[&quot;count-badge&quot;]</button></td>
+</tr>
+<tr>
+<td><code>size.bookmark-width-hover</code></td>
+<td class="pv"><span class="bar" style="width:min(var(--size-bookmark-width-hover),160px)"></span></td>
+<td><code>64px</code></td>
+<td><span class="same">same</span></td>
+<td><button class="copy" data-copy="var(--size-bookmark-width-hover)" title="Copy">var(--size-bookmark-width-hover)</button></td>
+<td><button class="copy" data-copy="*-bookmark-width-hover" title="Copy">*-bookmark-width-hover</button></td>
+<td><button class="copy" data-copy="tokens[mode].size[&quot;bookmark-width-hover&quot;]" title="Copy">tokens[mode].size[&quot;bookmark-width-hover&quot;]</button></td>
+</tr>
+<tr>
+<td><code>size.status-dot</code></td>
+<td class="pv"><span class="bar" style="width:min(var(--size-status-dot),160px)"></span></td>
+<td><code>7px</code></td>
+<td><span class="same">same</span></td>
+<td><button class="copy" data-copy="var(--size-status-dot)" title="Copy">var(--size-status-dot)</button></td>
+<td><button class="copy" data-copy="*-status-dot" title="Copy">*-status-dot</button></td>
+<td><button class="copy" data-copy="tokens[mode].size[&quot;status-dot&quot;]" title="Copy">tokens[mode].size[&quot;status-dot&quot;]</button></td>
+</tr>
+<tr>
+<td><code>size.meter-width</code></td>
+<td class="pv"><span class="bar" style="width:min(var(--size-meter-width),160px)"></span></td>
+<td><code>44px</code></td>
+<td><span class="same">same</span></td>
+<td><button class="copy" data-copy="var(--size-meter-width)" title="Copy">var(--size-meter-width)</button></td>
+<td><button class="copy" data-copy="*-meter-width" title="Copy">*-meter-width</button></td>
+<td><button class="copy" data-copy="tokens[mode].size[&quot;meter-width&quot;]" title="Copy">tokens[mode].size[&quot;meter-width&quot;]</button></td>
+</tr>
+<tr>
+<td><code>size.meter-height</code></td>
+<td class="pv"><span class="bar" style="width:min(var(--size-meter-height),160px)"></span></td>
+<td><code>6px</code></td>
+<td><span class="same">same</span></td>
+<td><button class="copy" data-copy="var(--size-meter-height)" title="Copy">var(--size-meter-height)</button></td>
+<td><button class="copy" data-copy="*-meter-height" title="Copy">*-meter-height</button></td>
+<td><button class="copy" data-copy="tokens[mode].size[&quot;meter-height&quot;]" title="Copy">tokens[mode].size[&quot;meter-height&quot;]</button></td>
 </tr></tbody></table></section>
 <section id="radii"><h2>Radii <small>17</small></h2>
 <table><thead><tr><th>Token</th><th></th><th>Day</th><th>Night</th><th>CSS</th><th>Tailwind</th><th>TS</th></tr></thead>
@@ -2699,7 +2762,7 @@ const term = new Terminal({
 <td><button class="copy" data-copy="*-bookmark" title="Copy">*-bookmark</button></td>
 <td><button class="copy" data-copy="tokens[mode].shadow.bookmark" title="Copy">tokens[mode].shadow.bookmark</button></td>
 </tr></tbody></table></section>
-<section id="opacity"><h2>Opacity <small>4</small></h2>
+<section id="opacity"><h2>Opacity <small>5</small></h2>
 <table><thead><tr><th>Token</th><th></th><th>Day</th><th>Night</th><th>CSS</th><th>Tailwind</th><th>TS</th></tr></thead>
 <tbody><tr>
 <td><code>opacity.agent-circle</code></td>
@@ -2727,6 +2790,15 @@ const term = new Terminal({
 <td><button class="copy" data-copy="var(--opacity-disabled)" title="Copy">var(--opacity-disabled)</button></td>
 <td><span class="same">–</span></td>
 <td><button class="copy" data-copy="tokens[mode].opacity.disabled" title="Copy">tokens[mode].opacity.disabled</button></td>
+</tr>
+<tr>
+<td><code>opacity.window-unfocused</code></td>
+<td class="pv"></td>
+<td><code>0.35</code></td>
+<td><span class="same">same</span></td>
+<td><button class="copy" data-copy="var(--opacity-window-unfocused)" title="Copy">var(--opacity-window-unfocused)</button></td>
+<td><span class="same">–</span></td>
+<td><button class="copy" data-copy="tokens[mode].opacity[&quot;window-unfocused&quot;]" title="Copy">tokens[mode].opacity[&quot;window-unfocused&quot;]</button></td>
 </tr>
 <tr>
 <td><code>opacity.logo-glow</code></td>

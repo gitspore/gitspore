@@ -50,6 +50,11 @@
   --size-logo-plate: 32px;
   --size-logo: 25px;
   --size-terminal-min-width: 660px;
+  --size-count-badge: 22px;
+  --size-bookmark-width-hover: 64px;
+  --size-status-dot: 7px;
+  --size-meter-width: 44px;
+  --size-meter-height: 6px;
   --border-line: 2px;
   --border-selected: 3px;
   --border-focus: 2px;
@@ -127,6 +132,7 @@
   --opacity-agent-circle: 0.33;
   --opacity-track-empty: 0.55;
   --opacity-disabled: 0.45;
+  --opacity-window-unfocused: 0.35;
   --space-top-bar-left: 16px;
   --space-top-bar-right: 20px;
   --space-top-bar-gap: 18px;
@@ -251,6 +257,7 @@
   --color-paper: #e2c793;
   --color-paper-line: #b8955c;
   --color-paper-ink: #3a2a1c;
+  --color-backdrop: rgba(42, 33, 25, 0.25);
   --opacity-logo-glow: 0;
   --shadow-panel: 0px 12px 30px 0px rgba(60, 45, 25, 0.22);
   --shadow-window: 0px 16px 34px 0px rgba(60, 45, 25, 0.25);
@@ -425,6 +432,7 @@
   --color-paper: #4a3d28;
   --color-paper-line: #7a6440;
   --color-paper-ink: #f1e6d2;
+  --color-backdrop: rgba(0, 0, 0, 0.5);
   --opacity-logo-glow: 1;
   --shadow-panel: 0px 12px 30px 0px rgba(0, 0, 0, 0.45);
   --shadow-window: 0px 16px 34px 0px rgba(0, 0, 0, 0.5);
@@ -517,6 +525,7 @@
     --color-paper: #4a3d28;
     --color-paper-line: #7a6440;
     --color-paper-ink: #f1e6d2;
+    --color-backdrop: rgba(0, 0, 0, 0.5);
     --opacity-logo-glow: 1;
     --shadow-panel: 0px 12px 30px 0px rgba(0, 0, 0, 0.45);
     --shadow-window: 0px 16px 34px 0px rgba(0, 0, 0, 0.5);

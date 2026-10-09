@@ -39,5 +39,6 @@ Open the HTML files directly in a browser. They load fonts and three.js from CDN
 | [0006](decisions/0006-visual-direction-cozy-06.md) | Visual direction cozy-06 | proposed |
 | [0007](decisions/0007-penpot-is-the-source-of-design-values.md) | Penpot is the source of design values | proposed |
 | [0008](decisions/0008-generated-theme-files.md) | Theme files are generated from a copy of the Penpot tokens | proposed |
+| [0009](decisions/0009-show-token-usage.md) | Show token usage: plan limits and tokens per agent | proposed |
 
 "Proposed" means not yet agreed by the team. When the team agrees, the status changes to "accepted".

@@ -73,6 +73,7 @@ The full layout (regions, rules, all 19 states) is in [design/layout.html](desig
 - The **hotbar** has one slot per pot (keys 1–6) and one for the overview (key 0). Each slot shows the plant, the status shape and the agent colour; a mark means the window is minimised ([ADR 0005](decisions/0005-hotbar-replaces-tray.md)).
 - When an agent waits and its terminal is not in view, a notification appears bottom right, and the tab title and favicon show the number of waiting agents.
 - Greenhouse vitality (should-have) is one value, 0–100 %, for how much agent time is lost to waiting.
+- Token usage: the top bar shows how much of the Claude plan's 5-hour and weekly limits is used; each terminal window shows its agent's tokens and how full its context is ([ADR 0009](decisions/0009-show-token-usage.md)).
 
 ## Who it is for and how we test it
 

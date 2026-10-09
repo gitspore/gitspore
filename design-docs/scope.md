@@ -1,6 +1,6 @@
 # Scope
 
-Status: proposed, not agreed by the team yet. Last updated 2026-10-07.
+Status: proposed, not agreed by the team yet. Last updated 2026-10-09.
 
 Four weeks, 2026-10-05 to the presentation on 2026-11-04, about 60 person-days for the team. Tasks and their status live on the board: https://github.com/orgs/gitspore/projects/1
 
@@ -13,6 +13,7 @@ Four weeks, 2026-10-05 to the presentation on 2026-11-04, about 60 person-days f
 - The hotbar (keys 1–6 and 0)
 - Side panel with the Agents and Issues tabs
 - Waiting notification, waiting count in the tab title and favicon
+- Token usage: the plan's 5-hour and weekly limits in the top bar, tokens and context per agent in its window ([ADR 0009](decisions/0009-show-token-usage.md))
 - Merge detection with bloom and worktree cleanup
 - macOS and Windows
 - Daemon only on localhost, with a token
@@ -26,6 +27,7 @@ Four weeks, 2026-10-05 to the presentation on 2026-11-04, about 60 person-days f
 - Tiling of 2–4 terminals
 - Agent colours and the colour picker
 - Replay, greenhouse vitality
+- The project's token total
 - Sound cue and browser notification
 
 ## Later, if time

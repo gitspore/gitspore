@@ -161,6 +161,7 @@
   --color-paper: #e2c793;
   --color-paper-line: #b8955c;
   --color-paper-ink: #3a2a1c;
+  --color-backdrop: rgba(42, 33, 25, 0.25);
   --text-ui-meta: 14px;
   --text-ui-meta--line-height: 1.2;
   --text-ui-meta--font-weight: 500;
@@ -255,6 +256,11 @@
   --spacing-logo-plate: var(--size-logo-plate);
   --spacing-logo: var(--size-logo);
   --spacing-terminal-min-width: var(--size-terminal-min-width);
+  --spacing-count-badge: var(--size-count-badge);
+  --spacing-bookmark-width-hover: var(--size-bookmark-width-hover);
+  --spacing-status-dot: var(--size-status-dot);
+  --spacing-meter-width: var(--size-meter-width);
+  --spacing-meter-height: var(--size-meter-height);
   --spacing-top-bar-left: var(--space-top-bar-left);
   --spacing-top-bar-right: var(--space-top-bar-right);
   --spacing-top-bar-gap: var(--space-top-bar-gap);
