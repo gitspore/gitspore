@@ -1,5 +1,5 @@
 // Generates the theme files from the token sources in src/theme:
-//   tokens.json      Penpot token sets (cozy-06/shared, /day, /night), dumped from Penpot
+//   tokens.json      Penpot token sets (cozy-06/base, /shared, /day, /night), dumped from Penpot
 //   typography.json  Penpot library typographies
 //   scene.json       3D scene values (not in Penpot)
 // Outputs: src/theme/tokens.css, src/theme/tailwind.css, src/theme/tokens.ts and
@@ -23,18 +23,38 @@ const PX_TYPES = new Set([
   "borderWidth",
   "dimension",
 ]);
+// Written in rem in CSS (1rem = 16px), except the names in PX_KEEP. tokens.ts keeps px numbers.
+const REM_TYPES = new Set(["sizing", "spacing", "borderRadius"]);
+const PX_KEEP = new Set([
+  "space.focus-offset",
+  "space.terminal.screen",
+  "size.terminal-min-width",
+  "radius.full",
+]);
+// Content groups: raw values allowed, no Tailwind utilities, interface tokens never point into them.
+const CONTENT = /^color\.(agent|art|xterm)\./;
+// Tokens outside cozy-06/base that may hold a raw value instead of a reference into base.
+const RAW_ALLOWED = [
+  CONTENT,
+  /^(shadow|border|font)\./,
+  /^(size\.panel-width|size\.terminal-min-width|space\.focus-offset)$/,
+];
+// Base scales: no Tailwind utility (Tailwind's own p-4, w-10, opacity-35 are the same values). Base radii are emitted.
+const BASE_SCALE = /^(palette\.|(space|size|opacity)\.\d+$)/;
+const ALPHA_STEPS = [0.1, 0.2, 0.35, 0.5];
 // Fallbacks after the font named in Penpot. next/font in layout.tsx sets --font-<family>, e.g. --font-fredoka.
 const FONT_STACKS = {
   title: '"Figtree", system-ui, sans-serif',
   ui: "system-ui, sans-serif",
   mono: "ui-monospace, monospace",
 };
+// xterm theme key → key in color.xterm.<light|dark>. The cursor uses fg on bg.
 const XTERM_KEYS = {
-  bg: "background",
-  fg: "foreground",
-  cursor: "cursor",
-  "cursor-accent": "cursorAccent",
-  selection: "selectionBackground",
+  background: "bg",
+  foreground: "fg",
+  cursor: "fg",
+  cursorAccent: "bg",
+  selectionBackground: "selection",
 };
 const ANSI = [
   "black",
@@ -70,6 +90,7 @@ const sceneJson = await readJson("scene.json");
 const typographyJson = await readJson("typography.json");
 
 const sets = {
+  base: flatten(tokenJson["cozy-06/base"] ?? {}),
   shared: flatten(tokenJson["cozy-06/shared"]),
   day: flatten(tokenJson["cozy-06/day"]),
   night: flatten(tokenJson["cozy-06/night"]),
@@ -79,7 +100,7 @@ const sceneSets = {
   day: flatten(sceneJson["scene/day"]),
   night: flatten(sceneJson["scene/night"]),
 };
-const uiEnv = (mode) => new Map([...sets.shared, ...sets[mode]]);
+const uiEnv = (mode) => new Map([...sets.base, ...sets.shared, ...sets[mode]]);
 const fullEnv = (mode) =>
   new Map([...uiEnv(mode), ...sceneSets.shared, ...sceneSets[mode]]);
 
@@ -125,11 +146,21 @@ const cssShadow = (list) =>
 const fontFace = (family) =>
   `--font-${family.toLowerCase().replaceAll(" ", "-")}`;
 
+const trim = (n, digits = 4) => String(Number(n.toFixed(digits)));
+const rem = (px) => `${trim(px / 16)}rem`;
+const inRem = (name, type) => REM_TYPES.has(type) && !PX_KEEP.has(name);
+
 // CSS value of a raw (unresolved) token: references stay var() so they follow the mode.
+// PX_KEEP names are resolved instead (base and shared are mode-free), so a px token can point at a rem one.
 function cssValue(name, token) {
+  if (PX_KEEP.has(name)) {
+    const t = resolve(uiEnv("day"), name);
+    return `${num(name, t.value)}px`;
+  }
   const ref = refOf(token.value);
   if (ref) return `var(${cssVar(ref)})`;
   const { type, value } = token;
+  if (inRem(name, type)) return rem(num(name, value));
   if (PX_TYPES.has(type)) return `${num(name, value)}px`;
   if (type === "shadow") return cssShadow(value);
   if (type === "fontFamilies") {
@@ -151,6 +182,32 @@ function tsValue(name, token) {
 
 const cssVar = (name) => `--${name.replaceAll(".", "-")}`;
 
+// ---------- checks
+
+for (const set of ["shared", "day", "night"]) {
+  for (const [name, token] of sets[set]) {
+    const ref = refOf(token.value);
+    if (!ref && !RAW_ALLOWED.some((re) => re.test(name)))
+      throw new Error(
+        `${name} (cozy-06/${set}): raw value ${JSON.stringify(token.value)}; point it at a cozy-06/base token`,
+      );
+    if (ref && CONTENT.test(ref) && !CONTENT.test(name))
+      throw new Error(
+        `${name} (cozy-06/${set}): interface tokens must not point into content (${ref})`,
+      );
+  }
+}
+for (const [name, token] of sets.base) {
+  if (!name.startsWith("palette.alpha.")) continue;
+  const alpha = String(token.value).match(
+    /^rgba\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*,\s*([\d.]+)\s*\)$/,
+  )?.[1];
+  if (!ALPHA_STEPS.includes(Number(alpha)))
+    throw new Error(
+      `${name}: alpha must be one of ${ALPHA_STEPS.join(", ")} (got ${token.value})`,
+    );
+}
+
 // ---------- typography
 
 const typographies = [];
@@ -166,6 +223,19 @@ for (const [group, entries] of Object.entries(typographyJson)) {
     });
   }
 }
+// Font sizes in rem, letter spacing in em. mono/terminal stays px, like everything terminal.
+const typeSize = (t) =>
+  t.id === "mono-terminal" ? `${t.fontSize}px` : rem(t.fontSize);
+const typeTracking = (t) => `${trim(t.letterSpacing / t.fontSize, 3)}em`;
+const typeVars = (t) => {
+  const v = `--text-${t.id}`;
+  return [
+    [v, typeSize(t)],
+    [`${v}--line-height`, String(t.lineHeight)],
+    [`${v}--font-weight`, String(t.fontWeight)],
+    [`${v}--letter-spacing`, typeTracking(t)],
+  ];
+};
 
 // ---------- tokens.css
 
@@ -174,34 +244,32 @@ function cssBlock(selector, entries, indent = "") {
   return `${indent}${selector} {\n${lines.join("\n")}\n${indent}}`;
 }
 
-const terminalKeys = [...sets.day.keys()]
-  .filter((n) => n.startsWith("color.terminal."))
-  .map((n) => n.slice("color.terminal.".length));
+// --color-terminal-<k> follows the mode (xterm light by day, dark at night) unless a window overrides it.
+const terminalKeys = [...sets.shared.keys()]
+  .filter((n) => n.startsWith("color.xterm.light."))
+  .map((n) => n.slice("color.xterm.light.".length));
+const terminal = (pal) =>
+  terminalKeys.map((k) => [
+    cssVar(`color.terminal.${k}`),
+    `var(${cssVar(`color.xterm.${pal}.${k}`)})`,
+  ]);
 
 function buildCss() {
-  const root = [...sets.shared, ...sets.day].map(([n, t]) => [
+  const root = [...sets.base, ...sets.shared, ...sets.day].map(([n, t]) => [
     cssVar(n),
     cssValue(n, t),
   ]);
+  root.push(...terminal("light"));
   for (const t of typographies) {
-    const v = `--text-${t.id}`;
-    root.push(
-      [v, `${t.fontSize}px`],
-      [`${v}--line-height`, String(t.lineHeight)],
-      [`${v}--font-weight`, String(t.fontWeight)],
-      [`${v}--letter-spacing`, `${t.letterSpacing}px`],
-      [
-        `--type-${t.id}`,
-        `${t.fontWeight} ${t.fontSize}px/${t.lineHeight} var(${cssVar(t.family)})`,
-      ],
-    );
-  }
-  const night = [...sets.night].map(([n, t]) => [cssVar(n), cssValue(n, t)]);
-  const terminal = (pal) =>
-    terminalKeys.map((k) => [
-      cssVar(`color.terminal.${k}`),
-      `var(${cssVar(`color.terminal-${pal}.${k}`)})`,
+    root.push(...typeVars(t), [
+      `--type-${t.id}`,
+      `${t.fontWeight} ${typeSize(t)}/${t.lineHeight} var(${cssVar(t.family)})`,
     ]);
+  }
+  const night = [
+    ...[...sets.night].map(([n, t]) => [cssVar(n), cssValue(n, t)]),
+    ...terminal("dark"),
+  ];
   const caseRules = typographies
     .filter((t) => t.textTransform !== "none")
     .map(
@@ -235,8 +303,11 @@ const TW_NAMESPACE = {
 };
 // shadcn already uses bg-muted and bg-accent for its own roles; reach ours through text-muted-foreground and bg-primary.
 const TW_SKIP = new Set(["color.muted", "color.accent"]);
+// The terminal colours that get a utility (bg-terminal-bg, text-terminal-fg); they are not tokens themselves.
+const TW_TERMINAL = ["bg", "fg"];
 const twName = (name) => {
-  if (TW_SKIP.has(name)) return null;
+  if (TW_SKIP.has(name) || BASE_SCALE.test(name) || CONTENT.test(name))
+    return null;
   const [group, ...rest] = name.split(".");
   const ns = TW_NAMESPACE[group];
   if (!ns) return null;
@@ -266,15 +337,14 @@ function buildTailwind() {
       lines.push(`  ${tw.variable}: ${cssValue(name, resolve(env, name))};`);
     }
   }
-  for (const t of typographies) {
-    const v = `--text-${t.id}`;
+  for (const k of TW_TERMINAL) {
+    const name = `color.xterm.light.${k}`;
     lines.push(
-      `  ${v}: ${t.fontSize}px;`,
-      `  ${v}--line-height: ${t.lineHeight};`,
-      `  ${v}--font-weight: ${t.fontWeight};`,
-      `  ${v}--letter-spacing: ${t.letterSpacing}px;`,
+      `  ${cssVar(`color.terminal.${k}`)}: ${cssValue(name, resolve(env, name))};`,
     );
   }
+  for (const t of typographies)
+    lines.push(...typeVars(t).map(([n, v]) => `  ${n}: ${v};`));
   return [
     `/* ${HEADER} */`,
     "/* Import after tailwindcss and next to tokens.css, which defines the values per mode. */",
@@ -303,9 +373,9 @@ function resolvedTree(mode) {
 
 function xtermTheme(pal) {
   const env = uiEnv("day");
-  const get = (k) => tsValue(k, resolve(env, `color.terminal-${pal}.${k}`));
+  const get = (k) => tsValue(k, resolve(env, `color.xterm.${pal}.${k}`));
   const theme = {};
-  for (const [k, key] of Object.entries(XTERM_KEYS)) theme[key] = get(k);
+  for (const [key, k] of Object.entries(XTERM_KEYS)) theme[key] = get(k);
   for (const c of ANSI) {
     theme[c] = get(`ansi.${c}`);
     theme[`bright${c[0].toUpperCase()}${c.slice(1)}`] = get(`ansi.bright-${c}`);
@@ -366,28 +436,34 @@ const tsPath = (name) =>
     .join("");
 
 const SECTIONS = [
+  ["Palette", (n) => n.startsWith("palette.")],
+  ["Spacing scale", (n) => /^space\.\d/.test(n)],
+  ["Size scale", (n) => /^size\.\d/.test(n)],
+  ["Radius scale", (n) => n.startsWith("radius.")],
+  ["Opacity scale", (n) => /^opacity\.\d/.test(n)],
   [
     "Interface colours",
     (n) =>
       n.startsWith("color.") &&
-      !/^color\.(terminal|status|agent|plant|pot|logo|scene|wood|light|tag|packet)/.test(
-        n,
-      ),
+      !/^color\.(status|agent|art|xterm|scene|wood|light|tag|packet)\./.test(n),
   ],
   ["Status colours", (n) => n.startsWith("color.status.")],
   ["Agent colours", (n) => n.startsWith("color.agent.")],
-  ["Terminal, by mode", (n) => n.startsWith("color.terminal.")],
-  ["Terminal palettes", (n) => /^color\.terminal-(light|dark)\./.test(n)],
-  ["Logo", (n) => n.startsWith("color.logo.")],
-  ["2D plant icons", (n) => /^color\.(plant|pot)\./.test(n)],
-  ["Spacing", (n) => n.startsWith("space.")],
-  ["Sizes", (n) => n.startsWith("size.")],
-  ["Radii", (n) => n.startsWith("radius.")],
+  ["Terminal palettes", (n) => n.startsWith("color.xterm.")],
+  ["Logo", (n) => n.startsWith("color.art.logo.")],
+  ["2D plant icons", (n) => /^color\.art\.(plant|pot)\./.test(n)],
+  [
+    "Component sizes and spacing",
+    (n) => /^(space|size)\./.test(n) && !/^(space|size)\.\d/.test(n),
+  ],
   ["Borders", (n) => n.startsWith("border.")],
   ["Shadows", (n) => n.startsWith("shadow.")],
   [
     "Opacity",
-    (n) => n.startsWith("opacity.") && !n.startsWith("opacity.scene"),
+    (n) =>
+      n.startsWith("opacity.") &&
+      !/^opacity\.\d/.test(n) &&
+      !n.startsWith("opacity.scene"),
   ],
   ["Fonts", (n) => n.startsWith("font.")],
   [
@@ -399,6 +475,10 @@ const SECTIONS = [
     (n) => n.startsWith("scene.") || n.startsWith("opacity.scene"),
   ],
 ];
+
+// Tailwind utility shown in the table: the namespace's prefix, or * where several apply (bg-, text-, p-, w- …).
+const TW_PREFIX = { radius: "rounded", shadow: "shadow", font: "font" };
+const twUtility = (tw) => `${TW_PREFIX[tw.ns] ?? "*"}-${tw.tail}`;
 
 function preview(name, type, inScene) {
   const v = inScene ? "" : `var(${cssVar(name)})`;
@@ -425,7 +505,8 @@ function buildHtml(css) {
   const shown = (env, n) => {
     const t = resolve(env, n);
     const v = tsValue(n, t);
-    return typeof v === "number" && PX_TYPES.has(t.type) ? `${v}px` : String(v);
+    if (typeof v !== "number" || !PX_TYPES.has(t.type)) return String(v);
+    return inRem(n, t.type) ? `${v}px · ${rem(v)}` : `${v}px`;
   };
   const swatchFor = (env, n) =>
     env.get(n).type === "color"
@@ -451,7 +532,7 @@ function buildHtml(css) {
 <td>${swatchFor(day, n)}<code>${esc(dv)}</code></td>
 <td>${nv !== dv ? `${swatchFor(night, n)}<code>${esc(nv)}</code>` : '<span class="same">same</span>'}</td>
 <td>${inScene ? '<span class="same">TS only</span>' : copy(`var(${cssVar(n)})`)}</td>
-<td>${tw ? copy(`*-${tw.tail}`) : '<span class="same">–</span>'}</td>
+<td>${tw ? copy(twUtility(tw)) : '<span class="same">–</span>'}</td>
 <td>${copy(tsPath(n))}</td>
 </tr>`;
     });
@@ -464,7 +545,7 @@ function buildHtml(css) {
   const typoRows = typographies.map(
     (t) => `<tr><td><code>${t.group}/${t.key}</code></td>
 <td class="pv"><span style="font:var(--type-${t.id});letter-spacing:var(--text-${t.id}--letter-spacing);text-transform:${t.textTransform}">#15 avatar-upload 0:43</span></td>
-<td><code>${t.fontSize}px / ${t.fontWeight} / ${t.lineHeight}</code></td>
+<td><code>${t.fontSize}px (${typeSize(t)}) / ${t.fontWeight} / ${t.lineHeight}</code></td>
 <td>${copy(`font: var(--type-${t.id})`)}</td><td>${copy(`text-${t.id} font-${t.family.split(".").at(-1)}`)}</td>
 <td>${copy(`typography.${t.group}${/^[a-z]\w*$/i.test(t.key) ? `.${t.key}` : `["${t.key}"]`}`)}</td></tr>`,
   );
@@ -493,13 +574,13 @@ function buildHtml(css) {
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Fredoka:wght@600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 ${css}
-body { margin: 0; background: var(--color-sky-top); color: var(--color-ink); font: 500 15px/1.4 var(--font-ui); }
-header { position: sticky; top: 0; z-index: 2; display: flex; gap: 16px; align-items: center; padding: 12px 24px; background: var(--color-panel); box-shadow: var(--shadow-panel); }
+body { margin: 0; background: var(--color-panel-2); color: var(--color-ink); font: 500 15px/1.4 var(--font-ui); }
+header { position: sticky; top: 0; z-index: 2; display: flex; gap: 16px; align-items: center; padding: 12px 24px; background: var(--color-panel); box-shadow: var(--shadow-lg); }
 header h1 { margin: 0; font: var(--type-title-panel); font-size: 24px; }
 header nav { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; flex: 1; }
 header a { color: var(--color-muted); }
 main { padding: 16px 24px 64px; max-width: 1400px; }
-section, .intro { background: var(--color-panel); border-radius: var(--radius-panel); padding: 16px; margin: 16px 0; overflow-x: auto; }
+section, .intro { background: var(--color-panel); border-radius: var(--radius-xl); padding: 16px; margin: 16px 0; overflow-x: auto; }
 h2 { font: var(--type-title-notification); margin: 0 0 8px; } h2 small { font: 500 14px var(--font-ui); color: var(--color-muted); }
 table { border-collapse: collapse; width: 100%; font-size: 13px; }
 th { text-align: left; color: var(--color-muted); font-weight: 600; padding: 4px 8px; }
@@ -517,7 +598,7 @@ code, .copy { font: 400 12.5px var(--font-mono); }
 .ansi { font: 400 13px/1.6 var(--font-mono); padding: 10px 12px; border-radius: 8px; margin: 6px 0; }
 details { margin: 6px 0; } summary { cursor: pointer; font-weight: 600; }
 pre { background: var(--color-terminal-bg); color: var(--color-terminal-fg); padding: 12px; border-radius: 8px; overflow-x: auto; }
-.toggle { border: 0; border-radius: var(--radius-button); background: var(--color-accent); color: var(--color-accent-ink); font: var(--type-ui-button); padding: 8px 14px; cursor: pointer; }
+.toggle { border: 0; border-radius: var(--radius-lg); background: var(--color-accent); color: var(--color-accent-ink); font: var(--type-ui-button); padding: 8px 14px; cursor: pointer; }
 :focus-visible { outline: var(--border-focus) solid var(--color-focus); outline-offset: var(--space-focus-offset); }
 </style>
 </head>
@@ -527,16 +608,18 @@ pre { background: var(--color-terminal-bg); color: var(--color-terminal-fg); pad
 <button class="toggle" id="mode">Night</button></header>
 <main>
 <div class="intro">
-<p>Every design value of gitspore. Penpot (<code>gitspore_v01</code>) is the source; <code>apps/web/src/theme/tokens.json</code> is its copy, <code>scene.json</code> holds the 3D values. Change a value in Penpot, dump it, run <code>npm run tokens</code>. Click any value to copy it. The Tailwind column is the utility suffix: <code>*-button-x</code> means <code>px-button-x</code>, <code>gap-…</code>, <code>w-…</code> and so on. <code>color.muted</code> and <code>color.accent</code> have no Tailwind utility because shadcn uses those names: use <code>text-muted-foreground</code> and <code>bg-primary</code>.</p>
+<p>Every design value of gitspore. Penpot (<code>gitspore_v01</code>) is the source; <code>apps/web/src/theme/tokens.json</code> is its copy, <code>scene.json</code> holds the 3D values. Change a value in Penpot, dump it, run <code>npm run tokens</code>. Click any value to copy it.</p>
+<p>Three layers. <b>Base</b> (<code>cozy-06/base</code>) holds the only raw interface values: palette, spacing, size, radius and opacity scales; <code>space.N</code> and <code>size.N</code> are N × 4 px. <b>Semantic</b> tokens (<code>color.ink</code>, <code>color.panel</code> …) point into base; day and night differ only in which base token they point to. <b>Component</b> tokens exist only where code or a layout rule needs a handle (<code>size.row</code>, <code>size.panel-width</code>, <code>space.layout.edge</code>). Content colours (<code>color.agent.*</code>, <code>color.art.*</code>, <code>color.xterm.*</code>) hold their own values. CSS uses rem for spacing, sizes, radii and font sizes (1rem = 16px), px for borders, shadows and everything terminal; <code>tokens.ts</code> has px numbers.</p>
+<p>Tailwind classes exist for semantic colours, kept component handles (<code>h-row</code>, <code>w-panel-width</code>, <code>gap-layout-edge</code>), base radii (<code>rounded-lg</code>, same names and values as Tailwind's), shadows, fonts and typographies, plus <code>bg-terminal-bg</code> and <code>text-terminal-fg</code>. Base spacing, sizes, opacity and the palette have none: Tailwind's own <code>p-4</code>, <code>w-10</code>, <code>opacity-35</code> are the same values. Content colours have none either; use the CSS variable or <code>tokens</code>. In the Tailwind column <code>*-row</code> means <code>h-row</code>, <code>w-…</code>, <code>bg-…</code> and so on. <code>color.muted</code> and <code>color.accent</code> have no utility because shadcn uses those names: use <code>text-muted-foreground</code> and <code>bg-primary</code>.</p>
 ${snippet(
   "CSS / CSS modules",
   "css",
   `
 .panel {
   background: var(--color-panel);
-  border-radius: var(--radius-panel);
-  box-shadow: var(--shadow-panel);
-  padding: var(--space-panel-padding);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-2);
 }
 .title { font: var(--type-title-panel); }`,
 )}
@@ -544,9 +627,9 @@ ${snippet(
   "Tailwind",
   "html",
   `
-<div className="bg-panel rounded-panel shadow-panel p-panel-padding">
+<div className="bg-panel rounded-xl shadow-lg p-2">
   <h2 className="text-title-panel font-title">Your pots</h2>
-  <button className="h-button px-button-x gap-button-gap rounded-button bg-primary text-primary-foreground">Open</button>
+  <button className="h-10 px-4 gap-2 rounded-lg bg-primary text-primary-foreground">Open</button>
 </div>`,
 )}
 ${snippet(

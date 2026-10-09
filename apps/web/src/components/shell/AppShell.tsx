@@ -27,7 +27,7 @@ export default function AppShell() {
 				Header
 				------
 			*/}
-      <header className="pointer-events-auto flex gap-2 rounded-panel bg-panel p-2 text-ink [grid-area:topbar]">
+      <header className="pointer-events-auto flex gap-2 rounded-xl bg-panel p-2 text-ink [grid-area:topbar]">
         top bar
         {/* Debug controls, remove once the store and real buttons exist */}
         <Button
@@ -73,7 +73,7 @@ export default function AppShell() {
 				Rail
 				----
 			*/}
-      <nav className="pointer-events-auto rounded-panel bg-plate p-2 text-plate-ink [grid-area:rail]">
+      <nav className="pointer-events-auto rounded-xl bg-plate p-2 text-plate-ink [grid-area:rail]">
         rail
       </nav>
 
@@ -87,27 +87,27 @@ export default function AppShell() {
         style={mainGrid(layout)}
       >
         {visibleWindows.length > 0 && (
-          <div className="pointer-events-auto rounded-terminal bg-terminal-bg p-2 text-terminal-fg [grid-area:windows]">
+          <div className="pointer-events-auto rounded-xl bg-terminal-bg p-2 text-terminal-fg [grid-area:windows]">
             {visibleWindows.length} window(s)
           </div>
         )}
 
-        <div className="hotbar pointer-events-auto flex items-center gap-1.5 justify-self-center rounded-hotbar bg-panel p-1.5 text-ink [grid-area:hotbar]">
+        <div className="hotbar pointer-events-auto flex items-center gap-1.5 justify-self-center rounded-2xl bg-panel p-1.5 text-ink [grid-area:hotbar]">
           {HOTBAR_SLOTS.map((key) => (
             <div
               key={key}
-              className="hotbar-slot grid place-items-center rounded-slot bg-panel-2 font-mono"
+              className="hotbar-slot grid place-items-center rounded-xl bg-panel-2 font-mono"
             >
               {key}
             </div>
           ))}
           <div className="h-10 w-0.5 bg-line" />
-          <div className="hotbar-slot grid place-items-center rounded-slot bg-panel-2 font-mono">
+          <div className="hotbar-slot grid place-items-center rounded-xl bg-panel-2 font-mono">
             0
           </div>
         </div>
 
-        <div className="pointer-events-auto absolute right-0 bottom-0 rounded-notification bg-wait p-2 text-xs text-wait-ink">
+        <div className="pointer-events-auto absolute right-0 bottom-0 rounded-xl bg-wait p-2 text-xs text-wait-ink">
           notifications
         </div>
       </section>
@@ -118,7 +118,7 @@ export default function AppShell() {
 				----------
 			*/}
       {layout.sidePanel && (
-        <aside className="pointer-events-auto rounded-panel bg-panel p-2 text-ink [grid-area:panel]">
+        <aside className="pointer-events-auto rounded-xl bg-panel p-2 text-ink [grid-area:panel]">
           side panel · {layout.sidePanel}
         </aside>
       )}
