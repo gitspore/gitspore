@@ -13,6 +13,13 @@ Penpot is the source; `apps/web/src/theme/tokens.json` and `typography.json` are
 - Read the Penpot high-level overview once per session before calling `execute_code`.
 - Work on a ticket branch, not `main`.
 
+## The four sets
+
+`tokens.json` has four sets ([ADR 0010](../../../design-docs/decisions/0010-token-layers-and-base-scales.md)): `cozy-06/base` (palette, spacing, size, radius and opacity scales), `cozy-06/shared` (both modes), `cozy-06/day` and `cozy-06/night`. The dump below loops over all sets, so a new set comes along.
+
+- Raw values only in base and the content groups (`color.agent.*`, `color.art.*`, `color.xterm.*`), plus `shadow.*`, `border.*`, `font.*`, `size.panel-width`, `size.terminal-min-width` and `space.focus-offset`. Every other token points into base. `npm run tokens` fails otherwise; fix the token in Penpot.
+- When a shape needs a spacing, size or radius, bind a base token (`space.4`, `size.10`, `radius.lg`), not a new component token. A component token is only for a handle code or a layout rule needs.
+
 ## 1. Dump from Penpot
 
 Run this with `mcp__penpot__execute_code`. It returns `tokens.json` and `typography.json` in the repo format:
@@ -74,14 +81,14 @@ If `unknownFonts` is not empty, a typography uses a new font: add it to `fam` ab
 2. `npx prettier --write apps/web/src/theme/*.json`
 3. `npm run tokens`
 
-The script fails on an unknown reference, a reference cycle, math in a value, or a Tailwind name clash. Fix the token in Penpot, not in the JSON.
+The script fails on an unknown reference, a reference cycle, math in a value, a Tailwind name clash, a raw value outside base and the content groups, or an alpha colour off the opacity steps (10, 20, 35, 50 %). Fix the token in Penpot, not in the JSON.
 
 ## 3. Check
 
 - `git diff apps/web/src/theme/tokens.json apps/web/src/theme/typography.json` shows exactly the change the user made in Penpot, nothing else. Key order may move if a token was deleted and re-added; values must not change unexpectedly. If the diff has changes nobody asked for, show them to the user before going on.
 - `npm run tokens:check`, `npx prettier --check .`, `npm run typecheck --workspace @gitspore/web`.
 - Mention which tokens changed and that the user can look at `design-docs/design/tokens.html`.
-- A new token group or a renamed token may need an edit in `design-docs/design/components.md` (Names, Groups) and in the components that use it.
+- A new token group or a renamed token may need an edit in `design-docs/design/components.md` (Layers, Names, Groups) and in the components that use it.
 
 Commit the JSON and the generated files together, only when the user asks.
 

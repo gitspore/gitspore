@@ -4,14 +4,14 @@ Every design value of gitspore: colours, spacing, sizes, radii, shadows, type, t
 
 ## Files
 
-| File              | What it is                                                          | Edit?                        |
-| ----------------- | ------------------------------------------------------------------- | ---------------------------- |
-| `tokens.json`     | Copy of the Penpot tokens (sets `cozy-06/shared`, `/day`, `/night`) | Only by dumping from Penpot  |
-| `typography.json` | Copy of the 17 Penpot typographies                                  | Only by dumping from Penpot  |
-| `scene.json`      | 3D scene values, not in Penpot                                      | Yes, this file is the source |
-| `tokens.css`      | CSS variables, day on `:root`, night under `.dark`                  | Generated                    |
-| `tailwind.css`    | Tailwind v4 theme that maps utilities to those variables            | Generated                    |
-| `tokens.ts`       | Typed values for R3F and xterm.js                                   | Generated                    |
+| File              | What it is                                                                   | Edit?                        |
+| ----------------- | ---------------------------------------------------------------------------- | ---------------------------- |
+| `tokens.json`     | Copy of the Penpot tokens (sets `cozy-06/base`, `/shared`, `/day`, `/night`) | Only by dumping from Penpot  |
+| `typography.json` | Copy of the 17 Penpot typographies                                           | Only by dumping from Penpot  |
+| `scene.json`      | 3D scene values, not in Penpot                                               | Yes, this file is the source |
+| `tokens.css`      | CSS variables, day on `:root`, night under `.dark`                           | Generated                    |
+| `tailwind.css`    | Tailwind v4 theme that maps utilities to those variables                     | Generated                    |
+| `tokens.ts`       | Typed values for R3F and xterm.js                                            | Generated                    |
 
 `npm run tokens` (script: `apps/web/scripts/tokens.mjs`) writes the generated files and `tokens.html`. `npm run tokens:check` fails if they are out of date; CI runs it. How a value gets from Penpot into `tokens.json`: [penpot.md, "Change a token"](../../../../design-docs/design/penpot.md#change-a-token). Why it works this way: [ADR 0008](../../../../design-docs/decisions/0008-generated-theme-files.md).
 
@@ -33,14 +33,20 @@ In `src/app/globals.css`, after Tailwind and shadcn:
 
 ## Use
 
-**Tailwind.** Token names without the group for sizes and spacing:
+The tokens have three layers ([ADR 0010](../../../../design-docs/decisions/0010-token-layers-and-base-scales.md)): base scales (`palette.*`, `space.N`, `size.N`, `radius.*`, `opacity.N`), semantic tokens that point into them (`color.panel`, `opacity.disabled`), and a few component handles (`size.row`, `size.panel-width`, `space.layout.edge`). `space.N` and `size.N` are N × 4 px, the same steps as Tailwind's spacing scale.
+
+**Units.** CSS variables use rem for spacing, sizes, radii, font sizes and layout widths (1rem = 16px), em for letter spacing, and px for borders, the focus offset, shadows and the terminal (`--type-mono-terminal`, `--space-terminal-screen`, `--size-terminal-min-width`). `tokens.ts` has numbers in px.
+
+**Tailwind.** Spacing and sizes from the base scale are Tailwind's own utilities (`p-2` is `space.2`, `w-10` is `size.10`, `opacity-35` is `opacity.35`), radii use Tailwind's names (`rounded-lg`, `rounded-xl`), and interface colours and handles have utilities without the group:
 
 ```tsx
-<aside className="bg-panel rounded-panel shadow-panel p-panel-padding w-panel-width">
+<aside className="bg-panel rounded-xl shadow-lg p-2 w-panel-width">
   <h2 className="text-title-panel font-title text-ink">Your pots</h2>
-  <div className="h-row pl-row-left pr-row-right gap-row-gap rounded-row" />
+  <div className="h-row pl-2 pr-3 gap-3 rounded-lg" />
 </aside>
 ```
+
+Padding, margin and gap use the base steps (`p-1`, `p-2`, `p-3`, `p-4`, `p-6`); a value off that scale needs a reason. Only interface colours have Tailwind classes. The palette and the content colours (`color.agent.*`, `color.art.*`, `color.xterm.*`) don't: use their CSS variables (`fill-(--color-art-pot-clay)`, `var(--color-agent-1)`) or `tokens` in TS.
 
 `color.muted` and `color.accent` have no utility because shadcn uses `muted` and `accent` for its own roles. Use shadcn's names, which point at our tokens in `globals.css`: `text-muted-foreground`, `bg-primary text-primary-foreground`. Tokens without a utility (opacity, border widths) work as `opacity-(--opacity-disabled)`, `border-(length:--border-line)`.
 
@@ -49,8 +55,9 @@ In `src/app/globals.css`, after Tailwind and shadcn:
 ```css
 .row {
   height: var(--size-row);
-  padding: 0 var(--space-row-right) 0 var(--space-row-left);
-  border-radius: var(--radius-row);
+  padding: 0 var(--space-3) 0 var(--space-2);
+  border-radius: var(--radius-lg);
+  background: var(--color-panel);
   font: var(--type-ui-row);
 }
 ```
@@ -64,7 +71,7 @@ const t = tokens[mode]; // "day" | "night"
 <meshStandardMaterial color={t.color.status.waiting} emissiveIntensity={t.scene.glow} />;
 ```
 
-Sizes are numbers in px. Agent colours are `t.color.agent[1]` … `[8]`.
+Sizes are numbers in px: `t.size.row`, `t.space[4]`. Agent colours are `t.color.agent[1]` … `[6]`.
 
 **xterm.js.** The terminal theme follows the window's sun/moon switch, not the mode:
 
