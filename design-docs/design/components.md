@@ -8,35 +8,49 @@ How the interface looks and how to build it: the tokens, the type, the five agen
 
 ## Tokens
 
+### Layers
+
+Three layers ([ADR 0010](../decisions/0010-token-layers-and-base-scales.md)):
+
+- **Base** (`cozy-06/base`) holds the only raw interface values: the palette and the spacing, size, radius and opacity scales.
+- **Semantic** tokens say what a value is for (`color.panel`, `color.status.waiting`, `opacity.disabled`) and point into base. Day and night differ only in which base token they point to.
+- **Component** tokens exist only where code or a layout rule needs a handle (`size.row`, `size.panel-width`, `space.layout.edge`), and point into base too. Everything else binds a base token directly: a button's padding is `space.4`, not a token of its own.
+
+Content palettes keep raw values in their own groups: `color.agent.*`, `color.art.*` (plant, pot, logo) and `color.xterm.*` (the terminal). Interface tokens never point into them.
+
 ### Names
 
-Lowercase, dot-separated, kebab-case inside a segment: `<group>.<name>` or `<group>.<subgroup>.<name>`. The first segment is the kind: `color`, `space`, `size`, `radius`, `border`, `shadow`, `opacity`, `font`. A name never contains the mode; day and night share it.
+Lowercase, dot-separated, kebab-case inside a segment: `<group>.<name>` or `<group>.<subgroup>.<name>`. The first segment is the kind: `palette`, `color`, `space`, `size`, `radius`, `border`, `shadow`, `opacity`, `font`. A name never contains the mode; day and night share it.
 
-- **CSS:** dots become hyphens, prefix `--`. `color.panel-2` → `--color-panel-2`, `space.button.x` → `--space-button-x`. Day values on `:root`, night values under `.dark`.
-- **Tailwind:** the same names without the group for sizes and spacing: `bg-panel`, `text-status-waiting`, `rounded-row`, `shadow-window`, `h-button`, `px-button-x`, `gap-row-gap`, `text-ui-row`. `color.muted` and `color.accent` have no utility because shadcn uses those names: `text-muted-foreground`, `bg-primary`.
-- **TS (R3F, xterm):** `tokens[mode]` nests by the dots: `tokens.night.color.status.waiting`, `tokens.day.size.row` (a number in px). `xtermTheme.light` / `.dark` and `typography.mono.terminal` are ready to pass to xterm.js.
-- **Spacing** is named per component, and the last segment is the CSS property: `space.button.x` (padding left and right), `space.row.left`, `space.notification.title-gap` (a margin). `space.layout.*` are the distances to the screen edge.
-- **Status tokens** use the state names from the code: `working`, `waiting`, `error`, `review`, `merged`, `empty`. The words on screen ("growing", "wilted") are copy, not token names.
-- **Agent colours** are numbered by slot: `color.agent.1` … `color.agent.8`.
+- **Base scales** follow Tailwind. `space.N` and `size.N` are N × 4 px: `space.1` 4, `space.2` 8, `space.3` 12, `space.4` 16, `space.6` 24; `size.1` to `size.18`. Radius `xs` 2, `sm` 4, `lg` 8, `xl` 12, `2xl` 16, `full` (pill). Opacity in percent: `opacity.10`, `20`, `35`, `50`. The palette is `palette.<hue>.<step>`, steps by lightness (`palette.cream.100`, `palette.pine.700`); `palette.alpha.*` holds the transparent colours, at the same opacity steps. Spacing and size have no t-shirt names: in Tailwind v4 `w-*` and `max-w-*` read `--spacing-*` first, so `--spacing-sm` would break shadcn's `max-w-sm`.
+- **Padding, margin and gap use `space.N`.** A new value needs a reason or a new step on the scale.
+- **CSS:** dots become hyphens, prefix `--`. `color.panel-2` → `--color-panel-2`, `space.4` → `--space-4`. Day values on `:root`, night values under `.dark`. Units: rem for spacing, sizes, radii, font sizes and layout widths (1rem = 16 px), em for letter spacing, px for borders, the focus offset, shadows and everything in the terminal (`mono/terminal`, `space.terminal.screen`, `size.terminal-min-width`).
+- **Tailwind:** only interface colours, the component handles, radii, shadows and type get utilities: `bg-panel`, `text-status-waiting`, `h-row`, `w-panel-width`, `gap-layout-edge`, `rounded-xl`, `shadow-lg`, `text-ui-row`. Base spacing, sizes and opacities have none, because Tailwind's own `p-4`, `w-10` and `opacity-35` are the same values. The base radii keep Tailwind's names and values. The palette and the content groups (`color.agent.*`, `color.art.*`, `color.xterm.*`) have no Tailwind class; use their CSS variables or `tokens`. `color.muted` and `color.accent` have no utility because shadcn uses those names: `text-muted-foreground`, `bg-primary`.
+- **TS (R3F, xterm):** `tokens[mode]` nests by the dots: `tokens.night.color.status.waiting`, `tokens.day.size.row`, `tokens.day.space[4]` (numbers in px). `xtermTheme.light` / `.dark` and `typography.mono.terminal` are ready to pass to xterm.js.
+- **Status tokens** use the state names from the code: `working`, `waiting`, `error`, `review`, `merged`. An empty slot uses `color.muted`. The words on screen ("growing", "wilted") are copy, not token names.
+- **Agent colours** are numbered by slot: `color.agent.1` … `color.agent.6`. The beetle (overview agent) has no slot colour.
 
-Penpot has three token sets: `cozy-06/shared` (both modes), `cozy-06/day` and `cozy-06/night` (same names, different values), switched by the theme group `mode`.
+Penpot has four token sets: `cozy-06/base` and `cozy-06/shared` (both modes), `cozy-06/day` and `cozy-06/night` (same names, different values), switched by the theme group `mode`.
 
 ### Groups
 
 | Group | Holds |
 |---|---|
-| `color.*` | interface colours, `status.*`, `agent.1`–`8`, `branch-main`, issue paper (`paper`, `paper-line`, `paper-ink`), `focus`, `backdrop` |
-| `color.terminal.*` | the terminal in use: light by day, dark at night; a window's sun/moon switch overrides it with `.terminal-light` / `.terminal-dark` |
-| `color.terminal-light.*`, `-dark.*` | the two terminal palettes: background, text, the colours Claude Code's output uses, 16 ANSI colours, cursor, selection |
-| `color.plant.*`, `color.pot.*` | the colours of the 2D plant icons (`plantSvg()`); the 3D scene uses `scene.json` |
-| `color.logo.*` | the beetle on and off its plate |
-| `space.*`, `size.*`, `radius.*`, `border.*` | spacing per component, fixed sizes, corner radii, line widths, all in px |
-| `shadow.*` | panel, window, hotbar, notification, bookmark; warm by day, black at night |
-| `opacity.*` | agent circle, empty track square, logo glow, `disabled` (.45), `window-unfocused` (.35) |
+| `palette.*` | base: the raw interface colours by hue (cream, straw, bark, stone, pine, amber, red, green, pink) and lightness step, and `palette.alpha.*` |
+| `space.N`, `size.N`, `radius.*`, `opacity.N` | base: the spacing, size, radius and opacity scales |
+| `color.*` | interface colours, each pointing into the palette: `panel`, `panel-2`, `ink`, `muted`, `line`, `plate`, `plate-ink`, `accent`, `accent-ink`, `hover`, `wait`, `wait-ink`, `status.*`, `branch-main`, issue paper (`paper`, `paper-line`; its text is `ink`), `focus`, `backdrop` |
+| `color.agent.*` | the six slot colours, raw values |
+| `color.art.plant.*`, `color.art.pot.*` | the colours of the 2D plant icons (`plantSvg()`); the 3D scene uses `scene.json` |
+| `color.art.logo.*` | the beetle's leaf, seam and glow (the glow is transparent by day) |
+| `color.xterm.light.*`, `color.xterm.dark.*` | the two terminal palettes: background, text, selection, 16 ANSI colours. The terminal in use is light by day and dark at night; a window's sun/moon switch overrides it with `.terminal-light` / `.terminal-dark` |
+| `space.*`, `size.*` handles | `space.layout.edge`, `space.terminal.screen`, `space.focus-offset`, `size.top-bar`, `size.panel-width`, `size.row`, `size.row-wait`, `size.terminal-header`, `size.terminal-min-width`, `size.hotbar-slot`, `size.bookmark-width` (`-open`, `-hover`) |
+| `border.*` | line widths: `line`, `focus`, `selected` |
+| `shadow.*` | `sm` (bookmarks) and `lg` (panel, window, hotbar, notification, popovers, dialogs); warm by day, black at night |
+| `opacity.*` | semantic: `agent-circle`, `track-empty`, `disabled`, `window-unfocused` |
 | `font.*` | `title` Fredoka, `ui` Figtree, `mono` JetBrains Mono |
 | 3D (`scene.json`) | sky, fog, floor, frame, glass, foliage, wood, soil, pot, leaves and stems with the three waiting stages, lights, name tag, seed packet, and the renderer numbers |
 
-The terminal sizes are measured, not estimated: JetBrains Mono 13 px is 7.8 px per column in xterm.js, line height 1.2 gives 20 px per row, the screen has 12 px padding top and bottom and 10 px left and right, and addon-fit reserves 14 px for the scrollbar. So 80 columns need `size.terminal-min-width` (660 px).
+The terminal sizes are measured, not estimated: JetBrains Mono 13 px is 7.8 px per column in xterm.js, line height 1.2 gives 20 px per row, the screen has 12 px padding on every side (`space.terminal.screen`), and addon-fit reserves 14 px for the scrollbar. So 80 columns need `size.terminal-min-width` (664 px).
 
 ## Type
 
@@ -65,31 +79,31 @@ Where status shows: the panel row, the hotbar slot, the pot rim and name tag in 
 
 ## Components
 
-The Penpot name comes first, the code name second. Sizes in px at a 1440 × 900 screen.
+The Penpot name comes first, the code name second. Sizes in px at a 1440 × 900 screen. Each paragraph names the tokens the component binds: base tokens (`space.4`, `radius.xl`) or the kept handles.
 
 ### Shell
 
-**`logo-lockup` / `Logo`.** Beetle on the plate (`size.logo-plate`, `radius.logo-plate`, `color.logo.plate`) plus "gitspore" in `font.title`, always lowercase. At night the seam glows (`color.logo.seam`, `color.logo.glow`, `opacity.logo-glow`). Variants of `logo-mark`: `plate`, `bare` (no plate), `slot` (in the hotbar). SVG source below.
+**`logo-lockup` / `Logo`.** Beetle (`size.6`) on the plate (`size.8`, `radius.lg`, `color.plate`) plus "gitspore" in `font.title`, always lowercase, gap `space.2`. At night the seam glows (`color.art.logo.seam`, `color.art.logo.glow`); by day the glow colour is transparent. Variants of `logo-mark`: `plate`, `slot` (in the hotbar). SVG source below.
 
-**`top-bar` / `TopBar`.** Height `size.top-bar`, background `color.panel`. Left: logo. Then the focused agent's issue and branch (`font.ui`, issue in 700). Right: `wait-badge`, two `usage-meter`s for the plan limits ("5 h" and "week"), connection status (see States) and vitality in `color.muted`, help and settings as `icon-button`. No repo name.
+**`top-bar` / `TopBar`.** Height `size.top-bar`, background `color.panel`, padding and gap `space.4`. Left: logo. Then the focused agent's issue and branch (`font.ui`, issue in 700). Right: `wait-badge`, two `usage-meter`s for the plan limits ("5 h" and "week"), connection status (see States) and vitality in `color.muted`, help and settings as `icon-button`. No repo name.
 
-**`wait-badge` / `WaitBadge`.** "1 waiting", uppercase, `color.wait` with `color.wait-ink`, `radius.badge`. A square dot blinks. Hidden when nothing waits.
+**`wait-badge` / `WaitBadge`.** "1 waiting", uppercase, `color.wait` with `color.wait-ink`, `radius.sm`, padding `space.1` `space.3`, gap `space.2`. A square dot blinks. Hidden when nothing waits.
 
-**`rail-bookmark` / `RailBookmark`.** Tabs on the left edge: `size.bookmark-width` × `size.bookmark-height`, open one `size.bookmark-width-open` in `color.accent`, others `color.plate` with `color.plate-ink` icons. Right corners `radius.bookmark`. Variant `state`: closed, open. `count-badge` on the agents bookmark shows the waiting count. Buttons: Agents, Issues, Branches, scene/focus.
+**`rail-bookmark` / `RailBookmark`.** Tabs on the left edge: `size.bookmark-width` × `size.13`, open one `size.bookmark-width-open` in `color.accent`, others `color.plate` with `color.plate-ink` icons. Right corners `radius.lg`, `shadow.sm`. Variant `state`: closed, open. `count-badge` on the agents bookmark shows the waiting count. Buttons: Agents, Issues, Branches, scene/focus.
 
-**`count-badge` / `CountBadge`.** `size.count-badge` square, `radius.badge`, `color.wait` with `color.wait-ink`, `ui/count`, a 2 px (`border.line`) ring in `color.panel`. It sits `space.count-badge.outside` outside the top-right corner of the agents bookmark.
+**`count-badge` / `CountBadge`.** `size.5` square, `radius.sm`, `color.wait` with `color.wait-ink`, `ui/count`, a 2 px (`border.line`) ring in `color.panel`. It sits `space.2` outside the top-right corner of the agents bookmark.
 
 ### Side panel
 
-**`side-panel` / `SidePanel`.** `size.panel-width`, `radius.panel`, `color.panel`, soft shadow, no border. Title in `font.title` ("Your pots") with the close button on the right; below it, aligned left, the count in `ui/meta` `color.muted` ("5 of 6 planted"). Optional: the project's token total on the same line ("5 of 6 planted · 20.8M tokens"), see Usage.
+**`side-panel` / `SidePanel`.** `size.panel-width`, `radius.xl`, `color.panel`, `shadow.lg`, padding `space.2`, no border. Title in `font.title` ("Your pots") with the close button on the right; below it, aligned left, the count in `ui/meta` `color.muted` ("5 of 6 planted"). Optional: the project's token total on the same line ("5 of 6 planted · 20.8M tokens"), see Usage.
 
-**`segmented-tabs` / `SegmentedTabs`.** Track `color.panel-2`, `radius.tab-track`; tabs `size.tab` high, `radius.tab`; active tab `color.plate` with `color.plate-ink`. Agents · Issues · Branches.
+**`segmented-tabs` / `SegmentedTabs`.** Track `color.panel-2`, `radius.lg`, padding `space.1`; tabs `size.9` high, `radius.sm`; active tab `color.plate` with `color.plate-ink`. Agents · Issues · Branches.
 
-**`panel-row` / `AgentRow`.** `size.row`, `radius.row`. Plant (`size.plant-in-row`) in a circle (`size.plant-circle`) filled with the agent colour at `opacity.agent-circle`, then the name, the status word in `color.muted` (error in its status colour) and the growth track. Odd rows `color.hover`. The focused agent's row has a 2 px `color.line` outline. Variant `state`: one per state. The `waiting` variant is `size.row-wait` high, `radius.row-wait`, filled `color.wait`, the timer in `font.mono` instead of the word, and the plant wiggles. Rows stay in slot order.
+**`panel-row` / `AgentRow`.** `size.row`, `radius.lg`, padding `space.2` left and `space.3` right, gap `space.3`. Plant (`size.6`) in a circle (`size.9`) filled with the agent colour at `opacity.agent-circle`, then the name, the status word in `color.muted` (error in its status colour) and the growth track. Odd rows `color.hover`. The focused agent's row has a 2 px `color.line` outline. Variant `state`: one per state. The `waiting` variant is `size.row-wait` high, `radius.xl`, filled `color.wait`, the timer in `font.mono` instead of the word, and the plant wiggles. Rows stay in slot order.
 
-**`growth-track`.** Five squares, `size.track-square`, `radius.track`, filled in the status colour, empty ones at `opacity.track-empty`.
+**`growth-track`.** Five squares, `size.2`, `radius.xs`, gap `space.1`, filled in the status colour, empty ones at `opacity.track-empty`.
 
-**`marker`.** The status shape, `size.marker`, in the status colour.
+**`marker`.** The status shape, `size.3`, in the status colour.
 
 **`IssueRow`, `BranchesTab`.** Specified in [layout.html](layout.html) (S09, S11), not yet in Penpot. `BranchesTab` uses the `commit-graph` package; gotchas:
 
@@ -100,13 +114,13 @@ The Penpot name comes first, the code name second. Sizes in px at a 1440 × 900 
 
 ### Main area
 
-**`terminal-window` / `TerminalWindow`.** A card: `radius.terminal`, 2 px `color.line` outline, no other frame. Header `size.terminal-header` in `color.panel` with a 2 px `color.line` underneath: status dot, issue and branch, a `usage-meter` for the agent's context with its token count ("context 22 % · 701k tokens"), the sun/moon switch, then the window buttons (minimise, focus this, maximise, close, ⋯) as `icon-button` at `size.window-button`, `radius.window-button`. Body: xterm.js with `typography.mono.terminal` and `xtermTheme`. The screen has 12 px padding top and bottom, 10 px left and right (`space.terminal.screen-y`, `-x`). A tile is at least `size.terminal-min-width` (660 px) wide, so 80 columns fit; the number of rows follows from the layout state. Focused and unfocused windows and the dark terminal: see States.
+**`terminal-window` / `TerminalWindow`.** A card: `radius.xl`, 2 px `color.line` outline, `shadow.lg`, no other frame. Header `size.terminal-header` in `color.panel` with a 2 px `color.line` underneath, padding `space.3` left and `space.2` right, gap `space.2`: status dot, issue and branch, a `usage-meter` for the agent's context with its token count ("context 22 % · 701k tokens"), the sun/moon switch, then the window buttons (minimise, focus this, maximise, close, ⋯) as `icon-button` at `size.8`, `radius.lg`. Body: xterm.js with `typography.mono.terminal` and `xtermTheme`. The screen has 12 px padding on every side (`space.terminal.screen`). A tile is at least `size.terminal-min-width` (664 px) wide, so 80 columns fit; the number of rows follows from the layout state. Focused and unfocused windows and the dark terminal: see States.
 
-**`hotbar-slot` / `HotbarSlot`, in `Hotbar`.** The hotbar sits at the bottom centre of the main area: `color.panel`, `radius.hotbar`. Slots 1–6 (pots) and 0 (overview, after a `color.line` separator): `size.hotbar-slot`, `radius.slot`, `color.panel-2`. Each shows the plant (`size.plant-in-slot`), the key number in `font.mono`, the marker top right and the agent colour as a `size.agent-band` band at the bottom. A minimised window shows as a mark at the top of its slot. Variants `state` × `selected`: selected has a `border.selected` outline in `color.accent`; `waiting` is filled `color.wait`, shows the seconds and bobs.
+**`hotbar-slot` / `HotbarSlot`, in `Hotbar`.** The hotbar sits at the bottom centre of the main area: `color.panel`, `radius.2xl`, `shadow.lg`, padding `space.2` `space.3`, gap `space.2`. Slots 1–6 (pots) and 0 (overview, after a `color.line` separator with `space.2` on each side): `size.hotbar-slot`, `radius.xl`, `color.panel-2`. Each shows the plant (`size.11`), the key number in `font.mono`, the marker top right and the agent colour as a `size.1` band at the bottom. A minimised window shows as a mark at the top of its slot. Variants `state` × `selected`: selected has a `border.selected` outline in `color.accent`; `waiting` is filled `color.wait`, shows the seconds and bobs.
 
-**`notification` / `Notification`.** Bottom right, `color.wait`, `radius.notification`, `font.title` heading. Buttons Open beside (primary) and Open, plus close. Stays until the agent no longer waits, never takes keyboard focus, nudges sideways every 2.4 s.
+**`notification` / `Notification`.** Bottom right, `color.wait`, `radius.xl`, `shadow.lg`, padding `space.4`, `font.title` heading. Buttons Open beside (primary) and Open, plus close. Stays until the agent no longer waits, never takes keyboard focus, nudges sideways every 2.4 s.
 
-**`button`, `icon-button`.** Button `size.button`, `radius.button`, `ui/button`, padding `space.button.x`, gap `space.button.gap`. Five kinds:
+**`button`, `icon-button`.** Button `size.10`, `radius.lg`, `ui/button`, padding `space.4`, gap `space.2`. Five kinds:
 
 | Kind | Fill | Text | Outline | Where |
 |---|---|---|---|---|
@@ -118,7 +132,7 @@ The Penpot name comes first, the code name second. Sizes in px at a 1440 × 900 
 
 Red means only "needs you" ([ADR 0006](../decisions/0006-visual-direction-cozy-06.md)), so destructive actions are ink, not red. The button that opens the confirm dialog is `secondary` and says what it does ("Stop agent"); only the confirm button is `destructive`.
 
-Icon button `size.icon-button`, `radius.icon-button`, `color.hover` fill, no border. In window headers it is `size.window-button`, `radius.window-button`, with no fill until hovered. Icons `size.icon`.
+Icon button `size.9`, `radius.lg`, `color.hover` fill, no border. In window headers it is `size.8`, `radius.lg`, with no fill until hovered. Icons `size.5`.
 
 shadcn names: `primary` is `default`, the header icon button is `ghost`. `outline` and `link` are not used.
 
@@ -126,7 +140,7 @@ shadcn names: `primary` is `default`, the header icon button is `ghost`. `outlin
 
 Token usage, from Claude Code ([ADR 0009](../decisions/0009-show-token-usage.md)). Numbers in `font.mono` 700, labels in `ui/meta`.
 
-**`usage-meter` / `UsageMeter`.** Variants `kind` (limit, context) × `state` (normal, warn, full). A label in `ui/meta`, a bar (`size.meter-width` × `size.meter-height`, track `color.panel-2`, fill `color.line`, round ends), the percentage, and an optional token count. From 80 % the fill is `color.status.review`. At 100 % label, fill and number are `color.wait`, followed by the reset time ("100 % · 14:30"). The whole meter has the hover of an unfilled button and opens a `usage-tip` on hover and on keyboard focus.
+**`usage-meter` / `UsageMeter`.** Variants `kind` (limit, context) × `state` (normal, warn, full). A label in `ui/meta`, a bar (`size.11` × `size.2`, track `color.panel-2`, fill `color.line`, round ends), the percentage, and an optional token count. From 80 % the fill is `color.status.review`. At 100 % label, fill and number are `color.wait`, followed by the reset time ("100 % · 14:30"). The whole meter has the hover of an unfilled button and opens a `usage-tip` on hover and on keyboard focus.
 
 | Where | Label | Value | `usage-tip` shows |
 |---|---|---|---|
@@ -136,23 +150,23 @@ Token usage, from Claude Code ([ADR 0009](../decisions/0009-show-token-usage.md)
 
 The plan limits apply to the whole Claude account, so they also count sessions outside gitspore; the tip says so. No money amounts: with a Pro or Max plan the user doesn't pay per token.
 
-**`usage-tip`.** A popover: `color.panel`, `radius.notification`, `shadow.panel`, padding `space.notification.y` `space.notification.x`. Width 260. Title in `ui/row`, rows with the label in `ui/meta` on the left and the number in `mono/key` on the right, a 1 px `color.panel-2` line above the total (in `ui/row`), a note in `ui/small` `color.muted`. It never takes focus.
+**`usage-tip`.** A popover: `color.panel`, `radius.xl`, `shadow.lg`, padding `space.4`. Width 260. Title in `ui/row`, rows with the label in `ui/meta` on the left and the number in `mono/key` on the right, a 1 px `color.panel-2` line above the total (in `ui/row`), a note in `ui/small` `color.muted`. It never takes focus.
 
-**`confirm-dialog` / `ConfirmDialog`.** For stopping an agent or deleting a worktree. Width 380, `color.panel`, `radius.panel`, `shadow.panel`, padding 18 × 20. Title in `title/notification` ("Stop the agent on #15?"), one sentence in `ui/body` `color.muted` saying what stays and what goes, then the buttons on the right: `secondary` "Cancel" and `destructive` with the action as its label. Over `color.backdrop`.
+**`confirm-dialog` / `ConfirmDialog`.** For stopping an agent or deleting a worktree. Width 380, `color.panel`, `radius.xl`, `shadow.lg`, padding `space.4` `space.6`. Title in `title/notification` ("Stop the agent on #15?"), one sentence in `ui/body` `color.muted` saying what stays and what goes, then the buttons on the right: `secondary` "Cancel" and `destructive` with the action as its label. Over `color.backdrop`.
 
 ### States
 
-**Hover.** A filled button (`primary`, `primary-on-wait`, `destructive`) mixes 20 % of the surface it sits on into its fill: `color-mix(in srgb, var(--color-accent) 80%, var(--color-panel))`, with `--color-wait` on the notification. It gets lighter by day and darker at night. Anything without a fill of its own (`secondary`, icon buttons, `on-wait`) gets its text colour at 12 % as the fill: `color-mix(in srgb, var(--color-ink) 12%, transparent)`, `--color-wait-ink` on the notification. Rows and slots use the same rule. A disabled element has no hover.
+**Hover.** A filled button (`primary`, `primary-on-wait`, `destructive`) mixes 20 % of the surface it sits on into its fill: `color-mix(in srgb, var(--color-accent) 80%, var(--color-panel))`, with `--color-wait` on the notification. It gets lighter by day and darker at night. Anything without a fill of its own (`secondary`, icon buttons, `on-wait`) gets its text colour at 20 % as the fill: `color-mix(in srgb, var(--color-ink) 20%, transparent)`, `--color-wait-ink` on the notification. Rows and slots use the same rule. A disabled element has no hover.
 
 **Disabled.** The whole element at `opacity.disabled`, `cursor: not-allowed`.
 
-**Keyboard focus.** An outline of `border.focus` in `color.focus`, offset `space.focus.offset`, on `:focus-visible` only (never after a mouse click). On buttons, icon buttons, rows, hotbar slots, bookmarks and tabs. The terminal has no ring; the window outline shows where typing goes.
+**Keyboard focus.** An outline of `border.focus` in `color.focus`, offset `space.focus-offset`, on `:focus-visible` only (never after a mouse click). On buttons, icon buttons, rows, hotbar slots, bookmarks and tabs. The terminal has no ring; the window outline shows where typing goes.
 
 **`terminal-window`.** Focused: 2 px `color.line` outline. Unfocused: the same outline at `opacity.window-unfocused` (`color-mix(in srgb, var(--color-line) 35%, transparent)`). The dark terminal (`.terminal-dark` on the body) changes only the body; header and outline stay.
 
 **`rail-bookmark`.** On hover a closed bookmark widens from `size.bookmark-width` to `size.bookmark-width-hover` (width transition 0.15 s), icon in `color.plate-ink`. The open one doesn't change.
 
-**Connection status.** In the top bar: a `size.status-dot` dot and a word in `ui/meta`.
+**Connection status.** In the top bar: a `size.2` dot and a word in `ui/meta`.
 
 | State | Dot | Word |
 |---|---|---|
@@ -162,7 +176,7 @@ The plan limits apply to the whole Claude account, so they also count sessions o
 
 Offline is red because you have to act (start the daemon). The offline dialog opens and the rest of the app drops to `opacity.disabled`.
 
-**Dialog backdrop.** `color.backdrop` covers the screen behind the confirm and offline dialogs: warm ink at 25 % by day, black at 50 % at night.
+**Dialog backdrop.** `color.backdrop` covers the screen behind the confirm and offline dialogs: warm ink at 20 % by day, black at 50 % at night.
 
 Penpot shows all of these on the board "states (GS-34)" below the components, with the day values. `top-bar`, `rail`, `side-panel` and `hotbar` are components too, so S01 day and night are built from the same parts and can't drift apart.
 
@@ -192,7 +206,7 @@ The agent beetle seen from above. The seam between the wing cases is one line th
 </svg>
 ```
 
-On the plate: BODY `color.logo.body`, SEAM `color.logo.seam`, LEAF `color.logo.leaf`. Without plate: `color.logo.bare-body`, `-bare-seam`, `-bare-leaf`.
+On the plate: BODY `color.plate-ink`, SEAM `color.art.logo.seam`, LEAF `color.art.logo.leaf`.
 
 ## Open
 
@@ -201,3 +215,4 @@ On the plate: BODY `color.logo.body`, SEAM `color.logo.seam`, LEAF `color.logo.l
 - `IssueRow`, `IssueSheet`, `BranchesTab`, and the connect screen are not yet components in Penpot.
 - The project's token total is optional. Claude Code deletes session logs after 30 days by default, so the daemon would keep its own running total per repo.
 - The ANSI colours: all 16 per terminal reach 4.5 : 1, so `white` is dark on the light terminal and `black` light on the dark one. If programs that paint black or white backgrounds (inverse bars) look wrong, change `ansi.white` and `ansi.bright-white` (light) and `ansi.black` (dark) back ([ADR 0008](../decisions/0008-generated-theme-files.md)). Check with real Claude Code output in #11.
+- The terminal stays at 13 px while everything else is in rem. The xterm font size could follow the root size.
