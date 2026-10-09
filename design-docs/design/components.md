@@ -138,6 +138,8 @@ The plan limits apply to the whole Claude account, so they also count sessions o
 
 **`usage-tip`.** A popover: `color.panel`, `radius.notification`, `shadow.panel`, padding `space.notification.y` `space.notification.x`. Width 260. Title in `ui/row`, rows with the label in `ui/meta` on the left and the number in `mono/key` on the right, a 1 px `color.panel-2` line above the total (in `ui/row`), a note in `ui/small` `color.muted`. It never takes focus.
 
+**`confirm-dialog` / `ConfirmDialog`.** For stopping an agent or deleting a worktree. Width 380, `color.panel`, `radius.panel`, `shadow.panel`, padding 18 × 20. Title in `title/notification` ("Stop the agent on #15?"), one sentence in `ui/body` `color.muted` saying what stays and what goes, then the buttons on the right: `secondary` "Cancel" and `destructive` with the action as its label. Over `color.backdrop`.
+
 ### States
 
 **Hover.** A filled button (`primary`, `primary-on-wait`, `destructive`) mixes 20 % of the surface it sits on into its fill: `color-mix(in srgb, var(--color-accent) 80%, var(--color-panel))`, with `--color-wait` on the notification. It gets lighter by day and darker at night. Anything without a fill of its own (`secondary`, icon buttons, `on-wait`) gets its text colour at 12 % as the fill: `color-mix(in srgb, var(--color-ink) 12%, transparent)`, `--color-wait-ink` on the notification. Rows and slots use the same rule. A disabled element has no hover.
@@ -161,6 +163,8 @@ The plan limits apply to the whole Claude account, so they also count sessions o
 Offline is red because you have to act (start the daemon). The offline dialog opens and the rest of the app drops to `opacity.disabled`.
 
 **Dialog backdrop.** `color.backdrop` covers the screen behind the confirm and offline dialogs: warm ink at 25 % by day, black at 50 % at night.
+
+Penpot shows all of these on the board "states (GS-34)" below the components, with the day values.
 
 ### Motion
 
