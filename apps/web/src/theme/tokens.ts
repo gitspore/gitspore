@@ -54,6 +54,9 @@ export const tokens = {
       "logo-plate": 32,
       logo: 25,
       "terminal-min-width": 660,
+      "count-badge": 22,
+      "bookmark-width-hover": 64,
+      "status-dot": 7,
     },
     border: {
       line: 2,
@@ -220,6 +223,7 @@ export const tokens = {
       paper: "#e2c793",
       "paper-line": "#b8955c",
       "paper-ink": "#3a2a1c",
+      backdrop: "rgba(42, 33, 25, 0.25)",
       wood: {
         "1": "#8d5c36",
         "2": "#97653c",
@@ -298,6 +302,7 @@ export const tokens = {
       "agent-circle": 0.33,
       "track-empty": 0.55,
       disabled: 0.45,
+      "window-unfocused": 0.35,
       "logo-glow": 0,
       scene: {
         glass: 0.08,
@@ -458,6 +463,9 @@ export const tokens = {
       "logo-plate": 32,
       logo: 25,
       "terminal-min-width": 660,
+      "count-badge": 22,
+      "bookmark-width-hover": 64,
+      "status-dot": 7,
     },
     border: {
       line: 2,
@@ -624,6 +632,7 @@ export const tokens = {
       paper: "#4a3d28",
       "paper-line": "#7a6440",
       "paper-ink": "#f1e6d2",
+      backdrop: "rgba(0, 0, 0, 0.5)",
       wood: {
         "1": "#8d5c36",
         "2": "#97653c",
@@ -702,6 +711,7 @@ export const tokens = {
       "agent-circle": 0.33,
       "track-empty": 0.55,
       disabled: 0.45,
+      "window-unfocused": 0.35,
       "logo-glow": 1,
       scene: {
         glass: 0.05,
