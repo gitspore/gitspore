@@ -114,6 +114,7 @@ const scenarioEntrySchema = z.discriminatedUnion("event", [
 const scenarioSchema = z
   .object({
     name: z.string(),
+    anchor: z.iso.datetime(),
     snapshot: greenhouseStateSchema,
     events: z.array(scenarioEntrySchema),
   })
