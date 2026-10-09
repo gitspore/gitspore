@@ -126,7 +126,7 @@ shadcn names: `primary` is `default`, the header icon button is `ghost`. `outlin
 
 Token usage, from Claude Code ([ADR 0009](../decisions/0009-show-token-usage.md)). Numbers in `font.mono` 700, labels in `ui/meta`.
 
-**`usage-meter` / `UsageMeter`.** A label, a bar (`size.meter-width` × `size.meter-height`, track `color.panel-2`, fill `color.line`, round ends), the percentage, and an optional token count. From 80 % the fill is `color.status.review`. At 100 % label, fill and number are `color.wait`, followed by the reset time ("100 % · 14:30"). The whole meter has the hover of an unfilled button and opens a `usage-tip` on hover and on keyboard focus.
+**`usage-meter` / `UsageMeter`.** Variants `kind` (limit, context) × `state` (normal, warn, full). A label in `ui/meta`, a bar (`size.meter-width` × `size.meter-height`, track `color.panel-2`, fill `color.line`, round ends), the percentage, and an optional token count. From 80 % the fill is `color.status.review`. At 100 % label, fill and number are `color.wait`, followed by the reset time ("100 % · 14:30"). The whole meter has the hover of an unfilled button and opens a `usage-tip` on hover and on keyboard focus.
 
 | Where | Label | Value | `usage-tip` shows |
 |---|---|---|---|
@@ -136,7 +136,7 @@ Token usage, from Claude Code ([ADR 0009](../decisions/0009-show-token-usage.md)
 
 The plan limits apply to the whole Claude account, so they also count sessions outside gitspore; the tip says so. No money amounts: with a Pro or Max plan the user doesn't pay per token.
 
-**`usage-tip`.** A popover: `color.panel`, `radius.notification`, `shadow.panel`, padding `space.notification.y` `space.notification.x`. Title in `title/notification` at 15 px, rows label left and number right, a line above the total, a note in `ui/small` `color.muted`. It never takes focus.
+**`usage-tip`.** A popover: `color.panel`, `radius.notification`, `shadow.panel`, padding `space.notification.y` `space.notification.x`. Width 260. Title in `ui/row`, rows with the label in `ui/meta` on the left and the number in `mono/key` on the right, a 1 px `color.panel-2` line above the total (in `ui/row`), a note in `ui/small` `color.muted`. It never takes focus.
 
 ### States
 
@@ -194,6 +194,6 @@ On the plate: BODY `color.logo.body`, SEAM `color.logo.seam`, LEAF `color.logo.l
 
 - Fredoka or Figtree for the name tags in the scene (Fredoka may blur at small sizes).
 - Whether a merged pot stays in the list or empties at once.
-- `IssueRow`, `IssueSheet`, `BranchesTab`, the connect screen, `usage-meter` and `usage-tip` are not yet components in Penpot.
+- `IssueRow`, `IssueSheet`, `BranchesTab`, and the connect screen are not yet components in Penpot.
 - The project's token total is optional. Claude Code deletes session logs after 30 days by default, so the daemon would keep its own running total per repo.
 - The ANSI colours: all 16 per terminal reach 4.5 : 1, so `white` is dark on the light terminal and `black` light on the dark one. If programs that paint black or white backgrounds (inverse bars) look wrong, change `ansi.white` and `ansi.bright-white` (light) and `ansi.black` (dark) back ([ADR 0008](../decisions/0008-generated-theme-files.md)). Check with real Claude Code output in #11.
