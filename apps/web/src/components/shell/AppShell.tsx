@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import type { Agent } from "@gitspore/shared";
 import { mainGrid, shellGrid, type LayoutSettings } from "@/lib/layout";
+import { mockAgents, mockIssues } from "@/lib/mock";
 import { Button } from "../ui/button";
 import SidePanel from "../side-panel/SidePanel";
-import ThemeToggle from "./ThemeToggle";
+import TopBar from "./TopBar";
 
 const HOTBAR_SLOTS = ["1", "2", "3", "4", "5", "6"];
 
@@ -15,6 +17,10 @@ export default function AppShell() {
     mode: "scene",
     windows: [{ agentId: "a1", minimised: false }],
   });
+
+  // Shared by the top bar and the side panel. Moves to the store with #8.
+  const [agents, setAgents] = useState<Agent[]>(mockAgents);
+  const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
 
   const visibleWindows = layout.windows.filter((w) => !w.minimised);
 
@@ -28,45 +34,51 @@ export default function AppShell() {
 				Header
 				------
 			*/}
-      <header className="pointer-events-auto flex gap-2 rounded-xl bg-panel p-2 text-ink [grid-area:topbar]">
-        top bar
-        {/* Debug controls, remove once the store and real buttons exist */}
-        <Button
-          onClick={() =>
-            setLayout((l) => ({
-              ...l,
-              sidePanel: l.sidePanel ? null : "agents",
-            }))
-          }
+      <header className="pointer-events-auto rounded-xl bg-panel text-ink [grid-area:topbar]">
+        <TopBar
+          agents={agents}
+          issues={mockIssues}
+          selectedSlot={selectedSlot}
+          connection="online"
+          mockScenario="all-states"
         >
-          Toggle Panel
-        </Button>
-        <Button
-          variant={layout.mode === "scene" ? "default" : "secondary"}
-          className="capitalize"
-          onClick={() =>
-            setLayout((l) => ({
-              ...l,
-              mode: l.mode === "scene" ? "focus" : "scene",
-            }))
-          }
-        >
-          {layout.mode}
-        </Button>
-        <Button
-          onClick={() =>
-            setLayout((l) => ({
-              ...l,
-              windows: l.windows.map((w) => ({
-                ...w,
-                minimised: !w.minimised,
-              })),
-            }))
-          }
-        >
-          Toggle Terminal
-        </Button>
-        <ThemeToggle />
+          {/* Debug controls, remove once the rail and the hotbar exist */}
+          <Button
+            onClick={() =>
+              setLayout((l) => ({
+                ...l,
+                sidePanel: l.sidePanel ? null : "agents",
+              }))
+            }
+          >
+            Toggle Panel
+          </Button>
+          <Button
+            variant={layout.mode === "scene" ? "default" : "secondary"}
+            className="capitalize"
+            onClick={() =>
+              setLayout((l) => ({
+                ...l,
+                mode: l.mode === "scene" ? "focus" : "scene",
+              }))
+            }
+          >
+            {layout.mode}
+          </Button>
+          <Button
+            onClick={() =>
+              setLayout((l) => ({
+                ...l,
+                windows: l.windows.map((w) => ({
+                  ...w,
+                  minimised: !w.minimised,
+                })),
+              }))
+            }
+          >
+            Toggle Terminal
+          </Button>
+        </TopBar>
       </header>
 
       {/* 
@@ -124,6 +136,10 @@ export default function AppShell() {
             tab={layout.sidePanel}
             onTabChange={(tab) => setLayout((l) => ({ ...l, sidePanel: tab }))}
             onClose={() => setLayout((l) => ({ ...l, sidePanel: null }))}
+            agents={agents}
+            setAgents={setAgents}
+            selectedSlot={selectedSlot}
+            setSelectedSlot={setSelectedSlot}
           />
         </aside>
       )}

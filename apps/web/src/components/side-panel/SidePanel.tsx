@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type Dispatch, type SetStateAction } from "react";
 import { MAX_SLOTS, type Agent } from "@gitspore/shared";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { SidePanelTab } from "@/lib/layout";
 import ConfirmDialog from "@/components/attention/ConfirmDialog";
-import { mockAgents, mockDirtyWorktrees, mockIssues } from "@/lib/mock";
+import { mockDirtyWorktrees, mockIssues } from "@/lib/mock";
 import AgentRow, { FreeSlotRow } from "./AgentRow";
 import IssueRow from "./IssueRow";
 
@@ -23,17 +23,22 @@ type SidePanelProps = {
   tab: SidePanelTab;
   onTabChange: (tab: SidePanelTab) => void;
   onClose: () => void;
+  // Shared with the top bar, so they live in AppShell. Move to the store with #8.
+  agents: Agent[];
+  setAgents: Dispatch<SetStateAction<Agent[]>>;
+  selectedSlot: number | null;
+  setSelectedSlot: (slot: number | null) => void;
 };
 
 export default function SidePanel({
   tab,
   onTabChange,
   onClose,
+  agents,
+  setAgents,
+  selectedSlot,
+  setSelectedSlot,
 }: SidePanelProps) {
-  const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
-  // Local copy of the mock data, so Plant can add an agent. Moves to the store with #8.
-  const [agents, setAgents] = useState<Agent[]>(mockAgents);
-
   // The agent the stop dialog asks about; null while the dialog is closed
   const [stopping, setStopping] = useState<Agent | null>(null);
   const [removeWorktree, setRemoveWorktree] = useState(false);
