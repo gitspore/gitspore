@@ -13,9 +13,9 @@ const paths = tsconfig?.compilerOptions?.paths ?? {};
 const config: Config = {
   moduleFileExtensions: ["js", "json", "ts", "tsx"],
   rootDir: ".",
-  testRegex: ".*\.spec\.tsx?$",
+  testRegex: ".*\\.spec\\.tsx?$",
   transform: {
-    "^.+\.tsx?$": [
+    "^.+\\.tsx?$": [
       "ts-jest",
       { tsconfig: "<rootDir>/tsconfig.jest.json" },
     ],
