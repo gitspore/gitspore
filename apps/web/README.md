@@ -59,7 +59,7 @@ The file is validated when it is loaded, and a mistake is reported with its plac
 
 ### In components
 
-Components get the client with `useGreenhouseClient()` from `src/lib/client/GreenhouseClientProvider.tsx`, and use the same `on`, `off` and `emit` for the mock and the daemon. Register listeners in an effect that depends on the client and remove them in its cleanup. The provider calls `connect()` afterwards, because the first event (`state:snapshot`) is sent inside `connect()`.
+Components get the client with `useGreenhouseClient()` from `src/lib/client/GreenhouseClientProvider.tsx`, and use the same `on`, `off` and `emit` for the mock and the daemon. Register listeners in an effect that depends on the client and remove them in its cleanup. The provider calls `connect()` afterwards, because the first event (`state:snapshot`) is sent inside `connect()`. Commands sent before that wait and run right after the snapshot, as with the real socket.
 
 At a speed above 1 the scenario runs faster than the clock. Derive waiting times from the mock's clock, not from `Date.now()`: `client.virtualNow() - Date.parse(agent.statusSince)` (the client is a `MockClient`, check it with `useMockClient()`). Otherwise the wilting stages do not play at speed.
 

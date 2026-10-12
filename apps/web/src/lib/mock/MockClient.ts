@@ -54,6 +54,8 @@ type Handlers = {
  *
  * Register listeners with on() before connect(). The snapshot is sent
  * synchronously inside connect(), so a listener added afterwards misses it.
+ * Commands sent before connect() are kept and run right after the snapshot,
+ * like the send buffer of Socket.io.
  */
 export class MockClient implements GreenhouseClient {
   private readonly listeners = new Map<
@@ -77,6 +79,10 @@ export class MockClient implements GreenhouseClient {
   // Timers the mock plans itself (new agent turns "working", terminal
   // greeting), so disconnect() can cancel them.
   private timers = new Set<TimerHandle>();
+  // True between connect() and disconnect().
+  private connected = false;
+  // Commands emitted while not connected, run by the next connect().
+  private queued: (() => void)[] = [];
   private readonly handlers: Handlers = {
     // The UI asks for the full state, e.g. after it saw a version gap.
     "state:request": () => this.sendSnapshot(),
@@ -182,10 +188,18 @@ export class MockClient implements GreenhouseClient {
    * the real socket, listeners must be registered before connect(). Calling
    * it again restarts the scenario from the beginning and drops what the
    * mock had planned or opened (see disconnect()). The speed is kept.
+   *
+   * Commands that were emitted while not connected run now, in their order,
+   * after the snapshot.
    */
   connect(): void {
     this.disconnect();
     this.player.start();
+    this.connected = true;
+
+    const queued = this.queued;
+    this.queued = [];
+    queued.forEach((run) => run());
   }
 
   /**
@@ -194,6 +208,7 @@ export class MockClient implements GreenhouseClient {
    * Listeners stay registered, so connect() can be called again.
    */
   disconnect(): void {
+    this.connected = false;
     this.player.stop();
     this.timers.forEach((t) => this.clock.clearTimeout(t));
     this.timers.clear();
@@ -251,6 +266,10 @@ export class MockClient implements GreenhouseClient {
    * Sends a command. It is answered right away (acks run synchronously) and
    * anything that follows arrives as a normal event. Commands the mock does
    * not know are ignored and their ack is never called.
+   *
+   * Before connect() (or after disconnect()) the command waits and runs when
+   * connect() is called. Answering it earlier would have no state to work on,
+   * and the snapshot of connect() would wipe out what it did.
    */
   emit<E extends keyof ClientToServerEvents>(
     event: E,
@@ -258,7 +277,13 @@ export class MockClient implements GreenhouseClient {
   ): void {
     const handler = this.handlers[event] as
       ((...a: typeof args) => void) | undefined;
-    handler?.(...args);
+    if (!handler) return;
+
+    if (this.connected) {
+      handler(...args);
+    } else {
+      this.queued.push(() => handler(...args));
+    }
   }
 
   on<E extends keyof ServerToClientEvents>(

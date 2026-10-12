@@ -261,9 +261,91 @@ describe("MockClient", () => {
       const sessionId = sessionOf(openTerminal(client, agent.id));
 
       client.disconnect();
+      client.connect();
       client.emit("terminal:input", { sessionId, data: "x" });
 
       expect(errors[0].code).toBe("session_not_found");
+    });
+  });
+
+  describe("commands before connect", () => {
+    // Not connected: no scenario yet, so nothing can have been sent.
+    function idle(events: ScenarioEntry[] = []) {
+      const clock = createFakeClock(Date.parse(ANCHOR));
+      const client = new MockClient(makeScenario(events), clock);
+      const log: string[] = [];
+      const patches: StatePatch[] = [];
+      client.on("state:snapshot", () => log.push("snapshot"));
+      client.on("state:patch", (patch) => {
+        log.push("patch");
+        patches.push(patch);
+      });
+      return { clock, client, log, patches };
+    }
+
+    it("waits, and runs after the snapshot of connect", () => {
+      const { client, log, patches } = idle();
+      const acks: AgentDispatchAck[] = [];
+
+      client.emit("agent:dispatch", { issueNumber: 2, slotIndex: 1 }, (ack) => {
+        log.push("ack");
+        acks.push(ack);
+      });
+      expect(log).toEqual([]);
+
+      client.connect();
+
+      expect(log).toEqual(["snapshot", "ack", "patch"]);
+      expect(acks[0]).toEqual({ agentId: "mock-agent-1" });
+      expect(patches[0].version).toBe(2); // after the snapshot's version 1
+    });
+
+    it("keeps the agent and its turn to working", () => {
+      const { client, clock, log } = idle();
+      client.emit("agent:dispatch", { issueNumber: 2, slotIndex: 1 }, () => {});
+
+      client.connect();
+      clock.advance(1500);
+
+      expect(log).toEqual(["snapshot", "patch", "patch"]);
+    });
+
+    it("runs several commands in the order they were sent", () => {
+      const { client } = idle();
+      const ids: string[] = [];
+
+      for (const issueNumber of [1, 2, 3]) {
+        client.emit("agent:dispatch", { issueNumber, slotIndex: 0 }, (ack) => {
+          if ("agentId" in ack) ids.push(ack.agentId);
+        });
+      }
+      client.connect();
+
+      expect(ids).toEqual(["mock-agent-1", "mock-agent-2", "mock-agent-3"]);
+    });
+
+    it("runs each command only once, also over a restart", () => {
+      const { client, log } = idle();
+      client.emit("agent:dispatch", { issueNumber: 2, slotIndex: 1 }, () => {});
+
+      client.connect();
+      client.restart();
+
+      expect(log.filter((entry) => entry === "snapshot")).toHaveLength(2);
+      expect(log.filter((entry) => entry === "patch")).toHaveLength(1);
+    });
+
+    it("also waits after disconnect", () => {
+      const { client, log } = idle();
+      client.connect();
+      client.disconnect();
+      log.length = 0;
+
+      client.emit("state:request", {});
+      expect(log).toEqual([]);
+
+      client.connect();
+      expect(log).toEqual(["snapshot", "snapshot"]); // connect, then the answer
     });
   });
 
