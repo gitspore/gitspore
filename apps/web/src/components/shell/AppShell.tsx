@@ -2,10 +2,16 @@
 
 import { useState } from "react";
 import type { Agent } from "@gitspore/shared";
-import { mainGrid, shellGrid, type LayoutSettings } from "@/lib/layout";
+import {
+  mainGrid,
+  shellGrid,
+  type LayoutSettings,
+  type SidePanelTab,
+} from "@/lib/layout";
 import { mockAgents, mockIssues } from "@/lib/mock";
 import { Button } from "../ui/button";
 import SidePanel from "../side-panel/SidePanel";
+import ToolRail from "./ToolRail";
 import TopBar from "./TopBar";
 
 const HOTBAR_SLOTS = ["1", "2", "3", "4", "5", "6"];
@@ -22,7 +28,23 @@ export default function AppShell() {
   const [agents, setAgents] = useState<Agent[]>(mockAgents);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
 
+  // The side panel before entering focus mode, to bring it back afterwards (rule R6)
+  const [panelBeforeFocus, setPanelBeforeFocus] = useState<SidePanelTab | null>(
+    null,
+  );
+
   const visibleWindows = layout.windows.filter((w) => !w.minimised);
+  const waitingCount = agents.filter((a) => a.status === "needs_input").length;
+
+  // R6: entering focus mode closes the side panel; leaving it restores the panel
+  function toggleMode() {
+    if (layout.mode === "scene") {
+      setPanelBeforeFocus(layout.sidePanel);
+      setLayout((l) => ({ ...l, mode: "focus", sidePanel: null }));
+    } else {
+      setLayout((l) => ({ ...l, mode: "scene", sidePanel: panelBeforeFocus }));
+    }
+  }
 
   return (
     <div
@@ -42,29 +64,7 @@ export default function AppShell() {
           connection="online"
           mockScenario="all-states"
         >
-          {/* Debug controls, remove once the rail and the hotbar exist */}
-          <Button
-            onClick={() =>
-              setLayout((l) => ({
-                ...l,
-                sidePanel: l.sidePanel ? null : "agents",
-              }))
-            }
-          >
-            Toggle Panel
-          </Button>
-          <Button
-            variant={layout.mode === "scene" ? "default" : "secondary"}
-            className="capitalize"
-            onClick={() =>
-              setLayout((l) => ({
-                ...l,
-                mode: l.mode === "scene" ? "focus" : "scene",
-              }))
-            }
-          >
-            {layout.mode}
-          </Button>
+          {/* Debug control, remove once the hotbar exists */}
           <Button
             onClick={() =>
               setLayout((l) => ({
@@ -86,8 +86,19 @@ export default function AppShell() {
 				Rail
 				----
 			*/}
-      <nav className="pointer-events-auto rounded-xl bg-plate p-2 text-plate-ink [grid-area:rail]">
-        rail
+      {/* No background of its own; -ml pulls the bookmarks to the screen edge */}
+      <nav className="-ml-layout-edge [grid-area:rail]">
+        <div className="pointer-events-auto w-fit">
+          <ToolRail
+            sidePanel={layout.sidePanel}
+            onSidePanelChange={(tab) =>
+              setLayout((l) => ({ ...l, sidePanel: tab }))
+            }
+            mode={layout.mode}
+            onToggleMode={toggleMode}
+            waitingCount={waitingCount}
+          />
+        </div>
       </nav>
 
       {/* 
