@@ -278,5 +278,93 @@ describe("WorktreeService", () => {
       const branches = await simpleGit(repo).branchLocal();
       expect(branches.all).toContain(branch);
     });
+
+    it("deletes the branch with deleteBranch when it has no new commits", async () => {
+      const { branch, path } = await service.create({
+        issueNumber: 42,
+        issueTitle: "Fix bug",
+      });
+
+      await service.remove({ path, deleteBranch: true });
+
+      expect(existsSync(path)).toBe(false);
+      const branches = await simpleGit(repo).branchLocal();
+      expect(branches.all).not.toContain(branch);
+    });
+
+    it("refuses deleteBranch when the branch has unmerged commits, and removes nothing", async () => {
+      const { branch, path } = await service.create({
+        issueNumber: 42,
+        issueTitle: "Fix bug",
+      });
+      await simpleGit(path).raw([
+        "commit",
+        "--allow-empty",
+        "-m",
+        "agent work",
+      ]);
+
+      await expect(
+        service.remove({ path, deleteBranch: true }),
+      ).rejects.toMatchObject({ code: "unmerged" });
+
+      expect(existsSync(path)).toBe(true);
+      const branches = await simpleGit(repo).branchLocal();
+      expect(branches.all).toContain(branch);
+    });
+
+    it("deletes an unmerged branch with deleteBranch and force", async () => {
+      const { branch, path } = await service.create({
+        issueNumber: 42,
+        issueTitle: "Fix bug",
+      });
+      await simpleGit(path).raw([
+        "commit",
+        "--allow-empty",
+        "-m",
+        "agent work",
+      ]);
+
+      await service.remove({ path, deleteBranch: true, force: true });
+
+      expect(existsSync(path)).toBe(false);
+      const branches = await simpleGit(repo).branchLocal();
+      expect(branches.all).not.toContain(branch);
+    });
+
+    it("refuses a path that is not a registered worktree, and leaves it alone", async () => {
+      const { path } = await service.create({
+        issueNumber: 42,
+        issueTitle: "Fix bug",
+      });
+      await service.remove({ path });
+
+      await expect(service.remove({ path })).rejects.toMatchObject({
+        code: "not_found",
+      });
+
+      const stray = join(parent, ".gitspore-worktrees", "my-repo", "99-stray");
+      await mkdir(stray);
+      await writeFile(join(stray, "keep.txt"), "mine");
+
+      await expect(service.remove({ path: stray })).rejects.toMatchObject({
+        code: "not_found",
+      });
+      expect(await readFile(join(stray, "keep.txt"), "utf8")).toBe("mine");
+    });
+  });
+
+  describe("startup", () => {
+    it("cleans up a worktree whose folder was deleted while the daemon was down", async () => {
+      const { path } = await service.create({
+        issueNumber: 42,
+        issueTitle: "Fix bug",
+      });
+      await rm(path, { recursive: true, force: true });
+
+      await service.onModuleInit();
+
+      expect(await service.list()).toEqual([]);
+    });
   });
 });
