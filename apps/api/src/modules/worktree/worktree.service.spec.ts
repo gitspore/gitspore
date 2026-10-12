@@ -128,5 +128,19 @@ describe("WorktreeService", () => {
         expect(existsSync(path)).toBe(true);
       }
     });
+
+    it("keeps each worktree's files apart", async () => {
+      const one = await service.create({ issueNumber: 1, issueTitle: "One" });
+      const two = await service.create({ issueNumber: 2, issueTitle: "Two" });
+
+      await writeFile(join(one.path, "notes.txt"), "from one");
+      expect(existsSync(join(two.path, "notes.txt"))).toBe(false);
+      expect(existsSync(join(repo, "notes.txt"))).toBe(false);
+
+      await writeFile(join(two.path, "notes.txt"), "from two");
+      expect(await readFile(join(one.path, "notes.txt"), "utf8")).toBe(
+        "from one",
+      );
+    });
   });
 });
