@@ -38,4 +38,8 @@ export const mockIssues: Issue[] = [
   { number: 15, title: "avatar-upload", url: "", labels: [] },
   { number: 18, title: "flaky-ci", url: "", labels: [] },
   { number: 21, title: "dark-mode-toggle", url: "", labels: [] },
+  // Not planted yet: they show up in the Issues tab
+  { number: 23, title: "info-box", url: "", labels: ["ui", "question"] },
+  { number: 25, title: "scene-feasibility", url: "", labels: ["research"] },
+  { number: 27, title: "theme-tokens", url: "", labels: ["ui"] },
 ];

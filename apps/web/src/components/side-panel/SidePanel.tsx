@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { MAX_SLOTS } from "@gitspore/shared";
+import { MAX_SLOTS, type Agent } from "@gitspore/shared";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { SidePanelTab } from "@/lib/layout";
 import { mockAgents, mockIssues } from "@/lib/mock";
 import AgentRow, { FreeSlotRow } from "./AgentRow";
+import IssueRow from "./IssueRow";
 
 // The side panel: title, counts, tabs. Spec: `side-panel` and `segmented-tabs`.
 
@@ -29,9 +30,38 @@ export default function SidePanel({
   onClose,
 }: SidePanelProps) {
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
+  // Local copy of the mock data, so Plant can add an agent. Moves to the store with #8.
+  const [agents, setAgents] = useState<Agent[]>(mockAgents);
 
-  const planted = mockAgents.filter((a) => a.slotIndex !== null).length;
-  const waiting = mockAgents.filter((a) => a.status === "needs_input").length;
+  const planted = agents.filter((a) => a.slotIndex !== null).length;
+  const waiting = agents.filter((a) => a.status === "needs_input").length;
+
+  const freeSlot = Array.from({ length: MAX_SLOTS }, (_, i) => i).find(
+    (i) => !agents.some((a) => a.slotIndex === i),
+  );
+  // Open issues without a running agent
+  const unplanted = mockIssues.filter(
+    (issue) => !agents.some((a) => a.issueNumber === issue.number),
+  );
+
+  // Later this sends `agent:dispatch { issueNumber, slotIndex }` to the daemon
+  function plant(issueNumber: number) {
+    if (freeSlot === undefined) return;
+    const now = new Date().toISOString();
+    setAgents((list) => [
+      ...list,
+      {
+        id: `agent-${freeSlot}-${issueNumber}`,
+        slotIndex: freeSlot,
+        issueNumber,
+        branch: `spore/${issueNumber}`,
+        worktreePath: `/tmp/gitspore/${issueNumber}`,
+        status: "starting",
+        statusSince: now,
+        startedAt: now,
+      },
+    ]);
+  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -68,16 +98,18 @@ export default function SidePanel({
             <TabsTrigger
               key={t.value}
               value={t.value}
-              className="h-9 rounded-sm text-ui-row text-ink data-active:bg-plate data-active:text-plate-ink dark:data-active:border-transparent dark:data-active:bg-plate dark:data-active:text-plate-ink"
+              // (components.md, States → Hover). dark: classes override shadcn's night styles.
+              className="h-9 rounded-sm text-ink hover:not-data-active:bg-ink/20 dark:text-ink data-active:bg-plate data-active:text-plate-ink data-active:hover:text-plate-ink dark:data-active:border-transparent dark:data-active:bg-plate dark:data-active:text-plate-ink dark:data-active:hover:text-plate-ink"
             >
-              {t.label}
+              {/* On the span, because cn() drops text-ui-* next to a text colour */}
+              <span className="text-ui-tab">{t.label}</span>
             </TabsTrigger>
           ))}
         </TabsList>
 
         <TabsContent value="agents" className="flex flex-col gap-1">
           {Array.from({ length: MAX_SLOTS }, (_, slotIndex) => {
-            const agent = mockAgents.find((a) => a.slotIndex === slotIndex);
+            const agent = agents.find((a) => a.slotIndex === slotIndex);
             if (!agent)
               return <FreeSlotRow key={slotIndex} slot={slotIndex + 1} />;
 
@@ -96,8 +128,21 @@ export default function SidePanel({
           })}
         </TabsContent>
 
-        <TabsContent value="issues" className="px-2 text-muted-foreground">
-          Issues come next.
+        <TabsContent value="issues" className="flex flex-col gap-1">
+          {unplanted.length === 0 ? (
+            <p className="px-2 text-ui-meta text-muted-foreground">
+              No open issues without an agent.
+            </p>
+          ) : (
+            unplanted.map((issue) => (
+              <IssueRow
+                key={issue.number}
+                issue={issue}
+                canPlant={freeSlot !== undefined}
+                onPlant={() => plant(issue.number)}
+              />
+            ))
+          )}
         </TabsContent>
 
         <TabsContent value="branches" className="px-2 text-muted-foreground">
