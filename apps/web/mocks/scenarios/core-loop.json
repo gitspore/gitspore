@@ -1,0 +1,193 @@
+{
+  "name": "core-loop",
+  "anchor": "2026-10-09T09:30:00.000Z",
+  "snapshot": {
+    "version": 1,
+    "agents": [],
+    "issues": [
+      {
+        "number": 301,
+        "title": "Login fails with umlauts in the password",
+        "url": "https://github.com/gitspore/gitspore/issues/301",
+        "labels": ["bug"]
+      },
+      {
+        "number": 302,
+        "title": "Dark mode",
+        "url": "https://github.com/gitspore/gitspore/issues/302",
+        "labels": ["enhancement"]
+      },
+      {
+        "number": 303,
+        "title": "Flaky checkout test fails on CI only under load",
+        "url": "https://github.com/gitspore/gitspore/issues/303",
+        "labels": ["ci"]
+      },
+      {
+        "number": 304,
+        "title": "Export the issue list as CSV",
+        "url": "https://github.com/gitspore/gitspore/issues/304",
+        "labels": ["enhancement"]
+      },
+      {
+        "number": 305,
+        "title": "Update the README",
+        "url": "https://github.com/gitspore/gitspore/issues/305",
+        "labels": []
+      },
+      {
+        "number": 306,
+        "title": "Rename the settings page",
+        "url": "https://github.com/gitspore/gitspore/issues/306",
+        "labels": ["chore"]
+      }
+    ]
+  },
+  "events": [
+    {
+      "at": 1000,
+      "event": "state:patch",
+      "payload": {
+        "version": 2,
+        "ops": [
+          {
+            "type": "agent:upsert",
+            "agent": {
+              "id": "agent-1",
+              "slotIndex": 0,
+              "issueNumber": 301,
+              "branch": "spore/301-login-umlauts",
+              "worktreePath": "/home/dev/repo/.worktrees/301-login-umlauts",
+              "status": "starting",
+              "statusSince": "2026-10-09T09:30:01.000Z",
+              "startedAt": "2026-10-09T09:30:01.000Z"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "at": 3000,
+      "event": "state:patch",
+      "payload": {
+        "version": 3,
+        "ops": [
+          {
+            "type": "agent:upsert",
+            "agent": {
+              "id": "agent-1",
+              "slotIndex": 0,
+              "issueNumber": 301,
+              "branch": "spore/301-login-umlauts",
+              "worktreePath": "/home/dev/repo/.worktrees/301-login-umlauts",
+              "status": "working",
+              "statusSince": "2026-10-09T09:30:03.000Z",
+              "startedAt": "2026-10-09T09:30:01.000Z"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "at": 8000,
+      "event": "state:patch",
+      "payload": {
+        "version": 4,
+        "ops": [
+          {
+            "type": "agent:upsert",
+            "agent": {
+              "id": "agent-1",
+              "slotIndex": 0,
+              "issueNumber": 301,
+              "branch": "spore/301-login-umlauts",
+              "worktreePath": "/home/dev/repo/.worktrees/301-login-umlauts",
+              "status": "needs_input",
+              "statusSince": "2026-10-09T09:30:08.000Z",
+              "startedAt": "2026-10-09T09:30:01.000Z"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "at": 78000,
+      "event": "state:patch",
+      "payload": {
+        "version": 5,
+        "ops": [
+          {
+            "type": "agent:upsert",
+            "agent": {
+              "id": "agent-1",
+              "slotIndex": 0,
+              "issueNumber": 301,
+              "branch": "spore/301-login-umlauts",
+              "worktreePath": "/home/dev/repo/.worktrees/301-login-umlauts",
+              "status": "working",
+              "statusSince": "2026-10-09T09:31:18.000Z",
+              "startedAt": "2026-10-09T09:30:01.000Z"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "at": 90000,
+      "event": "state:patch",
+      "payload": {
+        "version": 6,
+        "ops": [
+          {
+            "type": "agent:upsert",
+            "agent": {
+              "id": "agent-1",
+              "slotIndex": 0,
+              "issueNumber": 301,
+              "branch": "spore/301-login-umlauts",
+              "worktreePath": "/home/dev/repo/.worktrees/301-login-umlauts",
+              "status": "done",
+              "statusSince": "2026-10-09T09:31:30.000Z",
+              "startedAt": "2026-10-09T09:30:01.000Z"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "at": 95000,
+      "event": "state:patch",
+      "payload": {
+        "version": 7,
+        "ops": [
+          {
+            "type": "agent:upsert",
+            "agent": {
+              "id": "agent-1",
+              "slotIndex": 0,
+              "issueNumber": 301,
+              "branch": "spore/301-login-umlauts",
+              "worktreePath": "/home/dev/repo/.worktrees/301-login-umlauts",
+              "status": "merged",
+              "statusSince": "2026-10-09T09:31:35.000Z",
+              "startedAt": "2026-10-09T09:30:01.000Z"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "at": 97000,
+      "event": "state:patch",
+      "payload": {
+        "version": 8,
+        "ops": [
+          {
+            "type": "agent:remove",
+            "agentId": "agent-1"
+          }
+        ]
+      }
+    }
+  ]
+}
