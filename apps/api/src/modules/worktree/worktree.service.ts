@@ -1,11 +1,16 @@
 import { RepoConfig } from "@/config/repo-config";
 import { BRANCH_PREFIX } from "@gitspore/shared";
 import { Injectable } from "@nestjs/common";
-import { basename, dirname, join } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { simpleGit, SimpleGit } from "simple-git";
 import { branchName } from "./branch-name";
 import { WorktreeError } from "./worktree-error";
 import { access } from "node:fs/promises";
+
+export type Worktree = { branch: string; path: string };
+
+//
+//
 
 @Injectable()
 export class WorktreeService {
@@ -28,7 +33,10 @@ export class WorktreeService {
     );
   }
 
-  async create(issue: { issueNumber: number; issueTitle: string }) {
+  async create(issue: {
+    issueNumber: number;
+    issueTitle: string;
+  }): Promise<Worktree> {
     const branch = branchName(issue.issueNumber, issue.issueTitle);
     const path = join(this.worktreeRoot, branch.slice(BRANCH_PREFIX.length));
 
@@ -54,6 +62,43 @@ export class WorktreeService {
     return { branch, path };
   }
 
+  async list(): Promise<Worktree[]> {
+    const output = await this.run(["worktree", "list", "--porcelain"]);
+    const worktrees: Worktree[] = [];
+
+    for (const block of output.split("\n\n")) {
+      let path = "";
+      let branch = "";
+
+      for (const line of block.split("\n")) {
+        const space = line.indexOf(" ");
+        const key = space === -1 ? line : line.slice(0, space);
+        const value = space === -1 ? "" : line.slice(space + 1);
+
+        if (key === "worktree") path = resolve(value);
+        if (key === "branch") branch = value.replace("refs/heads/", "");
+      }
+
+      if (
+        dirname(path) === this.worktreeRoot &&
+        branch.startsWith(BRANCH_PREFIX)
+      ) {
+        worktrees.push({ branch, path });
+      }
+
+      // if (branch.startsWith(BRANCH_PREFIX)) {
+      //   worktrees.push({ branch, path });
+      // }
+
+      // if (dirname(path) === this.worktreeRoot) {
+      //   worktrees.push({ branch, path });
+      // }
+    }
+
+    return worktrees;
+  }
+
+  // error check helpers
   private async branchExists(branch: string): Promise<boolean> {
     try {
       await this.run(["show-ref", "--verify", `refs/heads/${branch}`]);

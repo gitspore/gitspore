@@ -143,4 +143,45 @@ describe("WorktreeService", () => {
       );
     });
   });
+
+  describe("list", () => {
+    it("returns an empty list when there are no worktrees", async () => {
+      expect(await service.list()).toEqual([]);
+    });
+
+    it("returns only our worktrees", async () => {
+      const ours = await service.create({
+        issueNumber: 42,
+        issueTitle: "Fix bug",
+      });
+
+      const git = simpleGit(repo);
+      const root = join(parent, ".gitspore-worktrees", "my-repo");
+      await git.raw([
+        "worktree",
+        "add",
+        "-b",
+        "feature",
+        join(parent, "elsewhere"),
+        "main",
+      ]);
+      await git.raw([
+        "worktree",
+        "add",
+        "-b",
+        `${BRANCH_PREFIX}7-x`,
+        join(parent, "spore-elsewhere"),
+        "main",
+      ]);
+      await git.raw([
+        "worktree",
+        "add",
+        "--detach",
+        join(root, "detached"),
+        "main",
+      ]);
+
+      expect(await service.list()).toEqual([ours]);
+    });
+  });
 });

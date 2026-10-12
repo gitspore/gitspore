@@ -1,4 +1,4 @@
-export type WorktreeErrorCode = "branch_exists";
+export type WorktreeErrorCode = "branch_exists" | "path_exists";
 
 export class WorktreeError extends Error {
   constructor(
