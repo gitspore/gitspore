@@ -62,14 +62,26 @@ export class WorktreeService implements OnModuleInit {
       throw new WorktreeError("path_exists", `Folder ${path} already exists.`);
     }
 
-    await this.run([
-      "worktree",
-      "add",
-      "-b",
-      branch,
-      path,
-      this.config.baseBranch(),
-    ]);
+    try {
+      await this.run([
+        "worktree",
+        "add",
+        "-b",
+        branch,
+        path,
+        this.config.baseBranch(),
+      ]);
+    } catch (error) {
+      // Another create() for the same issue can pass the checks at the same
+      // time; then its branch exists now.
+      if (await this.branchExists(branch)) {
+        throw new WorktreeError(
+          "branch_exists",
+          `Branch ${branch} already exists.`,
+        );
+      }
+      throw error;
+    }
     return { branch, path };
   }
 

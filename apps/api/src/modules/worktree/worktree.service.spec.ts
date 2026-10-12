@@ -129,6 +129,19 @@ describe("WorktreeService", () => {
       }
     });
 
+    it("gives branch_exists to the second of two create calls for the same issue", async () => {
+      const results = await Promise.allSettled([
+        service.create({ issueNumber: 42, issueTitle: "Fix bug" }),
+        service.create({ issueNumber: 42, issueTitle: "Fix bug" }),
+      ]);
+
+      expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+      const rejected = results.find(
+        (r): r is PromiseRejectedResult => r.status === "rejected",
+      );
+      expect(rejected?.reason).toMatchObject({ code: "branch_exists" });
+    });
+
     it("keeps each worktree's files apart", async () => {
       const one = await service.create({ issueNumber: 1, issueTitle: "One" });
       const two = await service.create({ issueNumber: 2, issueTitle: "Two" });
