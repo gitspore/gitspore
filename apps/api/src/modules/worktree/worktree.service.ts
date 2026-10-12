@@ -22,7 +22,8 @@ export class WorktreeService {
     // switch repos, it has to create a new instance.
     const repo = config.repoPath();
     this.git = simpleGit({
-      baseDir: config.repoPath(),
+      // baseDir: config.repoPath(),
+      baseDir: repo,
       maxConcurrentProcesses: 1,
       timeout: { block: 30_000 },
     });
@@ -85,17 +86,35 @@ export class WorktreeService {
       ) {
         worktrees.push({ branch, path });
       }
-
-      // if (branch.startsWith(BRANCH_PREFIX)) {
-      //   worktrees.push({ branch, path });
-      // }
-
-      // if (dirname(path) === this.worktreeRoot) {
-      //   worktrees.push({ branch, path });
-      // }
     }
 
     return worktrees;
+  }
+
+  async remove(options: { path: string; force?: boolean }): Promise<void> {
+    if (dirname(resolve(options.path)) !== this.worktreeRoot) {
+      throw new WorktreeError(
+        "outside_root",
+        `${options.path} is not a gitspore worktree.`,
+      );
+    }
+
+    if (!options.force) {
+      const status = await this.statusOf(options.path);
+      if (status !== "") {
+        throw new WorktreeError(
+          "dirty",
+          `${options.path} has uncommitted changes.`,
+        );
+      }
+    }
+
+    await this.run([
+      "worktree",
+      "remove",
+      ...(options.force ? ["--force"] : []),
+      options.path,
+    ]);
   }
 
   // error check helpers
@@ -117,6 +136,16 @@ export class WorktreeService {
     }
   }
 
+  //git status -C alternative (simple git forbids -C for security). I tried -C because we remain on main branch.
+  private statusOf(path: string): Promise<string> {
+    return simpleGit({ baseDir: path, timeout: { block: 30_000 } }).raw([
+      "status",
+      "--porcelain",
+      "--untracked-files=all",
+    ]);
+  }
+
+  // Run git command:
   private run(args: string[]): Promise<string> {
     return this.git.raw(args);
   }

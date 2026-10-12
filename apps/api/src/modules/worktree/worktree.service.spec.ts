@@ -184,4 +184,68 @@ describe("WorktreeService", () => {
       expect(await service.list()).toEqual([ours]);
     });
   });
+
+  describe("remove", () => {
+    it("removes a clean worktree and keeps its branch", async () => {
+      const { branch, path } = await service.create({
+        issueNumber: 42,
+        issueTitle: "Fix bug",
+      });
+
+      await service.remove({ path });
+
+      expect(existsSync(path)).toBe(false);
+      const branches = await simpleGit(repo).branchLocal();
+      expect(branches.all).toContain(branch);
+    });
+
+    it("refuses a path outside our folder and leaves it alone", async () => {
+      const elsewhere = join(parent, "elsewhere");
+      await simpleGit(repo).raw([
+        "worktree",
+        "add",
+        "-b",
+        "feature",
+        elsewhere,
+        "main",
+      ]);
+
+      await expect(service.remove({ path: elsewhere })).rejects.toMatchObject({
+        code: "outside_root",
+      });
+      await expect(service.remove({ path: repo })).rejects.toMatchObject({
+        code: "outside_root",
+      });
+
+      expect(existsSync(elsewhere)).toBe(true);
+      expect(existsSync(repo)).toBe(true);
+    });
+
+    it("refuses a worktree with an untracked file and keeps it", async () => {
+      const { path } = await service.create({
+        issueNumber: 42,
+        issueTitle: "Fix bug",
+      });
+      await writeFile(join(path, "new.ts"), "agent work");
+
+      await expect(service.remove({ path })).rejects.toMatchObject({
+        code: "dirty",
+      });
+      expect(await readFile(join(path, "new.ts"), "utf8")).toBe("agent work");
+    });
+
+    it("removes a dirty worktree with force and keeps its branch", async () => {
+      const { branch, path } = await service.create({
+        issueNumber: 42,
+        issueTitle: "Fix bug",
+      });
+      await writeFile(join(path, "new.ts"), "agent work");
+
+      await service.remove({ path, force: true });
+
+      expect(existsSync(path)).toBe(false);
+      const branches = await simpleGit(repo).branchLocal();
+      expect(branches.all).toContain(branch);
+    });
+  });
 });
