@@ -15,10 +15,7 @@ const config: Config = {
   rootDir: ".",
   testRegex: ".*\\.spec\\.tsx?$",
   transform: {
-    "^.+\\.tsx?$": [
-      "ts-jest",
-      { tsconfig: "<rootDir>/tsconfig.jest.json" },
-    ],
+    "^.+\\.tsx?$": ["ts-jest", { tsconfig: "<rootDir>/tsconfig.jest.json" }],
   },
   moduleNameMapper: pathsToModuleNameMapper(paths, { prefix: "<rootDir>/" }),
   testEnvironment: "node",
