@@ -30,7 +30,8 @@ export default function RailBookmark({
         render={
           <button
             type="button"
-            aria-label={label}
+            // aria-label replaces the content, so the count goes in here too
+            aria-label={count > 0 ? `${label}, ${count} waiting` : label}
             aria-pressed={open}
             onClick={onClick}
             className={cn(

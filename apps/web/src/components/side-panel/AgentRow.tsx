@@ -110,7 +110,10 @@ export default function AgentRow({
         aria-pressed={selected}
         className="flex h-full min-w-0 flex-1 items-center gap-3 text-left"
       >
-        <span className="w-3 font-mono text-ui-meta">{slot}</span>
+        <span className="w-3 font-mono text-ui-meta">
+          <span className="sr-only">Pot </span>
+          {slot}
+        </span>
 
         {/* Agent colour circle; the plant goes inside later */}
         <span
@@ -165,7 +168,10 @@ export default function AgentRow({
 export function FreeSlotRow({ slot }: { slot: number }) {
   return (
     <div className="flex h-row items-center gap-3 rounded-lg pr-3 pl-2 text-muted-foreground">
-      <span className="w-3 font-mono text-ui-meta">{slot}</span>
+      <span className="w-3 font-mono text-ui-meta">
+        <span className="sr-only">Pot </span>
+        {slot}
+      </span>
       <span className="size-9 shrink-0 rounded-full border-2 border-dashed border-current" />
       <span className="text-ui-row">Free slot</span>
     </div>

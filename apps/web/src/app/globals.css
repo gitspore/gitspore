@@ -80,6 +80,17 @@ body {
   }
 }
 
+/*
+  Keyboard focus (components.md, States): one yellow outline for every control,
+  only when moving with the keyboard. Outside any layer on purpose, so it wins over
+  shadcn's outline-none; the --tw-ring-shadow line switches off shadcn's own ring.
+*/
+:focus-visible {
+  outline: var(--border-focus) solid var(--color-focus);
+  outline-offset: var(--space-focus-offset);
+  --tw-ring-shadow: 0 0 #0000;
+}
+
 :root {
   /* Not a token yet, see #34 */
   --size-terminal-band: 392px;
