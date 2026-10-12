@@ -247,5 +247,36 @@ describe("WorktreeService", () => {
       const branches = await simpleGit(repo).branchLocal();
       expect(branches.all).toContain(branch);
     });
+
+    it("refuses a worktree with a modified tracked file and keeps the change", async () => {
+      const { path } = await service.create({
+        issueNumber: 42,
+        issueTitle: "Fix bug",
+      });
+      const git = simpleGit(path);
+      await writeFile(join(path, "app.ts"), "v1");
+      await git.add("app.ts");
+      await git.commit("add app.ts");
+      await writeFile(join(path, "app.ts"), "v2");
+
+      await expect(service.remove({ path })).rejects.toMatchObject({
+        code: "dirty",
+      });
+      expect(await readFile(join(path, "app.ts"), "utf8")).toBe("v2");
+    });
+
+    it("cleans up a worktree whose folder was deleted by hand", async () => {
+      const { branch, path } = await service.create({
+        issueNumber: 42,
+        issueTitle: "Fix bug",
+      });
+      await rm(path, { recursive: true, force: true });
+
+      await service.remove({ path });
+
+      expect(await service.list()).toEqual([]);
+      const branches = await simpleGit(repo).branchLocal();
+      expect(branches.all).toContain(branch);
+    });
   });
 });

@@ -99,7 +99,7 @@ export class WorktreeService {
       );
     }
 
-    if (!options.force) {
+    if (!options.force && (await this.pathExists(options.path))) {
       const status = await this.statusOf(options.path);
       if (status !== "") {
         throw new WorktreeError(
