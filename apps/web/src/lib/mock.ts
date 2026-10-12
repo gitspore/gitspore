@@ -2,12 +2,14 @@ import type { Agent, Issue } from "@gitspore/shared";
 
 // Fake data
 
-const now = new Date().toISOString();
+const now = Date.now();
+const secondsAgo = (s: number) => new Date(now - s * 1000).toISOString();
 
 function agent(
   slotIndex: number,
   issueNumber: number,
   status: Agent["status"],
+  since = 0,
 ): Agent {
   return {
     id: `agent-${slotIndex}`,
@@ -16,14 +18,15 @@ function agent(
     branch: `spore/${issueNumber}`,
     worktreePath: `/tmp/gitspore/${issueNumber}`,
     status,
-    statusSince: now,
-    startedAt: now,
+    statusSince: secondsAgo(since),
+    startedAt: secondsAgo(600),
   };
 }
 
 export const mockAgents: Agent[] = [
   agent(0, 12, "working"),
-  agent(1, 15, "needs_input"),
+  // Waiting for 50 s: emphasized now, stronger after 10 more seconds
+  agent(1, 15, "needs_input", 50),
   agent(2, 18, "error"),
   agent(3, 21, "done"),
   agent(4, 9, "merged"),
