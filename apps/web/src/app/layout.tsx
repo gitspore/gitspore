@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { PRODUCT_NAME } from "@gitspore/shared";
 import { Figtree, Fredoka, JetBrains_Mono } from "next/font/google";
+import EventLog from "@/components/dev/EventLog";
+import MockOverlay from "@/components/dev/MockOverlay";
 import { ThemeProvider } from "@/components/theme-provider";
+import { GreenhouseClientProvider } from "@/lib/client/GreenhouseClientProvider";
 import "./globals.css";
 
 // cozy-06 type (design-docs/design/components.md): Fredoka for logo and titles,
@@ -43,7 +46,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <GreenhouseClientProvider>
+            {children}
+            <MockOverlay />
+            <EventLog />
+          </GreenhouseClientProvider>
         </ThemeProvider>
       </body>
     </html>
