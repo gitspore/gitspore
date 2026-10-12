@@ -10,7 +10,10 @@ import { RepoConfig } from "./repo-config";
   providers: [
     {
       provide: RepoConfig,
-      useFactory: () => loadRepoConfig(process.env),
+      useFactory: () =>
+        // TEMPORARY until the setup-screen ticket: without GITSPORE_REPO, use the
+        // repo the daemon runs in. That ticket goes back to loadRepoConfig(process.env).
+        loadRepoConfig({ GITSPORE_REPO: process.cwd(), ...process.env }),
     },
   ],
   exports: [RepoConfig],
