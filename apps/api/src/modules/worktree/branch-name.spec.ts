@@ -26,4 +26,8 @@ describe("branchName", () => {
     expect(slug.length).toBeLessThanOrEqual(40);
     expect(slug.endsWith("-")).toBe(false);
   });
+
+  it("uses only the number when nothing usable is left of the title", () => {
+    expect(branchName(42, "🐛 🔥 !!!")).toBe(`${BRANCH_PREFIX}42`);
+  });
 });

@@ -18,5 +18,6 @@ export function branchName(issueNumber: number, title: string): string {
     .join("-")
     .slice(0, MAX_SLUG_LENGTH);
   const slug = words.endsWith("-") ? words.slice(0, -1) : words;
-  return `${BRANCH_PREFIX}${issueNumber}-${slug}`;
+  const suffix = slug ? `-${slug}` : "";
+  return `${BRANCH_PREFIX}${issueNumber}${suffix}`;
 }
