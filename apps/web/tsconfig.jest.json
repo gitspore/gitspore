@@ -1,0 +1,10 @@
+{
+  // tsconfig.json targets Next's bundler (ESM); jest runs CommonJS.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "rootDir": ".",
+    "plugins": []
+  }
+}
