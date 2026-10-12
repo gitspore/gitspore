@@ -6,7 +6,8 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { SidePanelTab } from "@/lib/layout";
-import { mockAgents, mockIssues } from "@/lib/mock";
+import ConfirmDialog from "@/components/attention/ConfirmDialog";
+import { mockAgents, mockDirtyWorktrees, mockIssues } from "@/lib/mock";
 import AgentRow, { FreeSlotRow } from "./AgentRow";
 import IssueRow from "./IssueRow";
 
@@ -32,6 +33,11 @@ export default function SidePanel({
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   // Local copy of the mock data, so Plant can add an agent. Moves to the store with #8.
   const [agents, setAgents] = useState<Agent[]>(mockAgents);
+
+  // The agent the stop dialog asks about; null while the dialog is closed
+  const [stopping, setStopping] = useState<Agent | null>(null);
+  const [removeWorktree, setRemoveWorktree] = useState(false);
+  const [stopError, setStopError] = useState<string>();
 
   const planted = agents.filter((a) => a.slotIndex !== null).length;
   const waiting = agents.filter((a) => a.status === "needs_input").length;
@@ -61,6 +67,27 @@ export default function SidePanel({
         startedAt: now,
       },
     ]);
+  }
+
+  function openStop(agent: Agent) {
+    setStopping(agent);
+    setRemoveWorktree(false);
+    setStopError(undefined);
+  }
+
+  // Later this sends `agent:stop { agentId, removeWorktree }` to the daemon
+  function stop() {
+    if (!stopping) return;
+    if (removeWorktree && mockDirtyWorktrees.has(stopping.branch)) {
+      // WORKTREE_DIRTY: the daemon keeps the agent
+      setStopError(
+        `${stopping.branch} has uncommitted changes, so the worktree can't be removed. The agent keeps running.`,
+      );
+      return;
+    }
+    setAgents((list) => list.filter((a) => a.id !== stopping.id));
+    if (selectedSlot === stopping.slotIndex) setSelectedSlot(null);
+    setStopping(null);
   }
 
   return (
@@ -123,6 +150,7 @@ export default function SidePanel({
                 }
                 selected={selectedSlot === slotIndex}
                 onSelect={() => setSelectedSlot(slotIndex)}
+                onStop={() => openStop(agent)}
               />
             );
           })}
@@ -149,6 +177,29 @@ export default function SidePanel({
           Branches later (should-have).
         </TabsContent>
       </Tabs>
+
+      <ConfirmDialog
+        open={stopping !== null}
+        onOpenChange={(open) => !open && setStopping(null)}
+        title={`Stop the agent on #${stopping?.issueNumber}?`}
+        description="Claude Code stops and the pot is free again. The branch stays."
+        actionLabel="Stop agent"
+        onConfirm={stop}
+        error={stopError}
+      >
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={removeWorktree}
+            onChange={(e) => {
+              setRemoveWorktree(e.target.checked);
+              setStopError(undefined);
+            }}
+            className="size-4 accent-plate"
+          />
+          <span className="text-ui-body">Also remove worktree</span>
+        </label>
+      </ConfirmDialog>
     </div>
   );
 }

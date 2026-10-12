@@ -60,7 +60,7 @@ body {
   --muted-foreground: var(--color-muted);
   --accent: var(--color-hover);
   --accent-foreground: var(--color-ink);
-  /* Red means only "needs you" (ADR 0006), so destructive actions stay ink. Open question for design. */
+  /* Red means only "needs you" (ADR 0006): destructive actions are ink (components.md, button kinds) */
   --destructive: var(--color-ink);
   --border: var(--color-panel-2);
   --input: var(--color-panel-2);

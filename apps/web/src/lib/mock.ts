@@ -32,6 +32,9 @@ export const mockAgents: Agent[] = [
   agent(4, 9, "merged"),
 ];
 
+// Worktrees with uncommitted changes: removing them fails with WORKTREE_DIRTY
+export const mockDirtyWorktrees = new Set(["spore/12"]);
+
 export const mockIssues: Issue[] = [
   { number: 9, title: "readme-setup", url: "", labels: [] },
   { number: 12, title: "login-redirect", url: "", labels: [] },
