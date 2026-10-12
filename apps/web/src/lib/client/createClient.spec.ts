@@ -1,5 +1,6 @@
 import { MockClient } from "../mock/MockClient";
 import { createClient } from "./createClient";
+import { SocketClient } from "./SocketClient";
 
 describe("createClient", () => {
   it("builds a MockClient with the scenario and speed of the mode", () => {
@@ -38,7 +39,7 @@ describe("createClient", () => {
     client.disconnect();
   });
 
-  it("says that the daemon client is missing", () => {
-    expect(() => createClient({ kind: "socket" })).toThrow(/SocketClient/);
+  it("builds a SocketClient for the daemon, without connecting", () => {
+    expect(createClient({ kind: "socket" })).toBeInstanceOf(SocketClient);
   });
 });

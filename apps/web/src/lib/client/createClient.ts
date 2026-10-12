@@ -2,12 +2,16 @@ import { getScenario } from "../../../mocks/scenarios";
 import { MockClient } from "../mock/MockClient";
 import type { ClientMode } from "./clientMode";
 import type { GreenhouseClient } from "./GreenhouseClient";
+import { SocketClient } from "./SocketClient";
+
+// apps/api listens on 3001 unless PORT says otherwise.
+const DEFAULT_DAEMON_URL = "http://localhost:3001";
 
 /**
  * Builds the client for a mode from resolveClientMode(). Components get a
  * GreenhouseClient and never learn which one it is.
  *
- * The mock is not connected yet; call connect() once the listeners are
+ * The client is not connected yet; call connect() once the listeners are
  * registered. A dev overlay can check `client instanceof MockClient` for the
  * playback controls.
  */
@@ -19,8 +23,8 @@ export function createClient(mode: ClientMode): GreenhouseClient {
     return client;
   }
 
-  throw new Error(
-    "The client for the real daemon (SocketClient) is not built yet. " +
-      "Open the app with ?mock=<scenario> to use the mock.",
+  // Written out in full: Next replaces exactly this expression at build time.
+  return new SocketClient(
+    process.env.NEXT_PUBLIC_DAEMON_URL ?? DEFAULT_DAEMON_URL,
   );
 }
