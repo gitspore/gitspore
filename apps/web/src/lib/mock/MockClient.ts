@@ -61,6 +61,8 @@ export class MockClient implements GreenhouseClient {
     Set<AnyListener>
   >();
   private readonly player: ScenarioPlayer;
+  /** Name of the scenario being played, for a dev overlay. */
+  readonly scenarioName: string;
 
   // The state as the UI has it: every patch sent is applied here as well.
   // This is what a snapshot on request contains.
@@ -167,18 +169,22 @@ export class MockClient implements GreenhouseClient {
     scenario: Scenario,
     private readonly clock: Clock = realClock,
   ) {
+    this.scenarioName = scenario.name;
     this.player = new ScenarioPlayer(
       scenario,
       (entry) => this.dispatch(entry),
       clock,
     );
   }
+
   /**
    * Starts the scenario: `state:snapshot` now, the rest as time passes. Like
    * the real socket, listeners must be registered before connect(). Calling
-   * it again restarts the scenario from the beginning.
+   * it again restarts the scenario from the beginning and drops what the
+   * mock had planned or opened (see disconnect()). The speed is kept.
    */
   connect(): void {
+    this.disconnect();
     this.player.start();
   }
 
@@ -192,6 +198,53 @@ export class MockClient implements GreenhouseClient {
     this.timers.forEach((t) => this.clock.clearTimeout(t));
     this.timers.clear();
     this.sessions.clear();
+  }
+
+  // --- Playback controls (dev overlay) ---------------------------------
+  // Not part of GreenhouseClient: the real socket has nothing like them. Code
+  // that wants them checks `client instanceof MockClient`.
+  // They steer the scenario only. What the mock plans itself (a dispatched
+  // agent turning "working", the terminal greeting) runs in real time.
+
+  /** Same as connect(): plays the scenario again from the start. */
+  restart(): void {
+    this.connect();
+  }
+
+  /** Holds the scenario back until resume(). Does nothing if not playing. */
+  pause(): void {
+    this.player.pause();
+  }
+
+  resume(): void {
+    this.player.resume();
+  }
+
+  /**
+   * Plays the scenario `factor` times as fast: 10 shows a 60 s stage in 6 s.
+   * Allowed at any time; it is kept across restart().
+   */
+  setSpeed(factor: number): void {
+    this.player.setSpeed(factor);
+  }
+
+  get speed(): number {
+    return this.player.speed;
+  }
+
+  get isPaused(): boolean {
+    return this.player.isPaused;
+  }
+
+  /**
+   * "Now" inside the scenario, in the same timeline as the timestamps of
+   * statusSince and startedAt. At speed above 1 it runs faster than the
+   * clock and it stands still while paused, so derive an agent's waiting time
+   * as `virtualNow() - Date.parse(statusSince)`, not from Date.now(). That is
+   * what makes the wilting stages play at speed.
+   */
+  virtualNow(): number {
+    return this.player.virtualNow();
   }
 
   /**

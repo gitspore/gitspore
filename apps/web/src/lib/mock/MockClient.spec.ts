@@ -266,4 +266,83 @@ describe("MockClient", () => {
       expect(errors[0].code).toBe("session_not_found");
     });
   });
+
+  describe("playback controls", () => {
+    it("exposes the name of the scenario", () => {
+      const { client } = setup();
+
+      expect(client.scenarioName).toBe("test");
+    });
+
+    it("plays faster after setSpeed", () => {
+      const { client, clock, chunks } = setup([data(1000, "a")]);
+
+      client.setSpeed(10);
+      clock.advance(100);
+
+      expect(client.speed).toBe(10);
+      expect(chunks).toEqual(["a"]);
+    });
+
+    it("holds the scenario back while paused, and goes on after resume", () => {
+      const { client, clock, chunks } = setup([data(100, "a")]);
+
+      client.pause();
+      clock.advance(1000);
+      expect(client.isPaused).toBe(true);
+      expect(chunks).toEqual([]);
+
+      client.resume();
+      clock.advance(100);
+      expect(client.isPaused).toBe(false);
+      expect(chunks).toEqual(["a"]);
+    });
+
+    it("runs virtualNow at the chosen speed", () => {
+      const { client, clock } = setup();
+      client.setSpeed(60);
+      const before = client.virtualNow();
+
+      clock.advance(1000);
+
+      expect(client.virtualNow() - before).toBe(60_000);
+    });
+
+    it("restarts with a fresh snapshot and keeps the speed", () => {
+      const { client, clock, snapshots, chunks } = setup([data(1000, "a")]);
+      client.setSpeed(10);
+      clock.advance(100);
+
+      client.restart();
+      expect(snapshots).toHaveLength(2);
+      expect(client.speed).toBe(10);
+
+      clock.advance(100);
+      expect(chunks).toEqual(["a", "a"]);
+    });
+
+    it("restarts without the sessions and timers of the run before", () => {
+      const { client, clock, patches, errors } = setup();
+      const sessionId = sessionOf(openTerminal(client, agent.id));
+      dispatchAgent(client); // plans "working"
+
+      client.restart();
+      clock.advance(5000);
+      client.emit("terminal:input", { sessionId, data: "x" });
+
+      expect(patches).toHaveLength(1); // "starting" only, no "working"
+      expect(errors[0].code).toBe("session_not_found");
+    });
+
+    it("plays again from the start after a restart from pause", () => {
+      const { client, clock, chunks } = setup([data(100, "a")]);
+      client.pause();
+
+      client.restart();
+      clock.advance(100);
+
+      expect(client.isPaused).toBe(false);
+      expect(chunks).toEqual(["a"]);
+    });
+  });
 });
