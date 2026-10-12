@@ -119,8 +119,12 @@ export default function AppShell() {
 				----------
 			*/}
       {layout.sidePanel && (
-        <aside className="pointer-events-auto rounded-xl bg-panel p-2 text-ink [grid-area:panel]">
-          <SidePanel />
+        <aside className="pointer-events-auto overflow-y-auto rounded-xl bg-panel p-2 text-ink shadow-lg [grid-area:panel]">
+          <SidePanel
+            tab={layout.sidePanel}
+            onTabChange={(tab) => setLayout((l) => ({ ...l, sidePanel: tab }))}
+            onClose={() => setLayout((l) => ({ ...l, sidePanel: null }))}
+          />
         </aside>
       )}
     </div>

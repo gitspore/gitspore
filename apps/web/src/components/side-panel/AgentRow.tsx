@@ -5,7 +5,6 @@ import type { Agent, AgentStatus } from "@gitspore/shared";
 import { Circle, Diamond, Flower, Triangle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-
 const STATUS_WORD: Record<AgentStatus, string> = {
   starting: "starting",
   working: "growing",
