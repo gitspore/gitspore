@@ -1,23 +1,14 @@
 import { loadRepoConfig } from "./load-repo-config";
+import { initRepo } from "../../test/git-repo";
+
 import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { mkdtemp, mkdir, realpath, rm } from "node:fs/promises";
-import { simpleGit } from "simple-git";
 
 //
 //
 //
-// A real repo with one empty commit on `branch`.
-async function initRepo(dir: string, branch = "main") {
-  const git = simpleGit(dir);
-  await git.init(["--initial-branch", branch]);
-  await git.addConfig("user.name", "gitspore test");
-  await git.addConfig("user.email", "test@gitspore.invalid");
-  await git.addConfig("commit.gpgsign", "false");
-  await git.raw(["commit", "--allow-empty", "-m", "initial"]);
-  return git;
-}
 
 describe("loadRepoConfig", () => {
   let dir: string;
