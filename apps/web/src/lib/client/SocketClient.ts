@@ -6,7 +6,9 @@ import type {
 import type { ConnectionStatus, GreenhouseClient } from "./GreenhouseClient";
 import { ConnectionStatusSource } from "./ConnectionStatusSource";
 
-const TOKEN_REJECTED =
+export const TOKEN_MISSING =
+  "Session token missing – open GitSpore from the daemon";
+export const TOKEN_REJECTED =
   "Session token invalid – reopen GitSpore from the daemon";
 
 /**
@@ -20,18 +22,24 @@ const TOKEN_REJECTED =
  */
 export class SocketClient implements GreenhouseClient {
   private readonly socket: Socket<ServerToClientEvents, ClientToServerEvents>;
-  private statusSource = new ConnectionStatusSource({
-    kind: "offline",
-    reason: "Not connected yet",
-  });
+  private readonly statusSource: ConnectionStatusSource;
 
   /**
    * @param url Where the daemon listens, e.g. http://localhost:3001.
    * @param token The session token the daemon printed on start. It goes into
    *   the Socket.io handshake `auth`, the daemon rejects the connection
-   *   without it.
+   *   without it. Null if the page was opened without one: the client then
+   *   stays offline with a message and connect() does nothing, instead of
+   *   knocking on the daemon with a handshake that is sure to fail.
    */
-  constructor(url: string, token: string) {
+  constructor(
+    url: string,
+    private readonly token: string | null,
+  ) {
+    this.statusSource = new ConnectionStatusSource({
+      kind: "offline",
+      reason: token === null ? TOKEN_MISSING : "Not connected yet",
+    });
     this.socket = io(url, { autoConnect: false, auth: { token } });
     this.socket.on("connect", () => {
       this.statusSource.set({ kind: "connected" });
@@ -56,6 +64,7 @@ export class SocketClient implements GreenhouseClient {
   }
 
   connect(): void {
+    if (this.token === null) return;
     this.socket.connect();
   }
 

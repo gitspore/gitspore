@@ -11,6 +11,7 @@ import { MockClient } from "../mock/MockClient";
 import { resolveClientMode } from "./clientMode";
 import { createClient } from "./createClient";
 import type { GreenhouseClient } from "./GreenhouseClient";
+import { resolveSessionToken } from "./sessionToken";
 
 const ClientContext = createContext<GreenhouseClient | null>(null);
 
@@ -28,7 +29,22 @@ function getCreated(): Created {
         useMockEnv: process.env.NEXT_PUBLIC_USE_MOCK,
         search: window.location.search,
       });
-      cache = { client: createClient(mode) };
+      // Only the daemon needs the token. Reading it also takes it out of the
+      // address bar, so the mock leaves the URL alone.
+      const token =
+        mode.kind === "socket"
+          ? resolveSessionToken({
+              search: window.location.search,
+              storage: window.sessionStorage,
+              replaceSearch: (search) =>
+                window.history.replaceState(
+                  null,
+                  "",
+                  window.location.pathname + search + window.location.hash,
+                ),
+            })
+          : null;
+      cache = { client: createClient(mode, token) };
     } catch (e) {
       cache = { error: e instanceof Error ? e : new Error(String(e)) };
     }

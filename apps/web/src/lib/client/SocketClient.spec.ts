@@ -1,9 +1,9 @@
 import { io } from "socket.io-client";
-import { SocketClient } from "./SocketClient";
+import { SocketClient, TOKEN_MISSING } from "./SocketClient";
 
 jest.mock("socket.io-client", () => ({ io: jest.fn() }));
 
-function setup(token = "test-token") {
+function setup({ token = "test-token" }: { token?: string | null } = {}) {
   const socket = {
     connect: jest.fn(),
     disconnect: jest.fn(),
@@ -43,8 +43,16 @@ describe("SocketClient", () => {
     expect(socket.connect).not.toHaveBeenCalled();
   });
 
+  it("does not connect the socket without a session token", () => {
+    const { client, socket } = setup({ token: null });
+
+    client.connect();
+
+    expect(socket.connect).not.toHaveBeenCalled();
+  });
+
   it("sends the session token in the handshake auth", () => {
-    setup("my-session-token");
+    setup({ token: "my-session-token" });
 
     expect(io).toHaveBeenCalledWith(
       "http://daemon:1234",
@@ -111,6 +119,15 @@ describe("SocketClient", () => {
       expect(client.getStatus()).toEqual({
         kind: "offline",
         reason: "Not connected yet",
+      });
+    });
+
+    it("is offline with a message when there is no session token", () => {
+      const { client } = setup({ token: null });
+
+      expect(client.getStatus()).toEqual({
+        kind: "offline",
+        reason: TOKEN_MISSING,
       });
     });
 
