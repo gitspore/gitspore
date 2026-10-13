@@ -4,6 +4,7 @@ import ConnectionStatus, { type Connection } from "./ConnectionStatus";
 import Logo from "./Logo";
 import ThemeToggle from "./ThemeToggle";
 import WaitBadge from "./WaitBadge";
+import HelpPopover from "./HelpPopover";
 
 // The bar along the top.
 
@@ -56,6 +57,7 @@ export default function TopBar({
         </span>
       )}
       <ConnectionStatus status={connection} />
+      <HelpPopover />
       <ThemeToggle />
     </div>
   );
