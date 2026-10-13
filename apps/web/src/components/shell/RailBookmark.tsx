@@ -15,6 +15,7 @@ type RailBookmarkProps = {
   onClick: () => void;
   // Number of waiting agents, shown as a red count badge
   count?: number;
+  className?: string;
 };
 
 export default function RailBookmark({
@@ -23,6 +24,7 @@ export default function RailBookmark({
   open,
   onClick,
   count = 0,
+  className,
 }: RailBookmarkProps) {
   return (
     <Tooltip>
@@ -39,6 +41,7 @@ export default function RailBookmark({
               open
                 ? "w-bookmark-width-open bg-primary text-primary-foreground"
                 : "w-bookmark-width bg-plate text-plate-ink hover:w-bookmark-width-hover",
+              className,
             )}
           />
         }

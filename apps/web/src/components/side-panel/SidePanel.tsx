@@ -125,7 +125,8 @@ export default function SidePanel({
         value={tab}
         onValueChange={(value) => onTabChange(value as SidePanelTab)}
       >
-        <TabsList className="h-11 w-full rounded-lg bg-panel-2 p-1">
+
+        <TabsList className="group-data-horizontal/tabs:h-auto w-full rounded-lg bg-panel-2 p-1">
           {TABS.map((t) => (
             <TabsTrigger
               key={t.value}
