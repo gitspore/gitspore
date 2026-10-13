@@ -8,10 +8,11 @@ import {
   type ServerToClientEvents,
   type StatePatch,
 } from "@gitspore/shared";
-import { GreenhouseClient } from "../client/GreenhouseClient";
+import { ConnectionStatus, GreenhouseClient } from "../client/GreenhouseClient";
 import { ScenarioPlayer } from "./ScenarioPlayer";
 import { Scenario, ScenarioEntry } from "./scenario";
 import { Clock, realClock, TimerHandle } from "./clock";
+import { ConnectionStatusSource } from "../client/ConnectionStatusSource";
 
 type AnyListener = ServerToClientEvents[keyof ServerToClientEvents];
 
@@ -81,6 +82,11 @@ export class MockClient implements GreenhouseClient {
   private timers = new Set<TimerHandle>();
   // True between connect() and disconnect().
   private connected = false;
+  // The current connection status
+  private statusSource = new ConnectionStatusSource({
+    kind: "offline",
+    reason: "Not connected yet",
+  });
   // Commands emitted while not connected, run by the next connect().
   private queued: (() => void)[] = [];
   private readonly handlers: Handlers = {
@@ -193,7 +199,8 @@ export class MockClient implements GreenhouseClient {
    * after the snapshot.
    */
   connect(): void {
-    this.disconnect();
+    this.reset();
+    this.statusSource.set({ kind: "connected" });
     this.player.start();
     this.connected = true;
 
@@ -208,6 +215,11 @@ export class MockClient implements GreenhouseClient {
    * Listeners stay registered, so connect() can be called again.
    */
   disconnect(): void {
+    this.reset();
+    this.statusSource.set({ kind: "offline", reason: "Disconnected" });
+  }
+
+  private reset(): void {
     this.connected = false;
     this.player.stop();
     this.timers.forEach((t) => this.clock.clearTimeout(t));
@@ -260,6 +272,18 @@ export class MockClient implements GreenhouseClient {
    */
   virtualNow(): number {
     return this.player.virtualNow();
+  }
+
+  now(): number {
+    return this.virtualNow();
+  }
+
+  getStatus(): ConnectionStatus {
+    return this.statusSource.get();
+  }
+
+  subscribeStatus(listener: () => void): () => void {
+    return this.statusSource.subscribe(listener);
   }
 
   /**
