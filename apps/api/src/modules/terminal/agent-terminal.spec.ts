@@ -1,37 +1,8 @@
 import { getDefaultShell } from "@/common/shell";
-import {
-  AgentTerminal,
-  type AgentTerminalOptions,
-  type Pty,
-} from "./agent-terminal";
+import { AgentTerminal, type AgentTerminalOptions } from "./agent-terminal";
 
 import { TerminalError } from "./terminal-error";
-
-class FakePty implements Pty {
-  readonly write = jest.fn();
-  readonly resize = jest.fn();
-  readonly kill = jest.fn();
-  private sendData?: (chunk: string) => void;
-  private sendExit?: (event: { exitCode: number }) => void;
-
-  readonly onData: Pty["onData"] = (listener) => {
-    this.sendData = listener;
-    return { dispose: () => {} };
-  };
-
-  readonly onExit: Pty["onExit"] = (listener) => {
-    this.sendExit = listener;
-    return { dispose: () => {} };
-  };
-
-  output(chunk: string) {
-    this.sendData?.(chunk);
-  }
-
-  exit(exitCode: number) {
-    this.sendExit?.({ exitCode });
-  }
-}
+import { FakePty } from "../../../test/fake-pty";
 
 const OPTIONS: AgentTerminalOptions = {
   cwd: "/repo/spore-42",
@@ -241,5 +212,20 @@ describe("AgentTerminal", () => {
 
     expect(pty.resize).not.toHaveBeenCalled();
     expect(pty.write).not.toHaveBeenCalled();
+  });
+
+  it("tells its owner the exit code after the viewers", () => {
+    const pty = new FakePty();
+    const onExit = jest.fn();
+    const terminal = new AgentTerminal(() => pty, OPTIONS, onExit);
+    const viewer = fakeViewer();
+    terminal.attach("session-1", viewer);
+
+    pty.exit(3);
+
+    expect(onExit).toHaveBeenCalledWith(3);
+    expect(viewer.onExit.mock.invocationCallOrder[0]).toBeLessThan(
+      onExit.mock.invocationCallOrder[0],
+    );
   });
 });

@@ -74,7 +74,11 @@ export class AgentTerminal {
   private rows = DEFAULT_ROWS;
   private exited = false;
 
-  constructor(spawnPty: SpawnPty, options: AgentTerminalOptions) {
+  constructor(
+    spawnPty: SpawnPty,
+    options: AgentTerminalOptions,
+    private readonly onExit?: (exitCode: number) => void,
+  ) {
     this.pty = startInShell(spawnPty, options);
     this.pty.onData((chunk) => this.batcher.push(chunk));
     this.pty.onExit(({ exitCode }) => this.handleExit(exitCode));
@@ -135,5 +139,6 @@ export class AgentTerminal {
     for (const viewer of this.viewers.values()) {
       viewer.onExit(exitCode);
     }
+    this.onExit?.(exitCode);
   }
 }

@@ -1,4 +1,5 @@
-export type TerminalErrorCode = "unsafe_argument";
+export type TerminalErrorCode =
+  "unsafe_argument" | "agent_not_found" | "already_running" | "limit_reached";
 
 export class TerminalError extends Error {
   constructor(
