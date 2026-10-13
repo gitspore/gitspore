@@ -10,6 +10,8 @@ const isContinuationByte = (byte: number) =>
 // character, it moves forward to the next one, so the rest is valid UTF-8.
 function dropFront(text: string, bytes: number): string {
   const encoded = Buffer.from(text);
+  //start is here a position showing the index of the first
+  // byte we keep in the byte array
   let start = bytes;
   while (start < encoded.length && isContinuationByte(encoded[start])) {
     start++;
