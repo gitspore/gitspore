@@ -3,7 +3,11 @@ import type {
   ClientToServerEvents,
   ServerToClientEvents,
 } from "@gitspore/shared";
-import type { GreenhouseClient } from "./GreenhouseClient";
+import type { ConnectionStatus, GreenhouseClient } from "./GreenhouseClient";
+import { ConnectionStatusSource } from "./ConnectionStatusSource";
+
+const TOKEN_REJECTED =
+  "Session token invalid – reopen GitSpore from the daemon";
 
 /**
  * The GreenhouseClient for the real daemon (apps/api): a thin wrapper around
@@ -16,10 +20,39 @@ import type { GreenhouseClient } from "./GreenhouseClient";
  */
 export class SocketClient implements GreenhouseClient {
   private readonly socket: Socket<ServerToClientEvents, ClientToServerEvents>;
+  private statusSource = new ConnectionStatusSource({
+    kind: "offline",
+    reason: "Not connected yet",
+  });
 
-  /** @param url Where the daemon listens, e.g. http://localhost:3001. */
-  constructor(url: string) {
-    this.socket = io(url, { autoConnect: false });
+  /**
+   * @param url Where the daemon listens, e.g. http://localhost:3001.
+   * @param token The session token the daemon printed on start. It goes into
+   *   the Socket.io handshake `auth`, the daemon rejects the connection
+   *   without it.
+   */
+  constructor(url: string, token: string) {
+    this.socket = io(url, { autoConnect: false, auth: { token } });
+    this.socket.on("connect", () => {
+      this.statusSource.set({ kind: "connected" });
+    });
+    this.socket.on("disconnect", () => {
+      this.statusSource.set(
+        this.socket.active
+          ? { kind: "reconnecting" }
+          : { kind: "offline", reason: "Disconnected" },
+      );
+    });
+    this.socket.io.on("reconnect_attempt", () => {
+      this.statusSource.set({ kind: "reconnecting" });
+    });
+    this.socket.on("connect_error", () => {
+      this.statusSource.set(
+        this.socket.active
+          ? { kind: "reconnecting" }
+          : { kind: "offline", reason: TOKEN_REJECTED },
+      );
+    });
   }
 
   connect(): void {
@@ -51,5 +84,17 @@ export class SocketClient implements GreenhouseClient {
     listener: ServerToClientEvents[E],
   ): void {
     this.socket.off(event, listener as never);
+  }
+
+  now(): number {
+    return Date.now();
+  }
+
+  getStatus(): ConnectionStatus {
+    return this.statusSource.get();
+  }
+
+  subscribeStatus(listener: () => void): () => void {
+    return this.statusSource.subscribe(listener);
   }
 }
