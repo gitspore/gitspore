@@ -128,10 +128,16 @@ export class AgentTerminal {
   }
 
   // node-pty throws when an exited PTY is resized, and in a timer that
-  // would be an uncaught exception that ends the daemon.
+  // would be an uncaught exception that ends the daemon. On Windows the
+  // shell can be gone before onExit fires, so the flag alone isn't enough.
   private resizePty(cols: number, rows: number): void {
-    if (!this.exited) {
+    if (this.exited) {
+      return;
+    }
+    try {
       this.pty.resize(cols, rows);
+    } catch {
+      // The shell has just exited; onExit follows.
     }
   }
 

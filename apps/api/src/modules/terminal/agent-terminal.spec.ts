@@ -214,6 +214,17 @@ describe("AgentTerminal", () => {
     expect(pty.write).not.toHaveBeenCalled();
   });
 
+  it("ignores a resize the PTY refuses because its shell just exited", () => {
+    const pty = new FakePty();
+    const terminal = new AgentTerminal(() => pty, OPTIONS);
+    terminal.attach("session-1", fakeViewer());
+    pty.resize.mockImplementation(() => {
+      throw new Error("Cannot resize a pty that has already exited");
+    });
+
+    expect(() => jest.advanceTimersByTime(50)).not.toThrow();
+  });
+
   it("tells its owner the exit code after the viewers", () => {
     const pty = new FakePty();
     const onExit = jest.fn();

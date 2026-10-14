@@ -102,7 +102,7 @@ The last three are mistakes on the daemon's side (#16), not something a tab can 
 
 - **No quoting.** `command` and `args` are typed into the shell as they are, joined by spaces. Every part must match `/^[\w./:=+-]+$/`: no spaces, quotes, `$`, `;`, backticks, `\` or `@` (PowerShell splatting), and not empty. Anything else is `unsafe_argument`. For #16: write the issue prompt to a file in the worktree and pass its relative path.
 - **Why a shell, not the command directly.** An interactive shell reads `.bashrc` (so `claude` installed through nvm is on the PATH), Ctrl+C stops the command but not the terminal, and `claude.cmd` works on Windows. All of this is in `startInShell()` in `agent-terminal.ts`. Starting the command directly later would only change that function.
-- **After the shell exits, `write` and `resize` are ignored.** node-pty throws on a resize after exit, and inside the redraw timer that would crash the daemon.
+- **After the shell exits, `write` and `resize` are ignored.** node-pty throws on a resize after exit, and inside the redraw timer that would crash the daemon. On Windows node-pty already refuses a resize before `onExit` fires, so `AgentTerminal` also ignores a resize that throws.
 - **Windows: the PTY is released after the shell exits.** ConPTY keeps its pipes open until `kill()` is called, so `AgentTerminal` calls it after every exit on Windows (`docs/decisions.md`, "Offen für GS-03"). Not on Unix, where `kill()` would signal a process id that may already belong to someone else.
 - **`TerminalService` gets node-pty's `spawn` through the token `SPAWN_PTY`.** `SpawnPty` is a function type, and Nest can't inject by type. Tests call `new TerminalService(fakeSpawn)` without Nest and never load the native module.
 
