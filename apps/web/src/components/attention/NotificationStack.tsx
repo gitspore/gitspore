@@ -37,9 +37,7 @@ export default function NotificationStack({
           agent={agent}
           onOpen={() => onOpen(agent)}
           onOpenBeside={() => onOpenBeside(agent)}
-          onDismiss={() =>
-            setDismissed((d) => new Set(d).add(waitKey(agent)))
-          }
+          onDismiss={() => setDismissed((d) => new Set(d).add(waitKey(agent)))}
         />
       ))}
     </div>

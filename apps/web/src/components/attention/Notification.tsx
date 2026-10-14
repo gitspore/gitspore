@@ -30,7 +30,8 @@ export default function Notification({
         #{agent.issueNumber} needs you
       </h3>
       <p className="mt-0.5 mb-3 text-ui-body">
-        Waiting{seconds !== null && ` for ${formatSeconds(seconds)}`} · pot {pot}
+        Waiting{seconds !== null && ` for ${formatSeconds(seconds)}`} · pot{" "}
+        {pot}
       </p>
 
       <button
@@ -43,7 +44,11 @@ export default function Notification({
       </button>
 
       <div className="flex gap-2">
-        <Button variant="primary-on-wait" className="h-10 px-4" onClick={onOpenBeside}>
+        <Button
+          variant="primary-on-wait"
+          className="h-10 px-4"
+          onClick={onOpenBeside}
+        >
           Open beside
         </Button>
         <Button variant="on-wait" className="h-10 px-4" onClick={onOpen}>

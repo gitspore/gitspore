@@ -127,7 +127,6 @@ export default function SidePanel({
         className="gap-3"
         onValueChange={(value) => onTabChange(value as SidePanelTab)}
       >
-
         <TabsList className="group-data-horizontal/tabs:h-auto w-full rounded-lg bg-panel-2 p-1">
           {TABS.map((t) => (
             <TabsTrigger
