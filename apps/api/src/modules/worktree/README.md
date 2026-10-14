@@ -2,12 +2,13 @@
 
 Gives every agent its own git worktree: a separate folder of the repo on its own `spore/…` branch, so up to six agents work in parallel without touching each other's files or the user's checkout. The module only creates, lists and removes worktrees. Starting Claude Code in one is the agent ticket (#16).
 
-| File                | Holds                                                                    |
-| ------------------- | ------------------------------------------------------------------------ |
-| `worktree.service`  | `WorktreeService`: `create`, `list`, `remove`, cleanup at startup        |
-| `worktree-error.ts` | `WorktreeError` with a `code` (see [Errors](#errors))                    |
-| `branch-name.ts`    | `branchName(issueNumber, title)`, the pure function that builds the name |
-| `worktree.module`   | Provides and exports `WorktreeService`; imports `RepoConfigModule`       |
+| File                | Holds                                                              |
+| ------------------- | ------------------------------------------------------------------ |
+| `worktree.service`  | `WorktreeService`: `create`, `list`, `remove`, cleanup at startup  |
+| `worktree-error.ts` | `WorktreeError` with a `code` (see [Errors](#errors))              |
+| `worktree.module`   | Provides and exports `WorktreeService`; imports `RepoConfigModule` |
+
+The branch name comes from `branchForIssue(issueNumber, title)` in `packages/shared/src/branch.ts`, next to `issueNumberFromBranch`, which reads the number back.
 
 ## Where worktrees go
 
@@ -77,4 +78,4 @@ Anything else (git missing, timeout) is simple-git's `GitError`.
 
 ## Tests
 
-`worktree.service.spec.ts` runs against real temporary repos (`initRepo` from `apps/api/test/git-repo.ts`) next to a `.gitspore-worktrees` folder in `os.tmpdir()`, on Ubuntu, macOS and Windows in CI. `branch-name.spec.ts` tests the slug without git. Run them with `npm run test:api`.
+`worktree.service.spec.ts` runs against real temporary repos (`initRepo` from `apps/api/test/git-repo.ts`) next to a `.gitspore-worktrees` folder in `os.tmpdir()`, on Ubuntu, macOS and Windows in CI. The branch name rules are tested in `packages/shared/src/branch.spec.ts`. Run them with `npm run test:api`.
