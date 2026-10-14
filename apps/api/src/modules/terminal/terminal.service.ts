@@ -23,15 +23,22 @@ export type SpawnRequest = {
   args: string[];
 };
 
-// ownerId is the socket that opens the session (socket.id in the gateway).
+// ownerId is the socket that opens the session.
 export type AttachRequest = Viewer & { ownerId: string };
 
+// each tab (socket) gets its own session for same agent.
 type Session = { agentId: AgentId; ownerId: string };
 
+type ExitListener = (agentId: AgentId, exitCode: number) => void;
+
+//
+//
+//
 @Injectable()
 export class TerminalService {
   private readonly terminals = new Map<AgentId, AgentTerminal>();
   private readonly sessions = new Map<SessionId, Session>();
+  private readonly exitListeners: ExitListener[] = [];
 
   constructor(@Inject(SPAWN_PTY) private readonly spawnPty: SpawnPty) {}
 
@@ -48,25 +55,89 @@ export class TerminalService {
         `At most ${MAX_TERMINALS} terminals can run at once`,
       );
     }
-    this.terminals.set(agentId, new AgentTerminal(this.spawnPty, options));
+    const terminal = new AgentTerminal(this.spawnPty, options, (exitCode) =>
+      this.handleExit(agentId, exitCode),
+    );
+    this.terminals.set(agentId, terminal);
   }
 
   attach(
     agentId: AgentId,
     { ownerId, ...viewer }: AttachRequest,
   ): { sessionId: SessionId } {
-    const terminal = this.terminalOf(agentId);
+    const terminal = this.terminalOfAgent(agentId);
     const sessionId = randomUUID();
     this.sessions.set(sessionId, { agentId, ownerId });
     terminal.attach(sessionId, viewer);
     return { sessionId };
   }
 
-  private terminalOf(agentId: AgentId): AgentTerminal {
+  write(sessionId: SessionId, ownerId: string, data: string): void {
+    this.terminalOfSession(sessionId, ownerId).write(data);
+  }
+
+  resize(
+    sessionId: SessionId,
+    ownerId: string,
+    cols: number,
+    rows: number,
+  ): void {
+    this.terminalOfSession(sessionId, ownerId).resize(cols, rows);
+  }
+
+  detach(sessionId: SessionId, ownerId: string): void {
+    const terminal = this.terminalOfSession(sessionId, ownerId);
+    this.sessions.delete(sessionId);
+    terminal.detach(sessionId);
+  }
+
+  // call from gateway when its
+  // socket disconnects, so a closed tab is not a viewer anymore.
+  detachOwner(ownerId: string): void {
+    for (const [sessionId, session] of this.sessions) {
+      if (session.ownerId === ownerId) {
+        this.detach(sessionId, ownerId);
+      }
+    }
+  }
+
+  onExited(listener: ExitListener): void {
+    this.exitListeners.push(listener);
+  }
+
+  // -------------private helpers:-----------------------
+  private terminalOfAgent(agentId: AgentId): AgentTerminal {
     const terminal = this.terminals.get(agentId);
     if (terminal === undefined) {
       throw new TerminalError("agent_not_found", `No terminal for ${agentId}`);
     }
     return terminal;
+  }
+
+  private terminalOfSession(
+    sessionId: SessionId,
+    ownerId: string,
+  ): AgentTerminal {
+    const session = this.sessions.get(sessionId);
+    if (session === undefined || session.ownerId !== ownerId) {
+      throw new TerminalError("session_not_found", `No session ${sessionId}`);
+    }
+    return this.terminalOfAgent(session.agentId);
+  }
+
+  private forget(agentId: AgentId): void {
+    this.terminals.delete(agentId);
+    for (const [sessionId, session] of this.sessions) {
+      if (session.agentId === agentId) {
+        this.sessions.delete(sessionId);
+      }
+    }
+  }
+
+  private handleExit(agentId: AgentId, exitCode: number): void {
+    this.forget(agentId);
+    for (const listener of this.exitListeners) {
+      listener(agentId, exitCode);
+    }
   }
 }
