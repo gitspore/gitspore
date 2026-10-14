@@ -12,6 +12,7 @@ import { mockAgents, mockIssues, mockUsage } from "@/lib/mock";
 import { useSceneEnabled } from "@/lib/scene";
 import Scene from "../Scene";
 import { Button } from "../ui/button";
+import NotificationStack from "../attention/NotificationStack";
 import SidePanel from "../side-panel/SidePanel";
 import ToolRail from "./ToolRail";
 import TopBar from "./TopBar";
@@ -49,6 +50,21 @@ export default function AppShell() {
     } else {
       setLayout((l) => ({ ...l, mode: "scene", sidePanel: panelBeforeFocus }));
     }
+  }
+
+  // Open: this agent's window alone, the others minimised.
+  // Beside: this window next to the ones already visible.
+  function openAgent(agent: Agent, beside: boolean) {
+    setSelectedSlot(agent.slotIndex);
+    setLayout((l) => {
+      const others = l.windows
+        .filter((w) => w.agentId !== agent.id)
+        .map((w) => (beside ? w : { ...w, minimised: true }));
+      return {
+        ...l,
+        windows: [...others, { agentId: agent.id, minimised: false }],
+      };
+    });
   }
 
   return (
@@ -143,9 +159,6 @@ export default function AppShell() {
             </div>
           </div>
 
-          <div className="pointer-events-auto absolute right-0 bottom-0 rounded-xl bg-wait p-2 text-xs text-wait-ink">
-            notifications
-          </div>
         </section>
 
         {/* 
@@ -168,6 +181,21 @@ export default function AppShell() {
             />
           </aside>
         )}
+
+        {/*
+				-------------
+				Notifications
+				-------------
+			*/}
+        <div className="absolute right-layout-edge bottom-[calc(var(--space-layout-edge)+12px)] flex w-panel-width justify-center">
+          <div className="pointer-events-auto">
+            <NotificationStack
+              agents={agents}
+              onOpen={(agent) => openAgent(agent, false)}
+              onOpenBeside={(agent) => openAgent(agent, true)}
+            />
+          </div>
+        </div>
       </div>
     </>
   );

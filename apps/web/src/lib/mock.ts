@@ -28,7 +28,7 @@ export const mockAgents: Agent[] = [
   agent(0, 12, "working"),
   // Waiting for 50 s: emphasized now, stronger after 10 more seconds
   agent(1, 15, "needs_input", 50),
-  agent(2, 18, "error"),
+  agent(2, 18, "error" , 70),
   agent(3, 21, "done"),
   agent(4, 9, "merged"),
 ];

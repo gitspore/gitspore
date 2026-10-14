@@ -18,6 +18,13 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive text-background hover:bg-[color-mix(in_srgb,var(--destructive)_80%,var(--color-panel))]",
         link: "text-primary underline-offset-4 hover:underline",
+        // components.md: buttons on the red notification, with a 2 px wait-ink outline.
+        // on-wait has no fill, so hover is its text colour at 20 %
+        "on-wait":
+          "border-(length:--border-line) border-wait-ink bg-transparent text-wait-ink hover:bg-[color-mix(in_srgb,var(--color-wait-ink)_20%,transparent)]",
+        // Filled: hover mixes 20 % of the notification into the accent
+        "primary-on-wait":
+          "border-(length:--border-line) border-wait-ink bg-primary text-primary-foreground hover:bg-[color-mix(in_srgb,var(--color-accent)_80%,var(--color-wait))]",
       },
       size: {
         default:

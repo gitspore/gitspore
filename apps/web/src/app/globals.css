@@ -107,3 +107,25 @@ body {
   width: var(--size-hotbar-slot);
   height: var(--size-hotbar-slot);
 }
+
+/*
+  Motion (components.md): the notification nudges sideways every 2.4 s.
+  Use it as motion-safe:animate-nudge, so it stops under prefers-reduced-motion.
+*/
+@theme {
+  --animate-nudge: nudge 2.4s ease-in-out infinite;
+
+  @keyframes nudge {
+    0%,
+    88%,
+    100% {
+      transform: translateX(0);
+    }
+    92% {
+      transform: translateX(-5px);
+    }
+    96% {
+      transform: translateX(4px);
+    }
+  }
+}
