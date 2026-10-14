@@ -228,4 +228,22 @@ describe("AgentTerminal", () => {
       onExit.mock.invocationCallOrder[0],
     );
   });
+
+  it("releases the PTY after the shell exits on Windows", () => {
+    const pty = new FakePty();
+    new AgentTerminal(() => pty, { ...OPTIONS, platform: "win32" });
+
+    pty.exit(0);
+
+    expect(pty.kill).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves an exited PTY alone on Unix", () => {
+    const pty = new FakePty();
+    new AgentTerminal(() => pty, { ...OPTIONS, platform: "linux" });
+
+    pty.exit(0);
+
+    expect(pty.kill).not.toHaveBeenCalled();
+  });
 });

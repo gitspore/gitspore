@@ -21,6 +21,8 @@ export type AgentTerminalOptions = {
   cwd: string;
   command: string;
   args: string[];
+  // Only tests set this, to run the Windows branch on any OS.
+  platform?: NodeJS.Platform;
 };
 
 const TERMINAL_NAME = "xterm-256color";
@@ -73,12 +75,14 @@ export class AgentTerminal {
   private cols = DEFAULT_COLS;
   private rows = DEFAULT_ROWS;
   private exited = false;
+  private readonly platform: NodeJS.Platform;
 
   constructor(
     spawnPty: SpawnPty,
     options: AgentTerminalOptions,
     private readonly onExit?: (exitCode: number) => void,
   ) {
+    this.platform = options.platform ?? process.platform;
     this.pty = startInShell(spawnPty, options);
     this.pty.onData((chunk) => this.batcher.push(chunk));
     this.pty.onExit(({ exitCode }) => this.handleExit(exitCode));
@@ -140,5 +144,10 @@ export class AgentTerminal {
       viewer.onExit(exitCode);
     }
     this.onExit?.(exitCode);
+    // ConPTY (win) keeps its pipes open after the shell exits, until kill()
+    // releases them (docs/decisions.md, "Offen für GS-03").
+    if (this.platform === "win32") {
+      this.pty.kill();
+    }
   }
 }
