@@ -19,26 +19,36 @@ const ASK_COLUMNS =
 // Real-PTY tests that need UTF-8 output. PowerShell gets it in PR 2.
 const itOnUnix = process.platform === "win32" ? it.skip : it;
 
+// Prints the numbers 1 to 10,000, one per line.
+const COUNT_TO_10000 =
+  process.platform === "win32" ? "1..10000" : "seq 1 10000";
+
 describe("TerminalService with a real PTY", () => {
-  let ptys: { pty: IPty; exited: Promise<void> }[];
+  let ptys: { pty: IPty; running: boolean; exited: Promise<void> }[];
   let service: TerminalService;
 
   beforeEach(() => {
     ptys = [];
     service = new TerminalService((file, args, options) => {
       const pty = spawn(file, args, options);
-      ptys.push({
-        pty,
-        exited: new Promise((resolve) => pty.onExit(() => resolve())),
-      });
+      const entry = { pty, running: true, exited: Promise.resolve() };
+      entry.exited = new Promise((resolve) =>
+        pty.onExit(() => {
+          entry.running = false;
+          resolve();
+        }),
+      );
+      ptys.push(entry);
       return pty;
     });
   });
 
   // PR 2's kill() doesn't exist yet, so the test kills its own shells.
   afterEach(async () => {
-    for (const { pty } of ptys) {
-      pty.kill();
+    for (const { pty, running } of ptys) {
+      if (running) {
+        pty.kill();
+      }
     }
     await Promise.all(ptys.map(({ exited }) => exited));
   });
@@ -47,13 +57,21 @@ describe("TerminalService with a real PTY", () => {
   function attachTab(agentId: string, ownerId = "socket-1") {
     let output = "";
     let check: (() => void) | undefined;
+    let chunks = 0;
+    let reportExit!: (exitCode: number) => void;
+    const exited = new Promise<number>((resolve) => {
+      reportExit = resolve;
+    });
+
     const { sessionId } = service.attach(agentId, {
       ownerId,
       onData: (chunk) => {
         output += chunk;
+        chunks += 1;
+
         check?.();
       },
-      onExit: () => {},
+      onExit: (exitCode) => reportExit(exitCode),
     });
 
     // Resolves once `found(output)` is true; fails after 10 s showing the output.
@@ -83,7 +101,13 @@ describe("TerminalService with a real PTY", () => {
     const waitForOutput = (text: string) =>
       waitFor((raw) => raw.includes(text), JSON.stringify(text));
 
-    return { sessionId, waitForLine, waitForOutput };
+    return {
+      sessionId,
+      waitForLine,
+      waitForOutput,
+      chunkCount: () => chunks,
+      exited,
+    };
   }
 
   it('runs "echo gitspore" in the shell and streams the output to a tab', async () => {
@@ -136,4 +160,51 @@ describe("TerminalService with a real PTY", () => {
     },
     30_000,
   );
+
+  it("sends 10,000 lines in far fewer than 10,000 chunks", async () => {
+    service.spawn({
+      agentId: "agent-1",
+      cwd: process.cwd(),
+      command: "echo",
+      args: ["gitspore"],
+    });
+    const browserTab = attachTab("agent-1");
+
+    service.write(browserTab.sessionId, "socket-1", `${COUNT_TO_10000}\r`);
+    await browserTab.waitForLine("10000");
+
+    expect(browserTab.chunkCount()).toBeLessThan(1_000);
+  }, 30_000);
+
+  it("keeps the shell running when a tab detaches", async () => {
+    service.spawn({
+      agentId: "agent-1",
+      cwd: process.cwd(),
+      command: "echo",
+      args: ["gitspore"],
+    });
+    const browserTab = attachTab("agent-1");
+    await browserTab.waitForLine("gitspore");
+
+    service.detach(browserTab.sessionId, "socket-1");
+    const otherBrowserTab = attachTab("agent-1", "socket-2");
+    service.write(otherBrowserTab.sessionId, "socket-2", "echo still-here\r");
+
+    await otherBrowserTab.waitForLine("still-here");
+  }, 30_000);
+
+  it("forgets the terminal when the shell exits", async () => {
+    service.spawn({
+      agentId: "agent-1",
+      cwd: process.cwd(),
+      command: "echo",
+      args: ["gitspore"],
+    });
+    const browserTab = attachTab("agent-1");
+
+    service.write(browserTab.sessionId, "socket-1", "exit\r");
+
+    await expect(browserTab.exited).resolves.toBe(0);
+    expect(() => attachTab("agent-1")).toThrow("No terminal for agent-1");
+  }, 30_000);
 });
