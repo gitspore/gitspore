@@ -120,9 +120,11 @@ const placeholderTicker: Ticker = {
  * client: React runs the effects of children before those of their parent,
  * so they are in place before connect() as well.
  *
- * Everything is created in the browser, not while rendering: the URL is
+ * Everything is created in the browser, never on the server: the URL is
  * unknown at build time (the app is a static export), and the mock must not
- * start on the server.
+ * start on the server. Creating happens in getSnapshot, so during a render,
+ * but only once: the result is cached on globalThis and every later call
+ * returns it.
  */
 export function GreenhouseClientProvider({
   children,
