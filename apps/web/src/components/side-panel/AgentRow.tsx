@@ -98,7 +98,7 @@ export default function AgentRow({
     // Two buttons side by side (a button can't hold another): select and the ⋯ menu
     <div
       className={cn(
-        "group flex h-row w-full items-center gap-1 rounded-lg pr-1 pl-2",
+        "group flex h-row w-full items-center gap-1 rounded-lg pr-1 pl-2 odd:bg-hover",
         waitStage >= 1 && "bg-wait text-wait-ink",
         waitStage === 2 && "h-row-wait rounded-xl",
         selected && "outline-2 outline-line",
@@ -167,7 +167,7 @@ export default function AgentRow({
 
 export function FreeSlotRow({ slot }: { slot: number }) {
   return (
-    <div className="flex h-row items-center gap-3 rounded-lg pr-3 pl-2 text-muted-foreground">
+    <div className="flex h-row items-center gap-3 rounded-lg pr-3 pl-2 text-muted-foreground odd:bg-hover">
       <span className="w-3 font-mono text-ui-meta">
         <span className="sr-only">Pot </span>
         {slot}

@@ -114,6 +114,7 @@ export default function SidePanel({
         <Button
           variant="ghost"
           size="icon"
+          className="size-9 rounded-lg bg-hover hover:bg-ink/20 [&_svg]:size-5"
           aria-label="Close panel"
           onClick={onClose}
         >
@@ -123,6 +124,7 @@ export default function SidePanel({
 
       <Tabs
         value={tab}
+        className="gap-3"
         onValueChange={(value) => onTabChange(value as SidePanelTab)}
       >
 
@@ -140,7 +142,7 @@ export default function SidePanel({
           ))}
         </TabsList>
 
-        <TabsContent value="agents" className="flex flex-col gap-1">
+        <TabsContent value="agents" className="flex flex-col gap-2">
           {Array.from({ length: MAX_SLOTS }, (_, slotIndex) => {
             const agent = agents.find((a) => a.slotIndex === slotIndex);
             if (!agent)
