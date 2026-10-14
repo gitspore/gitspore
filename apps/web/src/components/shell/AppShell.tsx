@@ -8,11 +8,12 @@ import {
   type LayoutSettings,
   type SidePanelTab,
 } from "@/lib/layout";
-import { mockAgents, mockIssues, mockUsage } from "@/lib/mock";
+import { mockAgents, mockContext, mockIssues, mockUsage } from "@/lib/mock";
 import { useSceneEnabled } from "@/lib/scene";
 import Scene from "../Scene";
 import { Button } from "../ui/button";
 import NotificationStack from "../attention/NotificationStack";
+import Window from "../main/Window";
 import SidePanel from "../side-panel/SidePanel";
 import ToolRail from "./ToolRail";
 import TopBar from "./TopBar";
@@ -24,7 +25,8 @@ export default function AppShell() {
   const [layout, setLayout] = useState<LayoutSettings>({
     sidePanel: "agents",
     mode: "scene",
-    windows: [{ agentId: "a1", minimised: false }],
+    // #15 waits in the mock, so the header shows the waiting state
+    windows: [{ agentId: "agent-1", minimised: false }],
   });
 
   // Shared by the top bar and the side panel. Moves to the store with #8.
@@ -39,7 +41,11 @@ export default function AppShell() {
   // No scene with ?scene=off or without WebGL; the interface works the same (#18)
   const showScene = useSceneEnabled();
 
-  const visibleWindows = layout.windows.filter((w) => !w.minimised);
+  // The agents of the visible windows; a window whose agent is gone is skipped
+  const visibleWindows = layout.windows
+    .filter((w) => !w.minimised)
+    .map((w) => agents.find((a) => a.id === w.agentId))
+    .filter((agent) => agent !== undefined);
   const waitingCount = agents.filter((a) => a.status === "needs_input").length;
 
   // R6: entering focus mode closes the side panel; leaving it restores the panel
@@ -139,8 +145,27 @@ export default function AppShell() {
           style={mainGrid(layout)}
         >
           {visibleWindows.length > 0 && (
-            <div className="pointer-events-auto rounded-xl bg-terminal-bg p-2 text-terminal-fg [grid-area:windows]">
-              {visibleWindows.length} window(s)
+            // Side by side for now; tiling (1, 2, 2+1, 2×2) comes with WindowGrid
+            <div className="pointer-events-auto flex gap-2 [grid-area:windows]">
+              {visibleWindows.map((agent) => (
+                <Window
+                  key={agent.id}
+                  agent={agent}
+                  issueTitle={
+                    mockIssues.find((i) => i.number === agent.issueNumber)
+                      ?.title ?? ""
+                  }
+                  context={mockContext[agent.id]}
+                  onMinimise={() =>
+                    setLayout((l) => ({
+                      ...l,
+                      windows: l.windows.map((w) =>
+                        w.agentId === agent.id ? { ...w, minimised: true } : w,
+                      ),
+                    }))
+                  }
+                />
+              ))}
             </div>
           )}
 

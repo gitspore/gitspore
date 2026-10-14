@@ -15,7 +15,16 @@ export type UsageLimit = { percent: number; resetsAt?: string };
 // Both windows can be missing: API key, before the first answer, after a reset
 export type PlanUsage = { fiveHour?: UsageLimit; week?: UsageLimit };
 
-export default function UsageMeter( { label, percent, resetsAt } : UsageMeterProps ) {
+// How full one agent's context is, for its window header.
+export type ContextUsage = { percent: number; tokens: number };
+
+// 701000 -> "701k", 20800000 -> "20.8M"
+const formatTokens = (n: number) =>
+  new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 })
+    .format(n)
+    .replace("K", "k");
+
+export default function UsageMeter( { label, percent, resetsAt, tokens } : UsageMeterProps ) {
 
   const state : MeterState = percent >= 100 ? "full" : percent >= 80 ? "warn" : "normal";
   const fill = { normal: "bg-line", warn: "bg-status-review", full: "bg-wait" }[state];
@@ -33,6 +42,11 @@ export default function UsageMeter( { label, percent, resetsAt } : UsageMeterPro
       {state === "full" && resetsAt && (
         <span className="text-mono-key font-mono tabular-nums">
           · {new Date(resetsAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+        </span>
+      )}
+      {tokens !== undefined && (
+        <span className="text-nowrap">
+          · <span className="text-mono-key font-mono tabular-nums">{formatTokens(tokens)}</span> tokens
         </span>
       )}
     </Meter.Root>

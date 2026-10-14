@@ -1,43 +1,16 @@
 "use client";
 
-import type { Agent, AgentStatus } from "@gitspore/shared";
-import { Circle, Diamond, Ellipsis, Flower, Triangle, X } from "lucide-react";
+import type { Agent } from "@gitspore/shared";
+import { Ellipsis } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { STATUS_COLOUR, STATUS_ICON, STATUS_WORD } from "@/lib/status";
 import { formatSeconds, useSecondsSince } from "@/lib/time";
 import { cn } from "@/lib/utils";
-
-const STATUS_WORD: Record<AgentStatus, string> = {
-  starting: "starting",
-  working: "growing",
-  needs_input: "waiting",
-  error: "wilted",
-  done: "review",
-  merged: "merged",
-};
-
-// Status is never shown by colour alone: every status also has a shape
-const STATUS_ICON: Record<AgentStatus, typeof Circle> = {
-  starting: Circle,
-  working: Circle,
-  needs_input: Triangle,
-  error: X,
-  done: Diamond,
-  merged: Flower,
-};
-
-const STATUS_COLOUR: Record<AgentStatus, string> = {
-  starting: "text-muted-foreground",
-  working: "text-status-working",
-  needs_input: "text-status-waiting",
-  error: "text-status-error",
-  done: "text-status-review",
-  merged: "text-status-merged",
-};
 
 type AgentRowProps = {
   agent: Agent;
