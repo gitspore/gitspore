@@ -28,6 +28,7 @@ const browserTab = service.attach("agent-1", {
   onData: (chunk) => process.stdout.write(chunk),
   onExit: (exitCode) => console.log(`\n[browserTab onExit] ${exitCode}`),
 });
+process.stdout.write(browserTab.scrollback);
 
 const resizeToWindow = () =>
   service.resize(

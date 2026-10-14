@@ -27,7 +27,7 @@ other browser tab            ─┼─ Socket.io ─ gateway                    
 
 ```ts
 spawn({ agentId, cwd, command, args }): void
-attach(agentId, { ownerId, onData, onExit }): { sessionId }
+attach(agentId, { ownerId, onData, onExit }): { sessionId, scrollback }
 write(sessionId, ownerId, data): void
 resize(sessionId, ownerId, cols, rows): void
 detach(sessionId, ownerId): void
@@ -37,7 +37,7 @@ onExited((agentId, exitCode) => void): void
 
 **`spawn`** starts the user's shell (`$SHELL`, `powershell.exe` on Windows) in `cwd` with `TERM=xterm-256color` and `COLORTERM=truecolor`, then types `command args…` and Enter into it. It refuses a second terminal for the same agent, and more than `MAX_SLOTS + 1` = 7 terminals (six slot agents plus the overview agent). Both checks run before the shell starts.
 
-**`attach`** opens a session for a tab. The gateway passes `socket.id` as `ownerId` and callbacks that emit `terminal:data` and `terminal:exit`. The tab first gets the scrollback as one chunk, then live output. Then the terminal grows by one column for 50 ms. Full-screen programs like Claude Code only redraw when their size changes, so the new tab sees a complete screen instead of half a scrollback.
+**`attach`** opens a session for a tab and returns its `sessionId` and the scrollback (the last 256 KB, `""` if there was no output yet). The gateway passes `socket.id` as `ownerId` and callbacks that emit `terminal:data` and `terminal:exit`. `attach` doesn't send the scrollback itself: the gateway acks `{ sessionId }` first and then emits the scrollback as the first `terminal:data`, so the tab knows its session id before any output arrives. `onData` carries only live output. After an attach the terminal grows by one column for 50 ms. Full-screen programs like Claude Code only redraw when their size changes, so the new tab sees a complete screen instead of half a scrollback.
 
 **`write`, `resize`, `detach`** need the `ownerId` that opened the session. Another tab's session id gives `session_not_found`, the same as an unknown id, so a tab learns nothing about sessions that aren't its own.
 
@@ -108,9 +108,9 @@ The last three are mistakes on the daemon's side (#16), not something a tab can 
 
 ## Not handled here
 
-- Stopping an agent: `kill(agentId)` and killing the whole process tree (Claude Code starts its own child processes, such as MCP servers). Ending the daemon cleanly with all terminals. PowerShell's UTF-8 output. All in the second PR of #9.
+- Stopping an agent: `kill(agentId)` and killing the whole process tree (Claude Code starts its own child processes, such as MCP servers). Ending the daemon cleanly with all terminals. PowerShell's UTF-8 output. All in #53.
 - Starting Claude Code with the issue prompt, and agent status: #16.
-- The `terminal:*` events: the gateway (no ticket yet). It maps `TerminalError` codes as in [Errors](#errors) and calls `detachOwner` on disconnect.
+- The `terminal:*` events: the gateway (#9, second PR). It acks before it sends the scrollback, maps `TerminalError` codes as in [Errors](#errors) and calls `detachOwner` on disconnect.
 - The browser terminal and fitting it to the window: #11.
 
 ## Trying it by hand

@@ -85,29 +85,31 @@ describe("AgentTerminal", () => {
     expect(spawnPty).not.toHaveBeenCalled();
   });
 
-  it("sends the scrollback first, then live output", () => {
+  it("returns the scrollback from attach, then sends live output", () => {
     const pty = new FakePty();
     const terminal = new AgentTerminal(() => pty, OPTIONS);
     pty.output("before");
     jest.advanceTimersByTime(16);
 
     const viewer = fakeViewer();
-    terminal.attach("session-1", viewer);
+    const scrollback = terminal.attach("session-1", viewer);
     pty.output("after");
     jest.advanceTimersByTime(16);
 
-    expect(viewer.onData.mock.calls).toEqual([["before"], ["after"]]);
+    expect(scrollback).toBe("before");
+    expect(viewer.onData.mock.calls).toEqual([["after"]]);
   });
 
-  it("sends no empty scrollback to a viewer who attaches before any output", () => {
+  it("returns an empty scrollback to a viewer who attaches before any output", () => {
     const pty = new FakePty();
     const terminal = new AgentTerminal(() => pty, OPTIONS);
 
     const viewer = fakeViewer();
-    terminal.attach("session-1", viewer);
+    const scrollback = terminal.attach("session-1", viewer);
     pty.output("hello");
     jest.advanceTimersByTime(16);
 
+    expect(scrollback).toBe("");
     expect(viewer.onData.mock.calls).toEqual([["hello"]]);
   });
 
@@ -124,9 +126,7 @@ describe("AgentTerminal", () => {
     expect(viewer.onData).not.toHaveBeenCalled();
     expect(pty.kill).not.toHaveBeenCalled();
 
-    const next = fakeViewer();
-    terminal.attach("session-2", next);
-    expect(next.onData).toHaveBeenCalledWith("later");
+    expect(terminal.attach("session-2", fakeViewer())).toBe("later");
   });
 
   it("passes a viewer's input to the PTY unchanged", () => {

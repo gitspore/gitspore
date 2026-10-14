@@ -64,12 +64,12 @@ export class TerminalService {
   attach(
     agentId: AgentId,
     { ownerId, ...viewer }: AttachRequest,
-  ): { sessionId: SessionId } {
+  ): { sessionId: SessionId; scrollback: string } {
     const terminal = this.terminalOfAgent(agentId);
     const sessionId = randomUUID();
     this.sessions.set(sessionId, { agentId, ownerId });
-    terminal.attach(sessionId, viewer);
-    return { sessionId };
+    const scrollback = terminal.attach(sessionId, viewer);
+    return { sessionId, scrollback };
   }
 
   write(sessionId: SessionId, ownerId: string, data: string): void {

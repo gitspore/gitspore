@@ -88,13 +88,11 @@ export class AgentTerminal {
     this.pty.onExit(({ exitCode }) => this.handleExit(exitCode));
   }
 
-  attach(sessionId: SessionId, viewer: Viewer): void {
+  attach(sessionId: SessionId, viewer: Viewer): string {
     const scrollback = this.scrollback.contents();
-    if (scrollback !== "") {
-      viewer.onData(scrollback);
-    }
     this.viewers.set(sessionId, viewer);
     this.nudgeRedraw();
+    return scrollback;
   }
 
   detach(sessionId: SessionId): void {

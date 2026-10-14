@@ -52,6 +52,16 @@ describe("TerminalService", () => {
     expect(browserTab.onData).toHaveBeenCalledWith("hello");
   });
 
+  it("returns the scrollback together with the session id", () => {
+    spawn("agent-1");
+    ptys[0].output("before");
+    jest.advanceTimersByTime(16);
+
+    const { scrollback } = service.attach("agent-1", viewer());
+
+    expect(scrollback).toBe("before");
+  });
+
   it("refuses to attach to an unknown agent", () => {
     expect(errorCode(() => service.attach("agent-9", viewer()))).toBe(
       "agent_not_found",

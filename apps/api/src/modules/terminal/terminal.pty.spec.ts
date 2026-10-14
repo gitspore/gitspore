@@ -16,7 +16,7 @@ const ASK_COLUMNS =
     ? "$Host.UI.RawUI.WindowSize.Width"
     : "tput cols";
 
-// Real-PTY tests that need UTF-8 output. PowerShell gets it in PR 2.
+// Real-PTY tests that need UTF-8 output. PowerShell gets it in #53.
 const itOnUnix = process.platform === "win32" ? it.skip : it;
 
 // Prints the numbers 1 to 10,000, one per line.
@@ -43,7 +43,7 @@ describe("TerminalService with a real PTY", () => {
     });
   });
 
-  // PR 2's kill() doesn't exist yet, so the test kills its own shells.
+  // kill() from #53 doesn't exist yet, so the test kills its own shells.
   afterEach(async () => {
     for (const { pty, running } of ptys) {
       if (running) {
@@ -63,7 +63,7 @@ describe("TerminalService with a real PTY", () => {
       reportExit = resolve;
     });
 
-    const { sessionId } = service.attach(agentId, {
+    const { sessionId, scrollback } = service.attach(agentId, {
       ownerId,
       onData: (chunk) => {
         output += chunk;
@@ -73,6 +73,7 @@ describe("TerminalService with a real PTY", () => {
       },
       onExit: (exitCode) => reportExit(exitCode),
     });
+    output = scrollback;
 
     // Resolves once `found(output)` is true; fails after 10 s showing the output.
     function waitFor(
