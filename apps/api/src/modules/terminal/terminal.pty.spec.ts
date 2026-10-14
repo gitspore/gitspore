@@ -16,6 +16,9 @@ const ASK_COLUMNS =
     ? "$Host.UI.RawUI.WindowSize.Width"
     : "tput cols";
 
+// Real-PTY tests that need UTF-8 output. PowerShell gets it in PR 2.
+const itOnUnix = process.platform === "win32" ? it.skip : it;
+
 describe("TerminalService with a real PTY", () => {
   let ptys: { pty: IPty; exited: Promise<void> }[];
   let service: TerminalService;
@@ -53,14 +56,18 @@ describe("TerminalService with a real PTY", () => {
       onExit: () => {},
     });
 
-    function waitForLine(line: string): Promise<void> {
+    // Resolves once `found(output)` is true; fails after 10 s showing the output.
+    function waitFor(
+      found: (output: string) => boolean,
+      what: string,
+    ): Promise<void> {
       return new Promise((resolve, reject) => {
         const timer = setTimeout(
-          () => reject(new Error(`No line "${line}" within 10s:\n${output}`)),
+          () => reject(new Error(`No ${what} within 10s:\n${output}`)),
           10_000,
         );
         check = () => {
-          if (toLines(output).includes(line)) {
+          if (found(output)) {
             clearTimeout(timer);
             check = undefined;
             resolve();
@@ -70,7 +77,13 @@ describe("TerminalService with a real PTY", () => {
       });
     }
 
-    return { sessionId, waitForLine };
+    const waitForLine = (line: string) =>
+      waitFor((raw) => toLines(raw).includes(line), `line "${line}"`);
+
+    const waitForOutput = (text: string) =>
+      waitFor((raw) => raw.includes(text), JSON.stringify(text));
+
+    return { sessionId, waitForLine, waitForOutput };
   }
 
   it('runs "echo gitspore" in the shell and streams the output to a tab', async () => {
@@ -99,4 +112,28 @@ describe("TerminalService with a real PTY", () => {
 
     await browserTab.waitForLine("100");
   }, 30_000);
+
+  itOnUnix(
+    "passes colour codes and UTF-8 through unchanged",
+    async () => {
+      service.spawn({
+        agentId: "agent-1",
+        cwd: process.cwd(),
+        command: "echo",
+        args: ["gitspore"],
+      });
+      const browserTab = attachTab("agent-1");
+
+      // Typed as octal escapes, so the real bytes only appear in the output:
+      // \033 = ESC, \303\274 = ü, \360\237\214\261 = 🌱
+      service.write(
+        browserTab.sessionId,
+        "socket-1",
+        "printf '\\033[32mgr\\303\\274n \\360\\237\\214\\261\\033[0m\\n'\r",
+      );
+
+      await browserTab.waitForOutput("\x1b[32mgrün 🌱\x1b[0m");
+    },
+    30_000,
+  );
 });
