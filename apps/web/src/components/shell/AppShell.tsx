@@ -8,7 +8,7 @@ import {
   type LayoutSettings,
   type SidePanelTab,
 } from "@/lib/layout";
-import { mockAgents, mockIssues } from "@/lib/mock";
+import { mockAgents, mockIssues, mockUsage } from "@/lib/mock";
 import { useSceneEnabled } from "@/lib/scene";
 import Scene from "../Scene";
 import { Button } from "../ui/button";
@@ -73,6 +73,7 @@ export default function AppShell() {
             issues={mockIssues}
             selectedSlot={selectedSlot}
             connection="online"
+            usage={mockUsage}
             mockScenario="all-states"
           >
             {/* Debug control, remove once the hotbar exists */}

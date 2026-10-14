@@ -5,6 +5,7 @@ import Logo from "./Logo";
 import ThemeToggle from "./ThemeToggle";
 import WaitBadge from "./WaitBadge";
 import HelpPopover from "./HelpPopover";
+import UsageMeter, { type PlanUsage } from "./UsageMeter";
 
 // The bar along the top.
 
@@ -13,6 +14,8 @@ type TopBarProps = {
   issues: Issue[];
   selectedSlot: number | null;
   connection: Connection;
+  // Plan limits; a missing window hides its meter
+  usage?: PlanUsage;
   // Name of the mock scenario while the app runs on fake data
   mockScenario?: string;
   // Temporary controls until the rail and the hotbar exist
@@ -24,6 +27,7 @@ export default function TopBar({
   issues,
   selectedSlot,
   connection,
+  usage,
   mockScenario,
   children,
 }: TopBarProps) {
@@ -56,6 +60,8 @@ export default function TopBar({
           Mock: {mockScenario}
         </span>
       )}
+      {usage?.fiveHour && <UsageMeter label="5 h" {...usage.fiveHour} />}
+      {usage?.week && <UsageMeter label="week" {...usage.week} />}
       <ConnectionStatus status={connection} />
       <HelpPopover />
       <ThemeToggle />

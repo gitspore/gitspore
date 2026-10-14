@@ -1,4 +1,5 @@
 import type { Agent, Issue } from "@gitspore/shared";
+import type { PlanUsage } from "@/components/shell/UsageMeter";
 
 // Fake data
 
@@ -31,6 +32,12 @@ export const mockAgents: Agent[] = [
   agent(3, 21, "done"),
   agent(4, 9, "merged"),
 ];
+
+// Plan limits: the 5-hour window in warn, the week in normal. 100% - full state with resetAt time
+export const mockUsage: PlanUsage = {
+  fiveHour: { percent: 86, resetsAt: new Date(now + 2 * 3600 * 1000).toISOString() },
+  week: { percent: 34, resetsAt: new Date(now + 4 * 86400 * 1000).toISOString() },
+};
 
 // Worktrees with uncommitted changes: removing them fails with WORKTREE_DIRTY
 export const mockDirtyWorktrees = new Set(["spore/12"]);
