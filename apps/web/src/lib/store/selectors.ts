@@ -2,8 +2,8 @@ import { MAX_SLOTS, type Agent, type Issue } from "@gitspore/shared";
 import type { GreenhouseStoreState } from "./greenhouseStore";
 
 // Selectors for useGreenhouseStore. The ones that return a new array on each
-// call (freeSlots, openIssuesWithoutAgent) need useShallow, otherwise every
-// store change re-renders the component:
+// call (freeSlots, openIssuesWithoutAgent) need useShallow, otherwise React
+// sees a "changed" value on every read and renders in an endless loop:
 //
 //   const slots = useGreenhouseStore(useShallow(freeSlots));
 
@@ -25,7 +25,10 @@ export function agentBySlot(slot: number) {
     selectAgents(state).find((agent) => agent.slotIndex === slot) ?? null;
 }
 
-/** Slot indexes without an agent, in ascending order. */
+/**
+ * Slot indexes without an agent, in ascending order. A new array each call:
+ * use it as `useGreenhouseStore(useShallow(freeSlots))`.
+ */
 export function freeSlots(state: GreenhouseStoreState): number[] {
   const taken = new Set(selectAgents(state).map((agent) => agent.slotIndex));
   return Array.from({ length: MAX_SLOTS }, (_, slot) => slot).filter(
@@ -39,7 +42,11 @@ export function needsInputCount(state: GreenhouseStoreState): number {
     .length;
 }
 
-/** Open issues no agent works on yet: the ones that can be dispatched. */
+/**
+ * Open issues no agent works on yet: the ones that can be dispatched. A new
+ * array each call: use it as
+ * `useGreenhouseStore(useShallow(openIssuesWithoutAgent))`.
+ */
 export function openIssuesWithoutAgent(state: GreenhouseStoreState): Issue[] {
   const taken = new Set(selectAgents(state).map((agent) => agent.issueNumber));
   return selectIssues(state).filter((issue) => !taken.has(issue.number));

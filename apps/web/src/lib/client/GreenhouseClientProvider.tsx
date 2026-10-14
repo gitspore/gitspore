@@ -159,9 +159,15 @@ export function GreenhouseClientProvider({
 }
 
 /**
- * Reads from the store and re-renders when the selected value changes. A
- * selector that returns a new array or object each time needs useShallow
- * from "zustand/react/shallow" (see selectors.ts).
+ * Reads from the store and re-renders when the selected value changes. The
+ * value is compared with ===, so a selector that returns a new array or
+ * object each time (`.filter`, `.map`, `[...]`, `{...}`) needs useShallow
+ * from "zustand/react/shallow", which compares the contents instead:
+ *
+ *   useGreenhouseStore(useShallow(freeSlots))
+ *
+ * Without it React stops with "The result of getServerSnapshot should be
+ * cached to avoid an infinite loop" (or getSnapshot).
  *
  * Until the client is made, it reads an empty store: no server state,
  * offline, actions do nothing.
