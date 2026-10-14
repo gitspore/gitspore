@@ -2,14 +2,14 @@
 
 Gives every agent a real terminal: a shell in a PTY (pseudo-terminal) that runs the agent's command in its worktree. Browser tabs attach to it, see its output and type into it. Closing a tab never stops the agent. The module only runs terminals and streams them. Starting Claude Code with the issue prompt is #16, connecting the `terminal:*` Socket.io events is the gateway's job, and the browser terminal is #11.
 
-| File                  | Holds                                                                                       |
-| --------------------- | ------------------------------------------------------------------------------------------- |
-| `terminal.service.ts` | `TerminalService`: one terminal per agent, sessions per tab, ownership, limits, exit         |
-| `agent-terminal.ts`   | `AgentTerminal`: one agent's PTY, scrollback, batcher and attached tabs; `startInShell`      |
-| `ring-buffer.ts`      | `RingBuffer`: the last 256 KB of output, never cut inside a UTF-8 character                  |
-| `output-batcher.ts`   | `OutputBatcher`: collects output and sends it every 16 ms or at 16 KB                        |
-| `terminal-error.ts`   | `TerminalError` with a `code` (see [Errors](#errors))                                        |
-| `terminal.module.ts`  | Provides and exports `TerminalService`; injects node-pty's `spawn` as `SPAWN_PTY`            |
+| File                  | Holds                                                                                              |
+| --------------------- | -------------------------------------------------------------------------------------------------- |
+| `terminal.service.ts` | `TerminalService`: one terminal per agent, sessions per tab, ownership, limits, exit               |
+| `agent-terminal.ts`   | `AgentTerminal`: one agent's PTY, scrollback, batcher and attached tabs; `startInShell`            |
+| `ring-buffer.ts`      | `RingBuffer`: the last 256 KB of output, never cut inside a UTF-8 character                        |
+| `output-batcher.ts`   | `OutputBatcher`: collects output and sends it every 16 ms or at 16 KB                              |
+| `terminal-error.ts`   | `TerminalError` with a `code` (see [Errors](#errors))                                              |
+| `terminal.module.ts`  | Provides and exports `TerminalService`; injects node-pty's `spawn` as `SPAWN_PTY`                  |
 | `terminal.manual.ts`  | A manual test: your own terminal plays a browser tab (see [Trying it by hand](#trying-it-by-hand)) |
 
 ## Terminal and session
@@ -88,13 +88,13 @@ node-pty: shell exited
 
 All refusals are a `TerminalError` with a `code`.
 
-| Code                | From                         | Meaning                                         | Suggested shared code |
-| ------------------- | ---------------------------- | ----------------------------------------------- | --------------------- |
-| `agent_not_found`   | `attach`                     | No terminal for this agent (never spawned, or its shell exited) | `agent_not_found` |
-| `session_not_found` | `write`, `resize`, `detach`  | Unknown session, or one another tab owns        | `session_not_found`   |
-| `already_running`   | `spawn`                      | The agent already has a terminal                | `internal`            |
-| `limit_reached`     | `spawn`                      | 7 terminals are already running                 | `internal`            |
-| `unsafe_argument`   | `spawn`                      | `command` or an argument contains a character that isn't allowed | `internal` |
+| Code                | From                        | Meaning                                                          | Suggested shared code |
+| ------------------- | --------------------------- | ---------------------------------------------------------------- | --------------------- |
+| `agent_not_found`   | `attach`                    | No terminal for this agent (never spawned, or its shell exited)  | `agent_not_found`     |
+| `session_not_found` | `write`, `resize`, `detach` | Unknown session, or one another tab owns                         | `session_not_found`   |
+| `already_running`   | `spawn`                     | The agent already has a terminal                                 | `internal`            |
+| `limit_reached`     | `spawn`                     | 7 terminals are already running                                  | `internal`            |
+| `unsafe_argument`   | `spawn`                     | `command` or an argument contains a character that isn't allowed | `internal`            |
 
 The last three are mistakes on the daemon's side (#16), not something a tab can cause.
 
