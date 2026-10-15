@@ -4,6 +4,7 @@ import type { AddressInfo } from "node:net";
 import { io, type Socket } from "socket.io-client";
 import type {
   ClientToServerEvents,
+  ServerError,
   ServerToClientEvents,
   TerminalDataPayload,
   TerminalOpenAck,
@@ -94,5 +95,35 @@ describe("TerminalGateway", () => {
     expect(await ack).toEqual({ sessionId: payload.sessionId });
     expect(payload.chunk).toBe("before");
     expect(seen).toEqual(["ack", "data"]);
+  });
+
+  it("acks terminal:open for an unknown agent with agent_not_found", async () => {
+    const browserTab = await connect();
+
+    const ack = await browserTab.emitWithAck("terminal:open", {
+      agentId: "unknown-agent",
+    });
+
+    expect(ack).toEqual({
+      error: { code: "agent_not_found", message: expect.any(String) },
+    });
+  });
+
+  it("answers terminal:input for another tab's session with session_not_found", async () => {
+    spawn("agent-1");
+    const tabA = await connect();
+    const tabB = await connect();
+    const ack = await tabA.emitWithAck("terminal:open", { agentId: "agent-1" });
+    if (!("sessionId" in ack)) throw new Error("terminal:open failed");
+
+    const error = new Promise<ServerError>((resolve) =>
+      tabB.on("error", resolve),
+    );
+    tabB.emit("terminal:input", { sessionId: ack.sessionId, data: "ls\r" });
+
+    expect(await error).toEqual({
+      code: "session_not_found",
+      message: expect.any(String),
+    });
   });
 });
