@@ -1,3 +1,3 @@
-export default function HotbarSlot() {
+export function HotbarSlot() {
   return <div>HotbarSlot</div>;
 }

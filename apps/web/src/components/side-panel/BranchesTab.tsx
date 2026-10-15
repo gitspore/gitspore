@@ -1,3 +1,3 @@
-export default function BranchesTab() {
+export function BranchesTab() {
   return <div>BranchesTab</div>;
 }

@@ -1,3 +1,3 @@
-export default function IssueSheet() {
+export function IssueSheet() {
   return <div>IssueSheet</div>;
 }
