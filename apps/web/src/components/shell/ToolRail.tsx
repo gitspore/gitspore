@@ -6,7 +6,7 @@ import {
   SproutIcon,
 } from "@/components/icons/RailIcons";
 import type { MainMode, SidePanelTab } from "@/lib/layout";
-import RailBookmark from "./RailBookmark";
+import { RailBookmark } from "./RailBookmark";
 
 // The bookmarks on the left edge: the three side panel tabs and scene/focus.
 // Icons from Penpot (components/icons/RailIcons.tsx); focus still uses lucide
@@ -27,7 +27,7 @@ type ToolRailProps = {
   waitingCount: number;
 };
 
-export default function ToolRail({
+export function ToolRail({
   sidePanel,
   onSidePanelChange,
   mode,

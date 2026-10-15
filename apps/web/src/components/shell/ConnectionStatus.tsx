@@ -20,7 +20,7 @@ const LOOK: Record<Connection, { dot: string; word: string; text: string }> = {
   offline: { dot: "bg-wait", word: "offline", text: "text-wait" },
 };
 
-export default function ConnectionStatus({ status }: { status: Connection }) {
+export function ConnectionStatus({ status }: { status: Connection }) {
   const look = LOOK[status];
 
   return (

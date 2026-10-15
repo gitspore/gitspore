@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
 import type { Agent, Issue } from "@gitspore/shared";
-import ConnectionStatus, { type Connection } from "./ConnectionStatus";
-import Logo from "./Logo";
-import ThemeToggle from "./ThemeToggle";
-import WaitBadge from "./WaitBadge";
-import HelpPopover from "./HelpPopover";
-import UsageMeter, { type PlanUsage } from "./UsageMeter";
+import { ConnectionStatus, type Connection } from "./ConnectionStatus";
+import { Logo } from "./Logo";
+import { ThemeToggle } from "./ThemeToggle";
+import { WaitBadge } from "./WaitBadge";
+import { HelpPopover } from "./HelpPopover";
+import { UsageMeter, type PlanUsage } from "./UsageMeter";
 
 // The bar along the top.
 
@@ -22,7 +22,7 @@ type TopBarProps = {
   children?: ReactNode;
 };
 
-export default function TopBar({
+export function TopBar({
   agents,
   issues,
   selectedSlot,

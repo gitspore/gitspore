@@ -1,6 +1,6 @@
-// "1 waiting" in the top bar. Spec: `wait-badge` in design-docs/design/components.md.
+// "1 waiting" in the top bar.
 // The dot should blink; it waits for the motion tokens (#36).
-export default function WaitBadge({ count }: { count: number }) {
+export function WaitBadge({ count }: { count: number }) {
   // Hidden when nothing waits
   if (count === 0) return null;
 

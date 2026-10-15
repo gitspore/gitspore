@@ -10,17 +10,17 @@ import {
 } from "@/lib/layout";
 import { mockAgents, mockContext, mockIssues, mockUsage } from "@/lib/mock";
 import { useSceneEnabled } from "@/lib/scene";
-import Scene from "../Scene";
+import { Scene } from "../Scene";
 import { Button } from "../ui/button";
-import NotificationStack from "../attention/NotificationStack";
-import Window from "../main/Window";
-import SidePanel from "../side-panel/SidePanel";
-import ToolRail from "./ToolRail";
-import TopBar from "./TopBar";
+import { NotificationStack } from "../attention/NotificationStack";
+import { Window } from "../main/Window";
+import { SidePanel } from "../side-panel/SidePanel";
+import { ToolRail } from "./ToolRail";
+import { TopBar } from "./TopBar";
 
 const HOTBAR_SLOTS = ["1", "2", "3", "4", "5", "6"];
 
-export default function AppShell() {
+export function AppShell() {
   // Temporary: moves to the zustand store later
   const [layout, setLayout] = useState<LayoutSettings>({
     sidePanel: "agents",
@@ -84,11 +84,7 @@ export default function AppShell() {
         className="app-shell pointer-events-none fixed inset-0 z-10"
         style={shellGrid(layout)}
       >
-        {/* 
-				------
-				Header
-				------
-			*/}
+        {/* Header */}
         <header className="pointer-events-auto rounded-xl bg-panel text-ink [grid-area:topbar]">
           <TopBar
             agents={agents}
@@ -115,11 +111,7 @@ export default function AppShell() {
           </TopBar>
         </header>
 
-        {/* 
-				----
-				Rail
-				----
-			*/}
+        {/* Rail */}
         {/* No background of its own; -ml pulls the bookmarks to the screen edge */}
         <nav className="-ml-layout-edge [grid-area:rail]">
           <div className="pointer-events-auto w-fit">
@@ -135,11 +127,7 @@ export default function AppShell() {
           </div>
         </nav>
 
-        {/* 
-				------------
-				Main Section 
-				------------
-			*/}
+        {/* Main Section */}
         <section
           className="relative grid gap-layout-edge [grid-area:main]"
           style={mainGrid(layout)}
@@ -185,11 +173,7 @@ export default function AppShell() {
           </div>
         </section>
 
-        {/* 
-				----------
-				Side Panel 
-				----------
-			*/}
+        {/* Side Panel */}
         {layout.sidePanel && (
           <aside className="pointer-events-auto overflow-y-auto rounded-xl bg-panel p-2 text-ink shadow-lg [grid-area:panel]">
             <SidePanel
@@ -206,11 +190,7 @@ export default function AppShell() {
           </aside>
         )}
 
-        {/*
-				-------------
-				Notifications
-				-------------
-			*/}
+        {/* Notifications */}
         <div className="absolute right-layout-edge bottom-[calc(var(--space-layout-edge)+12px)] flex w-panel-width justify-center">
           <div className="pointer-events-auto">
             <NotificationStack

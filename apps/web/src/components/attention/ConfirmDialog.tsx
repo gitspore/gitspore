@@ -26,7 +26,7 @@ type ConfirmDialogProps = {
   error?: string;
 };
 
-export default function ConfirmDialog({
+export function ConfirmDialog({
   open,
   onOpenChange,
   title,

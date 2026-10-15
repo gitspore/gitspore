@@ -67,7 +67,7 @@ const KEYS = [
   },
 ];
 
-export default function HelpPopover() {
+export function HelpPopover() {
   return (
     <Popover>
       <PopoverTrigger

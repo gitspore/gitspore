@@ -20,7 +20,7 @@ type AgentRowProps = {
   onStop: () => void;
 };
 
-export default function AgentRow({
+export function AgentRow({
   agent,
   issueTitle,
   selected,

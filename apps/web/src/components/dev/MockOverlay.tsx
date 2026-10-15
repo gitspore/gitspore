@@ -9,7 +9,7 @@ const SPEEDS = [1, 10, 60];
 
 // Dev tool for the mock: which scenario runs, how fast, play/pause, restart.
 // Shows nothing unless the app runs on the mock client.
-export default function MockOverlay() {
+export function MockOverlay() {
   const client = useMockClient();
   // The client is not React state, so a click re-renders by hand.
   const [, refresh] = useReducer((n: number) => n + 1, 0);

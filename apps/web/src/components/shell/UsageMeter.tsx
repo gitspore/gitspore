@@ -24,7 +24,7 @@ const formatTokens = (n: number) =>
     .format(n)
     .replace("K", "k");
 
-export default function UsageMeter({
+export function UsageMeter({
   label,
   percent,
   resetsAt,

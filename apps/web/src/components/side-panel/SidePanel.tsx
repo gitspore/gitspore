@@ -6,10 +6,10 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { SidePanelTab } from "@/lib/layout";
-import ConfirmDialog from "@/components/attention/ConfirmDialog";
+import { ConfirmDialog } from "@/components/attention/ConfirmDialog";
 import { mockDirtyWorktrees, mockIssues } from "@/lib/mock";
-import AgentRow, { FreeSlotRow } from "./AgentRow";
-import IssueRow from "./IssueRow";
+import { AgentRow, FreeSlotRow } from "./AgentRow";
+import { IssueRow } from "./IssueRow";
 
 // The side panel: title, counts, tabs. Spec: `side-panel` and `segmented-tabs`.
 
@@ -30,7 +30,7 @@ type SidePanelProps = {
   setSelectedSlot: (slot: number | null) => void;
 };
 
-export default function SidePanel({
+export function SidePanel({
   tab,
   onTabChange,
   onClose,

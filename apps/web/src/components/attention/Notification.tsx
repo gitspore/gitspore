@@ -15,7 +15,7 @@ type NotificationProps = {
   onDismiss: () => void;
 };
 
-export default function Notification({
+export function Notification({
   agent,
   onOpen,
   onOpenBeside,

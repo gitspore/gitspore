@@ -3,8 +3,8 @@
 import type { Agent } from "@gitspore/shared";
 import { Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import ThemeToggle from "@/components/shell/ThemeToggle";
-import UsageMeter, { type ContextUsage } from "@/components/shell/UsageMeter";
+import { ThemeToggle } from "@/components/shell/ThemeToggle";
+import { UsageMeter, type ContextUsage } from "@/components/shell/UsageMeter";
 import { STATUS_COLOUR, STATUS_ICON, STATUS_WORD } from "@/lib/status";
 
 // One agent's terminal window.
@@ -17,7 +17,7 @@ type WindowProps = {
   onMinimise: () => void;
 };
 
-export default function Window({
+export function Window({
   agent,
   issueTitle,
   context,

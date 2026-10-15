@@ -18,7 +18,7 @@ type RailBookmarkProps = {
   className?: string;
 };
 
-export default function RailBookmark({
+export function RailBookmark({
   label,
   icon,
   open,

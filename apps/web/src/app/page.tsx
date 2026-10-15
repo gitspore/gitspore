@@ -1,4 +1,4 @@
-import AppShell from "@/components/shell/AppShell";
+import { AppShell } from "@/components/shell/AppShell";
 
 // page.tsx stays a Server Component. AppShell draws the scene and the
 // interface on top of it.

@@ -4,9 +4,8 @@ import { MoonIcon, SunIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 
-// Day/night switch in the top bar. Moves into SettingsMenu once it has sound and
-// browser notifications too (layout.html, N5).
-export default function ThemeToggle() {
+// Day/night switch in the top bar.
+export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
 
   const isNight = resolvedTheme === "dark";

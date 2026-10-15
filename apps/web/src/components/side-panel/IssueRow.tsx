@@ -16,7 +16,7 @@ type IssueRowProps = {
   onPlant: () => void;
 };
 
-export default function IssueRow({ issue, canPlant, onPlant }: IssueRowProps) {
+export function IssueRow({ issue, canPlant, onPlant }: IssueRowProps) {
   const plantButton = (
     <Button size="sm" disabled={!canPlant} onClick={onPlant}>
       Plant
