@@ -427,4 +427,103 @@ describe("MockClient", () => {
       expect(chunks).toEqual(["a"]);
     });
   });
+
+  describe("connection status", () => {
+    it("is offline before connect", () => {
+      const client = new MockClient(makeScenario());
+
+      expect(client.getStatus().kind).toBe("offline");
+    });
+
+    it("is connected after connect and tells its listeners", () => {
+      const client = new MockClient(makeScenario());
+      const listener = jest.fn();
+      client.subscribeStatus(listener);
+
+      client.connect();
+
+      expect(client.getStatus()).toEqual({ kind: "connected" });
+      expect(listener).toHaveBeenCalledTimes(1);
+    });
+
+    it("is offline again after disconnect, with a reason", () => {
+      const { client } = setup();
+
+      client.disconnect();
+
+      expect(client.getStatus()).toEqual({
+        kind: "offline",
+        reason: "Disconnected",
+      });
+    });
+
+    it("is already connected when the snapshot arrives", () => {
+      const client = new MockClient(makeScenario());
+      const seen: string[] = [];
+      client.on("state:snapshot", () => seen.push(client.getStatus().kind));
+
+      client.connect();
+
+      expect(seen).toEqual(["connected"]);
+    });
+
+    it("never goes offline on restart", () => {
+      const { client } = setup();
+      const listener = jest.fn();
+      client.subscribeStatus(listener);
+
+      client.restart();
+
+      expect(listener).not.toHaveBeenCalled();
+      expect(client.getStatus().kind).toBe("connected");
+    });
+
+    it("keeps the same status object while the status does not change", () => {
+      const { client } = setup();
+      const before = client.getStatus();
+
+      client.restart();
+
+      expect(client.getStatus()).toBe(before);
+    });
+
+    it("stops telling a listener after it unsubscribed", () => {
+      const client = new MockClient(makeScenario());
+      const listener = jest.fn();
+      const unsubscribe = client.subscribeStatus(listener);
+
+      unsubscribe();
+      client.connect();
+
+      expect(listener).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("now", () => {
+    it("is the virtual time of the scenario", () => {
+      const { client } = setup();
+
+      expect(client.now()).toBe(client.virtualNow());
+    });
+
+    it("runs at the chosen speed", () => {
+      const { client, clock } = setup();
+      client.setSpeed(60);
+      const before = client.now();
+
+      clock.advance(1000);
+
+      expect(client.now() - before).toBe(60_000);
+    });
+
+    it("stands still while paused", () => {
+      const { client, clock } = setup();
+      client.pause();
+      const before = client.now();
+
+      clock.advance(5000);
+
+      expect(client.now()).toBe(before);
+    });
+  });
 });

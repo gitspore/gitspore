@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 // browser notifications too (layout.html, N5).
 export default function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
+
   const isNight = resolvedTheme === "dark";
 
   return (

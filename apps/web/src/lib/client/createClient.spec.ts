@@ -4,11 +4,10 @@ import { SocketClient } from "./SocketClient";
 
 describe("createClient", () => {
   it("builds a MockClient with the scenario and speed of the mode", () => {
-    const client = createClient({
-      kind: "mock",
-      scenario: "core-loop",
-      speed: 60,
-    });
+    const client = createClient(
+      { kind: "mock", scenario: "core-loop", speed: 60 },
+      null,
+    );
 
     expect(client).toBeInstanceOf(MockClient);
     expect((client as MockClient).scenarioName).toBe("core-loop");
@@ -23,13 +22,16 @@ describe("createClient", () => {
       "stress",
     ] as const) {
       expect(() =>
-        createClient({ kind: "mock", scenario, speed: 1 }),
+        createClient({ kind: "mock", scenario, speed: 1 }, null),
       ).not.toThrow();
     }
   });
 
   it("does not connect on its own", () => {
-    const client = createClient({ kind: "mock", scenario: "empty", speed: 1 });
+    const client = createClient(
+      { kind: "mock", scenario: "empty", speed: 1 },
+      null,
+    );
     const onSnapshot = jest.fn();
     client.on("state:snapshot", onSnapshot);
 
@@ -40,6 +42,8 @@ describe("createClient", () => {
   });
 
   it("builds a SocketClient for the daemon, without connecting", () => {
-    expect(createClient({ kind: "socket" })).toBeInstanceOf(SocketClient);
+    expect(createClient({ kind: "socket" }, "test-token")).toBeInstanceOf(
+      SocketClient,
+    );
   });
 });

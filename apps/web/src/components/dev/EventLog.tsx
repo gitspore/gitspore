@@ -23,7 +23,11 @@ export default function EventLog() {
     client.on("state:patch", onPatch);
     client.on("terminal:exit", onExit);
     client.on("error", onError);
+    const unsubscribeStatus = client.subscribeStatus(() =>
+      console.log("[status]", client.getStatus()),
+    );
     return () => {
+      unsubscribeStatus();
       client.off("state:snapshot", onSnapshot);
       client.off("state:patch", onPatch);
       client.off("terminal:exit", onExit);
