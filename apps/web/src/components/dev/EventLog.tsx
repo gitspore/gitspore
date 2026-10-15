@@ -5,7 +5,7 @@ import { useGreenhouseClient } from "@/lib/client/GreenhouseClientProvider";
 
 // Dev tool: writes every event the client receives to the browser console.
 // terminal:data is left out, it arrives too often to read.
-export default function EventLog() {
+export function EventLog() {
   const client = useGreenhouseClient();
 
   useEffect(() => {

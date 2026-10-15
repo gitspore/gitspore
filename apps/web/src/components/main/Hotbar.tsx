@@ -1,3 +1,3 @@
-export default function Hotbar() {
+export function Hotbar() {
   return <div>Hotbar</div>;
 }

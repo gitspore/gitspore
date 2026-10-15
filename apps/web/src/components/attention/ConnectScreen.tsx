@@ -1,3 +1,3 @@
-export default function ConnectScreen() {
+export function ConnectScreen() {
   return <div>ConnectScreen</div>;
 }

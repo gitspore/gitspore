@@ -59,7 +59,7 @@ function Ground() {
   );
 }
 
-export default function Scene() {
+export function Scene() {
   return (
     // <Canvas> sets up the renderer, a scene and a camera for you.
     // Everything inside it is 3D, not HTML.

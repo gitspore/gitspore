@@ -14,9 +14,17 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         ghost:
           "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
+        // components.md: ink fill, panel text; hover mixes 20 % of the panel into the fill
         destructive:
-          "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
+          "bg-destructive text-background hover:bg-[color-mix(in_srgb,var(--destructive)_80%,var(--color-panel))]",
         link: "text-primary underline-offset-4 hover:underline",
+        // components.md: buttons on the red notification, with a 2 px wait-ink outline.
+        // on-wait has no fill, so hover is its text colour at 20 %
+        "on-wait":
+          "border-(length:--border-line) border-wait-ink bg-transparent text-wait-ink hover:bg-[color-mix(in_srgb,var(--color-wait-ink)_20%,transparent)]",
+        // Filled: hover mixes 20 % of the notification into the accent
+        "primary-on-wait":
+          "border-(length:--border-line) border-wait-ink bg-primary text-primary-foreground hover:bg-[color-mix(in_srgb,var(--color-accent)_80%,var(--color-wait))]",
       },
       size: {
         default:

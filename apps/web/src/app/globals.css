@@ -60,7 +60,7 @@ body {
   --muted-foreground: var(--color-muted);
   --accent: var(--color-hover);
   --accent-foreground: var(--color-ink);
-  /* Red means only "needs you" (ADR 0006), so destructive actions stay ink. Open question for design. */
+  /* Red means only "needs you" (ADR 0006): destructive actions are ink (components.md, button kinds) */
   --destructive: var(--color-ink);
   --border: var(--color-panel-2);
   --input: var(--color-panel-2);
@@ -80,6 +80,17 @@ body {
   }
 }
 
+/*
+  Keyboard focus (components.md, States): one yellow outline for every control,
+  only when moving with the keyboard. Outside any layer on purpose, so it wins over
+  shadcn's outline-none; the --tw-ring-shadow line switches off shadcn's own ring.
+*/
+:focus-visible {
+  outline: var(--border-focus) solid var(--color-focus);
+  outline-offset: var(--space-focus-offset);
+  --tw-ring-shadow: 0 0 #0000;
+}
+
 :root {
   /* Not a token yet, see #34 */
   --size-terminal-band: 392px;
@@ -95,4 +106,26 @@ body {
 .hotbar-slot {
   width: var(--size-hotbar-slot);
   height: var(--size-hotbar-slot);
+}
+
+/*
+  Motion (components.md): the notification nudges sideways every 2.4 s.
+  Use it as motion-safe:animate-nudge, so it stops under prefers-reduced-motion.
+*/
+@theme {
+  --animate-nudge: nudge 2.4s ease-in-out infinite;
+
+  @keyframes nudge {
+    0%,
+    88%,
+    100% {
+      transform: translateX(0);
+    }
+    92% {
+      transform: translateX(-5px);
+    }
+    96% {
+      transform: translateX(4px);
+    }
+  }
 }

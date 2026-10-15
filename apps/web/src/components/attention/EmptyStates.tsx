@@ -1,3 +1,3 @@
-export default function EmptyStates() {
+export function EmptyStates() {
   return <div>EmptyStates</div>;
 }
