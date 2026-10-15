@@ -10,7 +10,10 @@ import { Server, Socket } from "socket.io";
 import { ClientToServerEvents, ServerToClientEvents } from "@gitspore/shared";
 
 type GreenhouseServer = Server<ClientToServerEvents, ServerToClientEvents>;
-type GreenhouseSocket = Socket<ClientToServerEvents, ServerToClientEvents>;
+export type GreenhouseSocket = Socket<
+  ClientToServerEvents,
+  ServerToClientEvents
+>;
 
 function sendSnapshot(client: GreenhouseSocket, store: StateStore) {
   client.emit("state:snapshot", store.snapshot());

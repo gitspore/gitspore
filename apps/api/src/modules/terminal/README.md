@@ -1,6 +1,6 @@
 # Terminal module
 
-Gives every agent a real terminal: a shell in a PTY (pseudo-terminal) that runs the agent's command in its worktree. Browser tabs attach to it, see its output and type into it. Closing a tab never stops the agent. The module only runs terminals and streams them. Starting Claude Code with the issue prompt is #16, connecting the `terminal:*` Socket.io events is the gateway's job, and the browser terminal is #11.
+Gives every agent a real terminal: a shell in a PTY (pseudo-terminal) that runs the agent's command in its worktree. Browser tabs attach to it, see its output and type into it. Closing a tab never stops the agent. The module only runs terminals and streams them. Starting Claude Code with the issue prompt is #16, the `terminal:*` Socket.io events are handled in `TerminalGateway` (`apps/api/src/modules/gateway/terminal.gateway.ts`), and the browser terminal is #11.
 
 | File                  | Holds                                                                                              |
 | --------------------- | -------------------------------------------------------------------------------------------------- |
@@ -110,7 +110,7 @@ The last three are mistakes on the daemon's side (#16), not something a tab can 
 
 - Stopping an agent: `kill(agentId)` and killing the whole process tree (Claude Code starts its own child processes, such as MCP servers). Ending the daemon cleanly with all terminals. PowerShell's UTF-8 output. All in #53.
 - Starting Claude Code with the issue prompt, and agent status: #16.
-- The `terminal:*` events: the gateway (#9, second PR). It acks before it sends the scrollback, maps `TerminalError` codes as in [Errors](#errors) and calls `detachOwner` on disconnect.
+- The `terminal:*` events: `TerminalGateway` in `apps/api/src/modules/gateway/terminal.gateway.ts`. It acks before it sends the scrollback, maps `TerminalError` codes as in [Errors](#errors) (and logs anything that isn't a `TerminalError`) and calls `detachOwner` on disconnect.
 - The browser terminal and fitting it to the window: #11.
 
 ## Trying it by hand
