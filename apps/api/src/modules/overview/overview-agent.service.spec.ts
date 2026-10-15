@@ -1,4 +1,5 @@
 import { RepoConfig } from "@/config/repo-config";
+import { Logger } from "@nestjs/common";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -79,5 +80,38 @@ describe("OverviewAgentService", () => {
       startedAt: expect.any(String),
     });
     expect(new Date(agent.startedAt).toISOString()).toBe(agent.startedAt);
+  });
+
+  it("starts nothing without the flag", async () => {
+    await start(false);
+
+    expect(terminals.spawn).not.toHaveBeenCalled();
+    expect(store.snapshot().agents).toEqual([]);
+  });
+
+  it("removes the overview agent when its shell exits", async () => {
+    await start(true);
+
+    terminals.exit("agent-1");
+    expect(store.snapshot().agents.map((agent) => agent.id)).toEqual([
+      "overview",
+    ]);
+
+    terminals.exit("overview");
+    expect(store.snapshot().agents).toEqual([]);
+  });
+
+  it("logs a failed start, and the daemon keeps running", async () => {
+    const logError = jest
+      .spyOn(Logger.prototype, "error")
+      .mockImplementation(() => {});
+    terminals.spawn.mockImplementation(() => {
+      throw new Error("no shell");
+    });
+
+    await expect(start(true)).resolves.toBeUndefined();
+
+    expect(logError).toHaveBeenCalledWith(expect.stringContaining("no shell"));
+    expect(store.snapshot().agents).toEqual([]);
   });
 });
