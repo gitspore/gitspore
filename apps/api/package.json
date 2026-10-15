@@ -40,6 +40,7 @@
     "test:watch": "node --experimental-vm-modules jest.runner.mjs --watch",
     "test:cov": "node --experimental-vm-modules jest.runner.mjs --coverage",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "terminal:manual": "TS_NODE_BASEURL=. TS_NODE_TRANSPILE_ONLY=1 node -r ts-node/register -r tsconfig-paths/register src/modules/terminal/terminal.manual.ts"
   }
 }
