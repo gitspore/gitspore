@@ -1,3 +1,5 @@
+import { Logger } from "@nestjs/common";
+
 import {
   Ack,
   ConnectedSocket,
@@ -22,14 +24,13 @@ import { TerminalService } from "../terminal/terminal.service";
 import { allowedOrigins } from "./session-auth.service";
 import type { GreenhouseSocket } from "./state.gateway";
 
-//
-//
-//
-// agent_not_found and session_not_found are the tab's own mistake and keep their code.
-// Everything else is the daemon's problem: internal.
-
-function toServerError(error: unknown): ServerError {
+// agent_not_found and session_not_found are the tab's own
+// mistake and keep their code. Everything else is the
+// daemon's problem: internal.
+// An error that isn't a TerminalError is a bug, so it is also logged.
+function toServerError(error: unknown, logger: Logger): ServerError {
   if (!(error instanceof TerminalError)) {
+    logger.error(error);
     const message = error instanceof Error ? error.message : String(error);
     return { code: "internal", message };
   }
@@ -43,6 +44,8 @@ function toServerError(error: unknown): ServerError {
 // so the middleware in StateGateway.afterInit already guards these events.
 @WebSocketGateway({ cors: { origin: allowedOrigins() } })
 export class TerminalGateway implements OnGatewayDisconnect {
+  private readonly logger = new Logger(TerminalGateway.name);
+
   constructor(private readonly terminals: TerminalService) {}
 
   handleDisconnect(client: GreenhouseSocket) {
@@ -67,7 +70,7 @@ export class TerminalGateway implements OnGatewayDisconnect {
         client.emit("terminal:data", { sessionId, chunk: scrollback });
       }
     } catch (error) {
-      ack({ error: toServerError(error) });
+      ack({ error: toServerError(error, this.logger) });
     }
   }
   @SubscribeMessage("terminal:input")
@@ -105,7 +108,7 @@ export class TerminalGateway implements OnGatewayDisconnect {
     try {
       action();
     } catch (error) {
-      client.emit("error", toServerError(error));
+      client.emit("error", toServerError(error, this.logger));
     }
   }
 }
