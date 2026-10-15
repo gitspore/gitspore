@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 // Day/night switch. Moves into SettingsMenu (light, dark, system) later.
 export default function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
+
   const isNight = resolvedTheme === "dark";
 
   return (

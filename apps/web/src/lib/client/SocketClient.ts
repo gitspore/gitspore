@@ -3,7 +3,13 @@ import type {
   ClientToServerEvents,
   ServerToClientEvents,
 } from "@gitspore/shared";
-import type { GreenhouseClient } from "./GreenhouseClient";
+import type { ConnectionStatus, GreenhouseClient } from "./GreenhouseClient";
+import { ConnectionStatusSource } from "./ConnectionStatusSource";
+
+export const TOKEN_MISSING =
+  "Session token missing – open GitSpore from the daemon";
+export const TOKEN_REJECTED =
+  "Session token invalid – reopen GitSpore from the daemon";
 
 /**
  * The GreenhouseClient for the real daemon (apps/api): a thin wrapper around
@@ -16,13 +22,49 @@ import type { GreenhouseClient } from "./GreenhouseClient";
  */
 export class SocketClient implements GreenhouseClient {
   private readonly socket: Socket<ServerToClientEvents, ClientToServerEvents>;
+  private readonly statusSource: ConnectionStatusSource;
 
-  /** @param url Where the daemon listens, e.g. http://localhost:3001. */
-  constructor(url: string) {
-    this.socket = io(url, { autoConnect: false });
+  /**
+   * @param url Where the daemon listens, e.g. http://localhost:3001.
+   * @param token The session token the daemon printed on start. It goes into
+   *   the Socket.io handshake `auth`, the daemon rejects the connection
+   *   without it. Null if the page was opened without one: the client then
+   *   stays offline with a message and connect() does nothing, instead of
+   *   knocking on the daemon with a handshake that is sure to fail.
+   */
+  constructor(
+    url: string,
+    private readonly token: string | null,
+  ) {
+    this.statusSource = new ConnectionStatusSource({
+      kind: "offline",
+      reason: token === null ? TOKEN_MISSING : "Not connected yet",
+    });
+    this.socket = io(url, { autoConnect: false, auth: { token } });
+    this.socket.on("connect", () => {
+      this.statusSource.set({ kind: "connected" });
+    });
+    this.socket.on("disconnect", () => {
+      this.statusSource.set(
+        this.socket.active
+          ? { kind: "reconnecting" }
+          : { kind: "offline", reason: "Disconnected" },
+      );
+    });
+    this.socket.io.on("reconnect_attempt", () => {
+      this.statusSource.set({ kind: "reconnecting" });
+    });
+    this.socket.on("connect_error", () => {
+      this.statusSource.set(
+        this.socket.active
+          ? { kind: "reconnecting" }
+          : { kind: "offline", reason: TOKEN_REJECTED },
+      );
+    });
   }
 
   connect(): void {
+    if (this.token === null) return;
     this.socket.connect();
   }
 
@@ -51,5 +93,17 @@ export class SocketClient implements GreenhouseClient {
     listener: ServerToClientEvents[E],
   ): void {
     this.socket.off(event, listener as never);
+  }
+
+  now(): number {
+    return Date.now();
+  }
+
+  getStatus(): ConnectionStatus {
+    return this.statusSource.get();
+  }
+
+  subscribeStatus(listener: () => void): () => void {
+    return this.statusSource.subscribe(listener);
   }
 }
