@@ -30,50 +30,6 @@ export class OverviewAgentService implements OnApplicationBootstrap {
     @Inject(START_OVERVIEW) private readonly enabled: boolean,
   ) {}
 
-  //   async onApplicationBootstrap(): Promise<void> {
-  //     if (!this.enabled) return;
-
-  //     const repo = this.config.repoPath();
-  //     // The branch checked out in the repo root, read once at startup.
-  //     const branch = await simpleGit(repo).revparse(["--abbrev-ref", "HEAD"]);
-
-  //     // Read-only (plan mode)
-  //     // while it runs in our own repo.
-  //     // No prompt,
-  //     // so nothing user-controlled typed into shell.
-  //     this.terminals.spawn({
-  //       agentId: OVERVIEW_AGENT_ID,
-  //       cwd: repo,
-  //       command: "claude",
-  //       args: ["--permission-mode", "plan"],
-  //     });
-
-  //     const now = new Date().toISOString();
-  //     this.store.apply([
-  //       {
-  //         type: "agent:upsert",
-  //         agent: {
-  //           id: OVERVIEW_AGENT_ID,
-  //           slotIndex: null,
-  //           issueNumber: null,
-  //           branch,
-  //           worktreePath: repo,
-  //           // Stays "working" until hooks report the real status (#16).
-  //           status: "working",
-  //           statusSince: now,
-  //           startedAt: now,
-  //         },
-  //       },
-  //     ]);
-  //     // TerminalService tells every listener
-  //     // about every agent's exit.
-  //     // No restart for now: the agent just leaves the state.
-  //     this.terminals.onExited((agentId) => {
-  //       if (agentId === OVERVIEW_AGENT_ID) {
-  //         this.store.apply([{ type: "agent:remove", agentId }]);
-  //       }
-  //     });
-  //   }
   // Nest calls this once, after every module is set up.
   async onApplicationBootstrap(): Promise<void> {
     if (!this.enabled) return;
