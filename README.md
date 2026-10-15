@@ -54,4 +54,17 @@ Der Daemon bindet nur an `127.0.0.1`. Bei jedem Start erzeugt er einen zufällig
 | `GITSPORE_REPO`        | Repo, in dem der Daemon läuft | Pfad zum Git-Repository, in dem gitspore Worktrees anlegt. Ein Unterordner wird auf den Repo-Stamm aufgelöst. Ein gesetzter, aber ungültiger Pfad stoppt den Daemon. Der Standard gilt vorläufig, bis es den Setup-Screen gibt. |
 | `GITSPORE_BASE_BRANCH` | `main`                        | Lokaler Branch, von dem neue Worktrees abzweigen. Muss lokal existieren.                                                                                                                                                        |
 
+### GitHub-Sync
+
+Der Daemon liest die offenen Issues des Repos, in dem er arbeitet, und prüft die Pull Requests der Agent-Branches. Repo und Owner kommen aus der Remote `origin`; sie muss auf `github.com` zeigen. Das Token sucht er in dieser Reihenfolge:
+
+1. `GITHUB_TOKEN` aus der Umgebung
+2. `gh auth token`, wenn die [GitHub CLI](https://cli.github.com/) installiert und angemeldet ist (`gh auth login`)
+
+Ohne Remote oder Token läuft der Daemon trotzdem, nur ohne Issues; der Browser bekommt einmal den Fehler `github_sync_disabled` mit dem Grund. Das Token wird nie geloggt und nie an den Browser geschickt. Für ein privates Repo braucht es Leserechte auf Issues und Pull Requests. Details: [apps/api/src/modules/github/README.md](apps/api/src/modules/github/README.md).
+
+| Variable       | Standard        | Wirkung                                                                                   |
+| -------------- | --------------- | ----------------------------------------------------------------------------------------- |
+| `GITHUB_TOKEN` | `gh auth token` | Token für die GitHub-API. Ein geändertes Token gilt erst nach einem Neustart des Daemons. |
+
 Konfigurationsentscheidungen stehen in [docs/decisions.md](docs/decisions.md).
