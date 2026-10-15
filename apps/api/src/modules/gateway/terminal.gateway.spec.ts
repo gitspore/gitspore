@@ -10,6 +10,7 @@ import type {
   TerminalOpenAck,
 } from "@gitspore/shared";
 import { FakePty } from "../../../test/fake-pty";
+import { TerminalError } from "../terminal/terminal-error";
 import { SPAWN_PTY, TerminalService } from "../terminal/terminal.service";
 import { GatewayModule } from "./gateway.module";
 import { SessionAuth } from "./session-auth.service";
@@ -71,6 +72,26 @@ describe("TerminalGateway", () => {
   // The batcher flushes every 16 ms (real timers).
   const flush = () => new Promise((resolve) => setTimeout(resolve, 50));
 
+  // The server handles a disconnect a moment after the client closes.
+  const waitUntil = async (condition: () => boolean): Promise<void> => {
+    for (let tries = 0; tries < 100 && !condition(); tries++) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    expect(condition()).toBe(true);
+  };
+
+  // True once write() refuses the session as unknown.
+  const isDetached = (sessionId: string, ownerId: string): boolean => {
+    try {
+      service.write(sessionId, ownerId, "x");
+      return false;
+    } catch (error) {
+      return (
+        error instanceof TerminalError && error.code === "session_not_found"
+      );
+    }
+  };
+
   it("acks terminal:open with the session id, then sends the scrollback", async () => {
     spawn("agent-1");
     ptys[0].output("before");
@@ -125,5 +146,25 @@ describe("TerminalGateway", () => {
       code: "session_not_found",
       message: expect.any(String),
     });
+  });
+
+  it("detaches a tab's sessions when it disconnects, and the terminal keeps running", async () => {
+    spawn("agent-1");
+    const tabA = await connect();
+    const ownerId = tabA.id;
+    if (ownerId === undefined) throw new Error("tabA has no id");
+    const ack = await tabA.emitWithAck("terminal:open", { agentId: "agent-1" });
+    if (!("sessionId" in ack)) throw new Error("terminal:open failed");
+
+    expect(isDetached(ack.sessionId, ownerId)).toBe(false);
+
+    tabA.close();
+    await waitUntil(() => isDetached(ack.sessionId, ownerId));
+
+    const tabB = await connect();
+    expect(
+      await tabB.emitWithAck("terminal:open", { agentId: "agent-1" }),
+    ).toEqual({ sessionId: expect.any(String) });
+    expect(ptys[0].kill).not.toHaveBeenCalled();
   });
 });

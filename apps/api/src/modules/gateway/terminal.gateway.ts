@@ -2,9 +2,11 @@ import {
   Ack,
   ConnectedSocket,
   MessageBody,
+  OnGatewayDisconnect,
   SubscribeMessage,
   WebSocketGateway,
 } from "@nestjs/websockets";
+
 import type {
   ServerError,
   TerminalClosePayload,
@@ -40,8 +42,12 @@ function toServerError(error: unknown): ServerError {
 // No auth here: every gateway on this port shares one Socket.io server,
 // so the middleware in StateGateway.afterInit already guards these events.
 @WebSocketGateway({ cors: { origin: allowedOrigins() } })
-export class TerminalGateway {
+export class TerminalGateway implements OnGatewayDisconnect {
   constructor(private readonly terminals: TerminalService) {}
+
+  handleDisconnect(client: GreenhouseSocket) {
+    this.terminals.detachOwner(client.id);
+  }
 
   @SubscribeMessage("terminal:open")
   handleOpen(
