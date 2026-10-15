@@ -11,6 +11,12 @@ import type {
   ConnectionStatus,
   GreenhouseClient,
 } from "../client/GreenhouseClient";
+import type {
+  LayoutSettings,
+  MainMode,
+  OpenWindow,
+  SidePanelTab,
+} from "../layout";
 
 export type GreenhouseStoreState = {
   server: GreenhouseState | null;
@@ -20,11 +26,27 @@ export type GreenhouseStoreState = {
   mode: "live" | "mock";
   lastError: ServerError | null;
 
+  // Layout slice: side panel, main mode, open windows.
+  // Snapshots never touch it.
+  layout: LayoutSettings;
+
   applySnapshot: (state: GreenhouseState) => void;
   applyPatch: (patch: StatePatch) => void;
   selectSlot: (slot: number | null) => void;
   setConnection: (status: ConnectionStatus) => void;
   setError: (error: ServerError | null) => void;
+
+  setSidePanel: (tab: SidePanelTab | null) => void;
+  /** Focus closes the side panel; back in the scene it returns. */
+  setMode: (mode: MainMode) => void;
+  /**
+   * Shows the agent's window: un-minimises it, or adds it at the end.
+   * `alone` minimises every other window (the notification's "Open").
+   */
+  openWindow: (agentId: AgentId, options?: { alone?: boolean }) => void;
+  closeWindow: (agentId: AgentId) => void;
+  toggleMinimised: (agentId: AgentId) => void;
+
   dispatchAgent: (issueNumber: number, slotIndex: number) => void;
   stopAgent: (agentId: AgentId, removeWorktree: boolean) => void;
   refreshIssues: () => void;
@@ -40,6 +62,8 @@ export function createGreenhouseStore(
   mode: "live" | "mock",
 ) {
   let snapshotRequested = false;
+  // The side panel before entering focus mode, to bring it back afterwards
+  let panelBeforeFocus: SidePanelTab | null = null;
 
   return createStore<GreenhouseStoreState>()((set, get) => ({
     server: null,
@@ -47,9 +71,43 @@ export function createGreenhouseStore(
     connection: client.getStatus(),
     mode,
     lastError: null,
+    layout: { sidePanel: "agents", mode: "scene", windows: [] },
     selectSlot: (slot) => set({ selectedSlot: slot }),
     setConnection: (status) => set({ connection: status }),
     setError: (error) => set({ lastError: error }),
+
+    setSidePanel: (sidePanel) =>
+      set((s) => ({ layout: { ...s.layout, sidePanel } })),
+    setMode: (next) => {
+      const { layout } = get();
+      if (next === layout.mode) return;
+      if (next === "focus") panelBeforeFocus = layout.sidePanel;
+      set({
+        layout: {
+          ...layout,
+          mode: next,
+          sidePanel: next === "focus" ? null : panelBeforeFocus,
+        },
+      });
+    },
+    openWindow: (agentId, { alone = false } = {}) =>
+      set((s) => withWindows(s, showWindow(s.layout.windows, agentId, alone))),
+    closeWindow: (agentId) =>
+      set((s) =>
+        withWindows(
+          s,
+          s.layout.windows.filter((w) => w.agentId !== agentId),
+        ),
+      ),
+    toggleMinimised: (agentId) =>
+      set((s) =>
+        withWindows(
+          s,
+          s.layout.windows.map((w) =>
+            w.agentId === agentId ? { ...w, minimised: !w.minimised } : w,
+          ),
+        ),
+      ),
 
     // Commands. Components call these instead of client.emit. The result of
     // a command arrives as a patch; only refusals end up in lastError.
@@ -92,7 +150,7 @@ export function createGreenhouseStore(
       set({ server: state });
     },
     applyPatch: (patch) => {
-      const { server, selectedSlot } = get();
+      const { server, selectedSlot, layout } = get();
       // Without a snapshot there is nothing to patch. It arrives on connect.
       if (server === null) return;
 
@@ -107,13 +165,23 @@ export function createGreenhouseStore(
           snapshotRequested = true;
           client.emit("state:request", {});
           return;
-        case "applied":
+        case "applied": {
+          // Windows follow agents: a removed agent's window closes
+          const windows = layout.windows.filter(
+            (w) => !agentRemoved(server, result.state, w.agentId),
+          );
           set({
             server: result.state,
             selectedSlot: agentLeftSlot(server, result.state, selectedSlot)
               ? null
               : selectedSlot,
+            // Same layout object when nothing closed, so readers don't re-render
+            layout:
+              windows.length === layout.windows.length
+                ? layout
+                : { ...layout, windows },
           });
+        }
       }
     },
   }));
@@ -164,4 +232,38 @@ function agentLeftSlot(
   const hasAgent = (state: GreenhouseState) =>
     state.agents.some((agent) => agent.slotIndex === slot);
   return hasAgent(before) && !hasAgent(after);
+}
+
+// A store change that replaces only the open windows
+function withWindows(s: GreenhouseStoreState, windows: OpenWindow[]) {
+  return { layout: { ...s.layout, windows } };
+}
+
+// openWindow: un-minimise the agent's window in place, or add it at the end.
+// `alone` minimises every other window first.
+function showWindow(
+  windows: OpenWindow[],
+  agentId: AgentId,
+  alone: boolean,
+): OpenWindow[] {
+  const others = alone
+    ? windows.map((w) => ({ ...w, minimised: true }))
+    : windows;
+  const isOpen = others.some((w) => w.agentId === agentId);
+  return isOpen
+    ? others.map((w) =>
+        w.agentId === agentId ? { ...w, minimised: false } : w,
+      )
+    : [...others, { agentId, minimised: false }];
+}
+
+// True if the agent existed before and is gone now
+function agentRemoved(
+  before: GreenhouseState,
+  after: GreenhouseState,
+  agentId: AgentId,
+): boolean {
+  const has = (state: GreenhouseState) =>
+    state.agents.some((agent) => agent.id === agentId);
+  return has(before) && !has(after);
 }

@@ -261,6 +261,161 @@ describe("createGreenhouseStore", () => {
     });
   });
 
+  describe("layout", () => {
+    const windows = (store: ReturnType<typeof setup>["store"]) =>
+      store.getState().layout.windows;
+
+    it("starts with the agents panel, the scene and no windows", () => {
+      const { store } = setup();
+
+      expect(store.getState().layout).toEqual({
+        sidePanel: "agents",
+        mode: "scene",
+        windows: [],
+      });
+    });
+
+    it("setSidePanel opens a tab and closes the panel with null", () => {
+      const { store } = setup();
+
+      store.getState().setSidePanel("issues");
+      expect(store.getState().layout.sidePanel).toBe("issues");
+
+      store.getState().setSidePanel(null);
+      expect(store.getState().layout.sidePanel).toBeNull();
+    });
+
+    it("setMode closes the panel for focus and brings it back for the scene", () => {
+      const { store } = setup();
+      store.getState().setSidePanel("issues");
+
+      store.getState().setMode("focus");
+      expect(store.getState().layout).toMatchObject({
+        mode: "focus",
+        sidePanel: null,
+      });
+
+      store.getState().setMode("scene");
+      expect(store.getState().layout).toMatchObject({
+        mode: "scene",
+        sidePanel: "issues",
+      });
+    });
+
+    it("setMode to the current mode changes nothing", () => {
+      const { store } = setup();
+      const before = store.getState().layout;
+
+      store.getState().setMode("scene");
+
+      expect(store.getState().layout).toBe(before);
+    });
+
+    it("openWindow adds a window at the end", () => {
+      const { store } = setup();
+
+      store.getState().openWindow("a1");
+      store.getState().openWindow("a2");
+
+      expect(windows(store)).toEqual([
+        { agentId: "a1", minimised: false },
+        { agentId: "a2", minimised: false },
+      ]);
+    });
+
+    it("openWindow un-minimises an open window in place, without a duplicate", () => {
+      const { store } = setup();
+      store.getState().openWindow("a1");
+      store.getState().openWindow("a2");
+      store.getState().toggleMinimised("a1");
+
+      store.getState().openWindow("a1");
+
+      expect(windows(store)).toEqual([
+        { agentId: "a1", minimised: false },
+        { agentId: "a2", minimised: false },
+      ]);
+    });
+
+    it("openWindow alone minimises every other window", () => {
+      const { store } = setup();
+      store.getState().openWindow("a1");
+      store.getState().openWindow("a2");
+
+      store.getState().openWindow("a3", { alone: true });
+
+      expect(windows(store)).toEqual([
+        { agentId: "a1", minimised: true },
+        { agentId: "a2", minimised: true },
+        { agentId: "a3", minimised: false },
+      ]);
+    });
+
+    it("closeWindow removes the window", () => {
+      const { store } = setup();
+      store.getState().openWindow("a1");
+      store.getState().openWindow("a2");
+
+      store.getState().closeWindow("a1");
+
+      expect(windows(store)).toEqual([{ agentId: "a2", minimised: false }]);
+    });
+
+    it("toggleMinimised flips one window", () => {
+      const { store } = setup();
+      store.getState().openWindow("a1");
+      store.getState().openWindow("a2");
+
+      store.getState().toggleMinimised("a2");
+
+      expect(windows(store)).toEqual([
+        { agentId: "a1", minimised: false },
+        { agentId: "a2", minimised: true },
+      ]);
+    });
+
+    it("closes the window of a removed agent", () => {
+      const { store } = setup();
+      store
+        .getState()
+        .applySnapshot(
+          state({ agents: [agent({ id: "a1" }), agent({ id: "a2" })] }),
+        );
+      store.getState().openWindow("a1");
+      store.getState().openWindow("a2");
+
+      store
+        .getState()
+        .applyPatch(patch(2, [{ type: "agent:remove", agentId: "a1" }]));
+
+      expect(windows(store)).toEqual([{ agentId: "a2", minimised: false }]);
+    });
+
+    it("keeps the same layout object when a patch closes no window", () => {
+      const { store } = setup();
+      store.getState().applySnapshot(state({ agents: [agent({ id: "a1" })] }));
+      store.getState().openWindow("a1");
+      const before = store.getState().layout;
+
+      store
+        .getState()
+        .applyPatch(patch(2, [{ type: "issue:upsert", issue: issue(1) }]));
+
+      expect(store.getState().layout).toBe(before);
+    });
+
+    it("a snapshot leaves the layout untouched", () => {
+      const { store } = setup();
+      store.getState().openWindow("a1");
+      store.getState().setSidePanel(null);
+      const before = store.getState().layout;
+
+      store.getState().applySnapshot(state());
+
+      expect(store.getState().layout).toBe(before);
+    });
+  });
+
   describe("commands", () => {
     it("dispatchAgent emits agent:dispatch", () => {
       const { store, client } = setup();
