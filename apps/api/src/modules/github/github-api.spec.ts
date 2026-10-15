@@ -274,3 +274,198 @@ describe("GitHubApi.openIssues", () => {
     }
   });
 });
+
+// One entry as GitHub's pulls endpoint returns it.
+function gitHubPull(number: number, overrides: Record<string, unknown> = {}) {
+  return {
+    number,
+    html_url: `https://github.com/owner/repo/pull/${number}`,
+    state: "open",
+    merged_at: null,
+    ...overrides,
+  };
+}
+
+describe("GitHubApi.pullRequestFor", () => {
+  it("asks for the branch's pull requests in any state", async () => {
+    const fetch = jest.fn().mockResolvedValue(json([]));
+    const api = createApi(fetch);
+
+    await api.pullRequestFor("spore/42-fix-login");
+
+    const url = new URL(fetch.mock.calls[0][0]);
+    expect(url.pathname).toBe("/repos/owner/repo/pulls");
+    expect(url.searchParams.get("head")).toBe("owner:spore/42-fix-login");
+    expect(url.searchParams.get("state")).toBe("all");
+  });
+
+  it("returns null when the branch has no pull request", async () => {
+    const fetch = jest.fn().mockResolvedValue(json([]));
+    const api = createApi(fetch);
+
+    const result = await api.pullRequestFor("spore/42-fix-login");
+
+    expect(result).toEqual({ changed: true, pullRequest: null });
+  });
+
+  it("returns an open pull request", async () => {
+    const fetch = jest.fn().mockResolvedValue(json([gitHubPull(7)]));
+    const api = createApi(fetch);
+
+    const result = await api.pullRequestFor("spore/42-fix-login");
+
+    expect(result).toEqual({
+      changed: true,
+      pullRequest: {
+        number: 7,
+        url: "https://github.com/owner/repo/pull/7",
+        state: "open",
+      },
+    });
+  });
+
+  it("tells a merged pull request from a closed one", async () => {
+    const fetch = jest
+      .fn()
+      .mockResolvedValueOnce(
+        json([
+          gitHubPull(7, {
+            state: "closed",
+            merged_at: "2026-10-15T10:00:00Z",
+          }),
+        ]),
+      )
+      .mockResolvedValueOnce(json([gitHubPull(8, { state: "closed" })]));
+    const api = createApi(fetch);
+
+    const merged = await api.pullRequestFor("spore/42-fix-login");
+    const closed = await api.pullRequestFor("spore/43-other");
+
+    expect(merged).toMatchObject({ pullRequest: { state: "merged" } });
+    expect(closed).toMatchObject({ pullRequest: { state: "closed" } });
+  });
+
+  it("takes the newest pull request when the branch has several", async () => {
+    const fetch = jest
+      .fn()
+      .mockResolvedValue(
+        json([gitHubPull(9), gitHubPull(7, { state: "closed" })]),
+      );
+    const api = createApi(fetch);
+
+    const result = await api.pullRequestFor("spore/42-fix-login");
+
+    expect(result).toMatchObject({ pullRequest: { number: 9 } });
+  });
+
+  it("reports no change when GitHub answers 304", async () => {
+    const fetch = jest
+      .fn()
+      .mockResolvedValueOnce(json([gitHubPull(7)], 200, { etag: '"pr"' }))
+      .mockResolvedValueOnce(notModified());
+    const api = createApi(fetch);
+    await api.pullRequestFor("spore/42-fix-login");
+
+    const result = await api.pullRequestFor("spore/42-fix-login");
+
+    expect(sentHeaders(fetch, 1)["if-none-match"]).toBe('"pr"');
+    expect(result).toEqual({ changed: false });
+  });
+
+  it("keeps the ETags of branches and issue pages apart", async () => {
+    const fetch = jest
+      .fn()
+      .mockResolvedValueOnce(json([gitHubPull(7)], 200, { etag: '"a"' }))
+      .mockResolvedValueOnce(json([], 200, { etag: '"b"' }));
+    const api = createApi(fetch);
+    await api.pullRequestFor("spore/42-fix-login");
+
+    await api.pullRequestFor("spore/43-other");
+
+    expect(sentHeaders(fetch, 1)["if-none-match"]).toBeUndefined();
+  });
+});
+
+describe("GitHubApi.getIssue", () => {
+  it("returns title, body, URL and labels of an open issue", async () => {
+    const fetch = jest.fn().mockResolvedValue(
+      json(
+        gitHubIssue(42, {
+          title: "Fix login",
+          body: "The button does nothing.",
+          state: "open",
+          labels: [{ name: "bug" }],
+        }),
+      ),
+    );
+    const api = createApi(fetch);
+
+    const issue = await api.getIssue(42);
+
+    expect(issue).toEqual({
+      number: 42,
+      title: "Fix login",
+      url: "https://github.com/owner/repo/issues/42",
+      labels: ["bug"],
+      body: "The button does nothing.",
+    });
+  });
+
+  it("gives an empty body when the issue has no text", async () => {
+    const fetch = jest
+      .fn()
+      .mockResolvedValue(json(gitHubIssue(42, { state: "open", body: null })));
+    const api = createApi(fetch);
+
+    const issue = await api.getIssue(42);
+
+    expect(issue.body).toBe("");
+  });
+
+  it("throws issue_not_found for a closed issue", async () => {
+    const fetch = jest
+      .fn()
+      .mockResolvedValue(json(gitHubIssue(42, { state: "closed" })));
+    const api = createApi(fetch);
+
+    const error = await failure(api.getIssue(42));
+
+    expect(error.code).toBe("issue_not_found");
+    expect(error.message).toContain("closed");
+  });
+
+  it("throws issue_not_found for a number that does not exist", async () => {
+    const fetch = jest
+      .fn()
+      .mockResolvedValue(json({ message: "Not Found" }, 404));
+    const api = createApi(fetch);
+
+    const error = await failure(api.getIssue(42));
+
+    expect(error.code).toBe("issue_not_found");
+  });
+
+  it("throws issue_not_found for a pull request", async () => {
+    const fetch = jest
+      .fn()
+      .mockResolvedValue(
+        json(gitHubIssue(42, { state: "open", pull_request: {} })),
+      );
+    const api = createApi(fetch);
+
+    const error = await failure(api.getIssue(42));
+
+    expect(error.code).toBe("issue_not_found");
+  });
+
+  it("throws the usual codes for other failures", async () => {
+    const fetch = jest
+      .fn()
+      .mockResolvedValue(json({ message: "Bad credentials" }, 401));
+    const api = createApi(fetch);
+
+    const error = await failure(api.getIssue(42));
+
+    expect(error.code).toBe("github_auth_failed");
+  });
+});

@@ -10,28 +10,48 @@ type GitHubIssue = Awaited<
   ReturnType<Octokit["rest"]["issues"]["listForRepo"]>
 >["data"][number];
 
+// The fields toIssue reads. Both the issue list and the single issue
+// (getIssue) have them.
+type GitHubIssueFields = Pick<
+  GitHubIssue,
+  "number" | "title" | "html_url" | "labels"
+>;
+
 // GitHub sends at most 100 entries per answer; more need page 2, 3, ...
 // A page with fewer entries is the last one.
 const PER_PAGE = 100;
 
-// What a page looked like the last time GitHub sent it. The ETag is GitHub's
-// fingerprint of that answer: sent back as `if-none-match`, GitHub answers
-// 304 Not Modified (no body, doesn't count against the rate limit) as long as
-// the page is the same.
-type CachedPage = { etag: string; data: GitHubIssue[] };
+// What an answer looked like the last time GitHub sent it. The ETag is
+// GitHub's fingerprint of that answer: sent back as `if-none-match`, GitHub
+// answers 304 Not Modified (no body, doesn't count against the rate limit) as
+// long as the answer is the same.
+type CachedAnswer = { etag: string; data: unknown };
+
+/** The pull request of an agent's branch, as far as GS-48 needs it. */
+export type PullRequest = {
+  number: number;
+  /** The pull request's page on github.com. */
+  url: string;
+  /** `merged` is a closed pull request whose branch was merged. */
+  state: "open" | "closed" | "merged";
+};
+
+/** An issue with its text, for starting an agent on it. */
+export type IssueDetails = Issue & { body: string };
 
 /**
  * The only place that talks to GitHub's REST API. Knows nothing about Nest,
  * timers or the state; the GitHub service decides when to ask and what to do
  * with the answer.
  *
- * Remembers the pages between calls (`pages`), so one instance belongs to one
+ * Remembers answers between calls (`answers`), so one instance belongs to one
  * repo and one token. A new token or repo needs a new instance.
  */
 export class GitHubApi {
   private readonly octokit: Octokit;
-  // Page number → that page's ETag and content.
-  private readonly pages = new Map<number, CachedPage>();
+  // What was asked → its ETag and content. Keys look like `issues/2` (page 2
+  // of the issue list) or `pulls/spore/42-fix-login` (a branch's pull request).
+  private readonly answers = new Map<string, CachedAnswer>();
 
   // `fetch` is only passed in tests, to answer instead of GitHub. Without it,
   // Octokit uses Node's own fetch. The token goes to Octokit and is not kept
@@ -67,7 +87,16 @@ export class GitHubApi {
     // No end condition in the head: the loop ends with `break` below, at the
     // first page that is not full.
     for (let page = 1; ; page++) {
-      const result = await this.fetchPage(page);
+      const result = await this.conditional(`issues/${page}`, (headers) =>
+        this.octokit.rest.issues.listForRepo({
+          owner: this.repo.owner,
+          repo: this.repo.repo,
+          state: "open",
+          per_page: PER_PAGE,
+          page,
+          headers,
+        }),
+      );
       if (result.changed) changed = true;
       all.push(...result.data);
 
@@ -86,36 +115,123 @@ export class GitHubApi {
     };
   }
 
-  // Asks for one page. `changed: false` means GitHub answered 304 and `data`
-  // is what was remembered from the last time.
-  private async fetchPage(
-    page: number,
-  ): Promise<{ changed: boolean; data: GitHubIssue[] }> {
-    const cached = this.pages.get(page);
-
-    try {
-      const response = await this.octokit.rest.issues.listForRepo({
+  /**
+   * The newest pull request whose head is `branch` in this repo, in any
+   * state, or `null` if there is none.
+   *
+   * `{ changed: false }` when GitHub answered 304, i.e. nothing about the
+   * branch's pull requests changed since the last call for it.
+   */
+  async pullRequestFor(
+    branch: string,
+  ): Promise<
+    { changed: false } | { changed: true; pullRequest: PullRequest | null }
+  > {
+    const result = await this.conditional(`pulls/${branch}`, (headers) =>
+      this.octokit.rest.pulls.list({
         owner: this.repo.owner,
         repo: this.repo.repo,
-        state: "open",
-        per_page: PER_PAGE,
-        page,
-        // Only a page seen before has an ETag to send.
-        headers: cached ? { "if-none-match": cached.etag } : {},
-      });
+        // GitHub wants `owner:branch`; a branch name alone matches nothing.
+        head: `${this.repo.owner}:${branch}`,
+        state: "all",
+        headers,
+      }),
+    );
+    if (!result.changed) return { changed: false };
 
-      // Remember the page for the next call. Without an ETag there is
-      // nothing to compare against, so an old entry is dropped.
+    // Newest first by default. An older closed pull request of the same
+    // branch doesn't matter once a new one exists.
+    const newest = result.data[0];
+    if (!newest) return { changed: true, pullRequest: null };
+
+    return {
+      changed: true,
+      pullRequest: {
+        number: newest.number,
+        url: newest.html_url,
+        state: newest.merged_at
+          ? "merged"
+          : newest.state === "open"
+            ? "open"
+            : "closed",
+      },
+    };
+  }
+
+  /**
+   * Title, text, URL and labels of one open issue, for starting an agent on
+   * it. Asked fresh every time (no ETag): it is called once per dispatch.
+   *
+   * Throws a GitHubError with `issue_not_found` when the number is missing,
+   * closed or a pull request; other failures as in openIssues.
+   */
+  async getIssue(issueNumber: number): Promise<IssueDetails> {
+    let raw;
+    try {
+      const response = await this.octokit.rest.issues.get({
+        owner: this.repo.owner,
+        repo: this.repo.repo,
+        issue_number: issueNumber,
+      });
+      raw = response.data;
+    } catch (error) {
+      // 404: never existed or no access. 410: deleted.
+      const status = statusOf(error);
+      if (status === 404 || status === 410) {
+        throw new GitHubError(
+          "issue_not_found",
+          `Issue #${issueNumber} does not exist`,
+        );
+      }
+      throw toGitHubError(error);
+    }
+
+    if (raw.pull_request) {
+      throw new GitHubError(
+        "issue_not_found",
+        `#${issueNumber} is a pull request, not an issue`,
+      );
+    }
+    if (raw.state !== "open") {
+      throw new GitHubError(
+        "issue_not_found",
+        `Issue #${issueNumber} is closed`,
+      );
+    }
+
+    return { ...toIssue(raw), body: raw.body ?? "" };
+  }
+
+  // Asks GitHub with the ETag of the last answer to the same question (`key`)
+  // and remembers the new one. `changed: false` means GitHub answered 304 and
+  // `data` is what was remembered.
+  private async conditional<T>(
+    key: string,
+    request: (
+      headers: Record<string, string>,
+    ) => Promise<{ data: T; headers: { etag?: string } }>,
+  ): Promise<{ changed: boolean; data: T }> {
+    const cached = this.answers.get(key);
+
+    try {
+      // Only a question asked before has an ETag to send.
+      const response = await request(
+        cached ? { "if-none-match": cached.etag } : {},
+      );
+
+      // Without an ETag there is nothing to compare against next time, so
+      // an old entry is dropped.
       const etag = response.headers.etag;
-      if (etag) this.pages.set(page, { etag, data: response.data });
-      else this.pages.delete(page);
+      if (etag) this.answers.set(key, { etag, data: response.data });
+      else this.answers.delete(key);
 
       return { changed: true, data: response.data };
     } catch (error) {
       // Octokit treats 304 as an error and throws, so "nothing changed"
       // arrives here, not as a normal response.
       if (cached && statusOf(error) === 304) {
-        return { changed: false, data: cached.data };
+        // Stored by this method for the same key, so it is a T.
+        return { changed: false, data: cached.data as T };
       }
       throw toGitHubError(error);
     }
@@ -123,7 +239,7 @@ export class GitHubApi {
 }
 
 // GitHub's large issue object → the contract's small Issue.
-function toIssue(raw: GitHubIssue): Issue {
+function toIssue(raw: GitHubIssueFields): Issue {
   return {
     number: raw.number,
     title: raw.title,
