@@ -10,7 +10,8 @@ import { OverviewAgentService, START_OVERVIEW } from "./overview-agent.service";
     OverviewAgentService,
     {
       provide: START_OVERVIEW,
-      // Read once at startup. Off unless "1".
+      // Read once at startup.
+      // Off unless "1".
       useFactory: () => process.env.GITSPORE_START_OVERVIEW === "1",
     },
   ],
