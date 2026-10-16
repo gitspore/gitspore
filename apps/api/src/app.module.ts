@@ -3,6 +3,7 @@ import { StateModule } from "./modules/state/state.module";
 import { GatewayModule } from "./modules/gateway/gateway.module";
 import { RepoConfigModule } from "./config/config.module";
 import { WorktreeModule } from "./modules/worktree/worktree.module";
+import { GitHubModule } from "./modules/github/github.module";
 import { TerminalModule } from "./modules/terminal/terminal.module";
 import { OverviewModule } from "./modules/overview/overview.module";
 
@@ -14,6 +15,7 @@ import { OverviewModule } from "./modules/overview/overview.module";
     StateModule,
     GatewayModule,
     WorktreeModule,
+    GitHubModule,
     TerminalModule,
     OverviewModule,
   ],

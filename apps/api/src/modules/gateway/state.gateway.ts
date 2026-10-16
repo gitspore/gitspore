@@ -6,6 +6,7 @@ import {
 } from "@nestjs/websockets";
 import { allowedOrigins, SessionAuth } from "./session-auth.service";
 import { StateStore } from "../state/state.store";
+import { GitHubService } from "../github/github.service";
 import { Server, Socket } from "socket.io";
 import { ClientToServerEvents, ServerToClientEvents } from "@gitspore/shared";
 
@@ -24,6 +25,7 @@ export class StateGateway implements OnGatewayInit, OnGatewayConnection {
   constructor(
     private readonly auth: SessionAuth,
     private readonly store: StateStore,
+    private readonly github: GitHubService,
   ) {}
 
   afterInit(server: GreenhouseServer) {
@@ -41,14 +43,26 @@ export class StateGateway implements OnGatewayInit, OnGatewayConnection {
     });
 
     this.store.onPatch((patch) => server.emit("state:patch", patch));
+    this.github.onError((error) => server.emit("error", error));
   }
 
   handleConnection(client: GreenhouseSocket) {
     sendSnapshot(client, this.store);
+
+    // A GitHub problem is reported once, usually before the browser is open.
+    // A client that connects later still gets to know it.
+    const problem = this.github.currentProblem();
+    if (problem) client.emit("error", problem);
   }
 
   @SubscribeMessage("state:request")
   handleStateRequest(client: GreenhouseSocket) {
     sendSnapshot(client, this.store);
+  }
+
+  // Not awaited: the result arrives as `state:patch`, failures as `error`.
+  @SubscribeMessage("issues:refresh")
+  handleIssuesRefresh() {
+    void this.github.refresh();
   }
 }
