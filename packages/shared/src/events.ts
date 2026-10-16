@@ -34,6 +34,14 @@ export type ErrorCode =
   | "git_failed"
   /** GitHub could not be reached or refused the request. */
   | "github_failed"
+  /** GitHub synchronization is disabled. */
+  | "github_sync_disabled"
+  /** GitHub Servers are not reachable. */
+  | "github_unreachable"
+  /** GitHub rate limiting. */
+  | "github_rate_limited"
+  /** Not authorized. */
+  | "github_auth_failed"
   /** Anything else. `message` says what. */
   | "internal";
 

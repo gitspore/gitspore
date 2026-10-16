@@ -1,9 +1,8 @@
 import { RepoConfig } from "@/config/repo-config";
-import { BRANCH_PREFIX } from "@gitspore/shared";
+import { BRANCH_PREFIX, branchForIssue } from "@gitspore/shared";
 import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { basename, dirname, join, resolve } from "node:path";
 import { simpleGit, SimpleGit } from "simple-git";
-import { branchName } from "./branch-name";
 import { WorktreeError } from "./worktree-error";
 import { access } from "node:fs/promises";
 
@@ -48,7 +47,7 @@ export class WorktreeService implements OnModuleInit {
     issueNumber: number;
     issueTitle: string;
   }): Promise<Worktree> {
-    const branch = branchName(issue.issueNumber, issue.issueTitle);
+    const branch = branchForIssue(issue.issueNumber, issue.issueTitle);
     const path = join(this.worktreeRoot, branch.slice(BRANCH_PREFIX.length));
 
     if (await this.branchExists(branch)) {
@@ -59,6 +58,16 @@ export class WorktreeService implements OnModuleInit {
     }
 
     if (await this.pathExists(path)) {
+      // Another create() for the same issue may have made the folder since
+      // the check above. `worktree add -b` makes the branch before the
+      // folder, so then the branch exists by now. A folder without its
+      // branch is a leftover.
+      if (await this.branchExists(branch)) {
+        throw new WorktreeError(
+          "branch_exists",
+          `Branch ${branch} already exists.`,
+        );
+      }
       throw new WorktreeError("path_exists", `Folder ${path} already exists.`);
     }
 

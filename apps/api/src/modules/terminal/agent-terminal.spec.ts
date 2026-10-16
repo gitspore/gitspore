@@ -4,10 +4,12 @@ import { AgentTerminal, type AgentTerminalOptions } from "./agent-terminal";
 import { TerminalError } from "./terminal-error";
 import { FakePty } from "../../../test/fake-pty";
 
+// Unix unless a test says otherwise: the shell types the command there.
 const OPTIONS: AgentTerminalOptions = {
   cwd: "/repo/spore-42",
   command: "claude",
   args: [],
+  platform: "linux",
 };
 
 function fakeViewer() {
@@ -31,10 +33,11 @@ describe("AgentTerminal", () => {
       cwd: "/repo/spore-42",
       command: "claude",
       args: [],
+      platform: "linux",
     });
 
     expect(spawnPty).toHaveBeenCalledWith(
-      getDefaultShell(),
+      getDefaultShell("linux"),
       [],
       expect.objectContaining({
         name: "xterm-256color",
@@ -54,11 +57,30 @@ describe("AgentTerminal", () => {
       cwd: "/repo/spore-42",
       command: "claude",
       args: ["--model=opus", ".gitspore/prompt-42.md"],
+      platform: "linux",
     });
 
     expect(pty.write).toHaveBeenCalledWith(
       "claude --model=opus .gitspore/prompt-42.md\r",
     );
+  });
+
+  it("hands the command line to PowerShell on Windows instead of typing it", () => {
+    const pty = new FakePty();
+    const spawnPty = jest.fn(() => pty);
+
+    new AgentTerminal(spawnPty, {
+      ...OPTIONS,
+      args: ["--permission-mode", "plan"],
+      platform: "win32",
+    });
+
+    expect(spawnPty).toHaveBeenCalledWith(
+      "powershell.exe",
+      ["-NoExit", "-Command", "claude --permission-mode plan"],
+      expect.anything(),
+    );
+    expect(pty.write).not.toHaveBeenCalled();
   });
 
   it.each([

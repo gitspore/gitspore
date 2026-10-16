@@ -142,6 +142,35 @@ describe("WorktreeService", () => {
       expect(rejected?.reason).toMatchObject({ code: "branch_exists" });
     });
 
+    // The timing the test above only hits sometimes: the other call made
+    // branch and folder after this call's branch check, before its folder
+    // check.
+    it("gives branch_exists when the other call made the folder after the branch check", async () => {
+      const branch = `${BRANCH_PREFIX}42-fix-bug`;
+      const path = join(parent, ".gitspore-worktrees", "my-repo", "42-fix-bug");
+      await simpleGit(repo).raw([
+        "worktree",
+        "add",
+        "-b",
+        branch,
+        path,
+        "main",
+      ]);
+      // The branch check that ran before the other call was done.
+      jest
+        .spyOn(
+          service as unknown as {
+            branchExists(branch: string): Promise<boolean>;
+          },
+          "branchExists",
+        )
+        .mockResolvedValueOnce(false);
+
+      await expect(
+        service.create({ issueNumber: 42, issueTitle: "Fix bug" }),
+      ).rejects.toMatchObject({ code: "branch_exists" });
+    });
+
     it("keeps each worktree's files apart", async () => {
       const one = await service.create({ issueNumber: 1, issueTitle: "One" });
       const two = await service.create({ issueNumber: 2, issueTitle: "Two" });

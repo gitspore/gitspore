@@ -3,6 +3,53 @@
 Kurz festgehalten, damit später nachvollziehbar ist, _warum_ etwas so
 eingerichtet ist. Neue Einträge oben anfügen.
 
+## GS-21 – GitHub-Sync (2026-10-15)
+
+### Fehlercodes klein geschrieben, wie der übrige Contract
+
+Das Ticket nennt `GITHUB_SYNC_DISABLED`, `GITHUB_UNREACHABLE`,
+`GITHUB_RATE_LIMITED` und `GITHUB_AUTH_FAILED`. Im `ErrorCode` von
+`packages/shared` sind alle Codes klein geschrieben, deshalb heißen sie dort
+`github_sync_disabled`, `github_unreachable`, `github_rate_limited` und
+`github_auth_failed`. `github_failed` bleibt als Auffangcode für alles andere
+(z. B. 403 ohne Zugriff, 404 auf das Repo).
+
+### Ein ETag pro Seite der Issue-Liste
+
+Ein ETag nur für Seite 1 würde Änderungen an älteren Issues auf späteren Seiten
+verpassen. Jede Seite wird deshalb mit ihrem eigenen ETag abgefragt; als
+„unverändert“ gilt die Liste nur, wenn alle Seiten 304 liefern.
+
+### Pull Requests in jedem Poll, nach den Issues
+
+Statt eigener Auslöser („Issue verschwindet“, „Refresh“) werden die PRs aller
+Agent-Branches in jedem Poll direkt nach den Issues geprüft. Das deckt beide
+Fälle aus dem Ticket ab: Schließt ein Merge das Issue, wird der PR im selben
+Poll geprüft. Mit ETag kostet eine unveränderte Abfrage kein Rate-Limit.
+
+### Fehler einmal melden, später Verbundenen trotzdem zeigen
+
+Jeder GitHub-Fehler geht nur einmal an die Clients, bis ein Poll wieder
+klappt. Weil der Daemon meist vor dem Browser startet, bekommt ein Client beim
+Verbinden zusätzlich den aktuellen Fehler (`currentProblem()`), sonst sähe er
+z. B. `github_sync_disabled` nie. Ein `issues:refresh`, während der Sync aus
+oder pausiert ist, fragt GitHub nicht und schickt den Fehler erneut.
+
+### Octokit 22 (ESM-only)
+
+`@octokit/rest` 22 ist wie Nest 12 nur als ESM verfügbar. Der Daemon lädt es
+per `require()` (Node 24), Jest über den bestehenden `jest.runner.mjs` mit
+`--experimental-vm-modules`. In den Tests ersetzt ein injiziertes `fetch` das
+Netzwerk; keine Anfrage geht an GitHub.
+
+### `GitHubService` statt Octokit in jedem Modul
+
+Teamentscheidung vom 2026-10-13: Jeder GitHub-Lesezugriff läuft über
+`GitHubService` (Issues, PR-Status für GS-48, Issue-Text für den Dispatch).
+Token-Quelle (`GitHubCredentialsProvider`) und Repo-Quelle (`GitHubSource`)
+sind abstrakte Klassen, damit ein späterer Login per Device Flow oder ein
+Setup-Screen nur diese austauscht.
+
 ## GS-02 – Monorepo-Gerüst und CI (2026-10-06)
 
 ### Node 24 (aktuelle LTS) statt Node 20

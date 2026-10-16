@@ -2,12 +2,8 @@
 
 import { useState } from "react";
 import type { Agent } from "@gitspore/shared";
-import {
-  mainGrid,
-  shellGrid,
-  type LayoutSettings,
-  type SidePanelTab,
-} from "@/lib/layout";
+import { useGreenhouseStore } from "@/lib/client/GreenhouseClientProvider";
+import { mainGrid, shellGrid } from "@/lib/layout";
 import { mockAgents, mockContext, mockIssues, mockUsage } from "@/lib/mock";
 import { useSceneEnabled } from "@/lib/scene";
 import { Scene } from "../Scene";
@@ -21,22 +17,16 @@ import { TopBar } from "./TopBar";
 const HOTBAR_SLOTS = ["1", "2", "3", "4", "5", "6"];
 
 export function AppShell() {
-  // Temporary: moves to the zustand store later
-  const [layout, setLayout] = useState<LayoutSettings>({
-    sidePanel: "agents",
-    mode: "scene",
-    // #15 waits in the mock, so the header shows the waiting state
-    windows: [{ agentId: "agent-1", minimised: false }],
-  });
+  // Side panel, main mode and open windows live in the store
+  const layout = useGreenhouseStore((s) => s.layout);
+  const setSidePanel = useGreenhouseStore((s) => s.setSidePanel);
+  const setMode = useGreenhouseStore((s) => s.setMode);
+  const openWindow = useGreenhouseStore((s) => s.openWindow);
+  const toggleMinimised = useGreenhouseStore((s) => s.toggleMinimised);
 
   // Shared by the top bar and the side panel. Moves to the store with #8.
   const [agents, setAgents] = useState<Agent[]>(mockAgents);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
-
-  // The side panel before entering focus mode, to bring it back afterwards (rule R6)
-  const [panelBeforeFocus, setPanelBeforeFocus] = useState<SidePanelTab | null>(
-    null,
-  );
 
   // No scene with ?scene=off or without WebGL; the interface works the same (#18)
   const showScene = useSceneEnabled();
@@ -48,29 +38,11 @@ export function AppShell() {
     .filter((agent) => agent !== undefined);
   const waitingCount = agents.filter((a) => a.status === "needs_input").length;
 
-  // R6: entering focus mode closes the side panel; leaving it restores the panel
-  function toggleMode() {
-    if (layout.mode === "scene") {
-      setPanelBeforeFocus(layout.sidePanel);
-      setLayout((l) => ({ ...l, mode: "focus", sidePanel: null }));
-    } else {
-      setLayout((l) => ({ ...l, mode: "scene", sidePanel: panelBeforeFocus }));
-    }
-  }
-
   // Open: this agent's window alone, the others minimised.
   // Beside: this window next to the ones already visible.
   function openAgent(agent: Agent, beside: boolean) {
     setSelectedSlot(agent.slotIndex);
-    setLayout((l) => {
-      const others = l.windows
-        .filter((w) => w.agentId !== agent.id)
-        .map((w) => (beside ? w : { ...w, minimised: true }));
-      return {
-        ...l,
-        windows: [...others, { agentId: agent.id, minimised: false }],
-      };
-    });
+    openWindow(agent.id, { alone: !beside });
   }
 
   return (
@@ -97,13 +69,7 @@ export function AppShell() {
             {/* Debug control, remove once the hotbar exists */}
             <Button
               onClick={() =>
-                setLayout((l) => ({
-                  ...l,
-                  windows: l.windows.map((w) => ({
-                    ...w,
-                    minimised: !w.minimised,
-                  })),
-                }))
+                layout.windows.forEach((w) => toggleMinimised(w.agentId))
               }
             >
               Toggle Terminal
@@ -117,11 +83,11 @@ export function AppShell() {
           <div className="pointer-events-auto w-fit">
             <ToolRail
               sidePanel={layout.sidePanel}
-              onSidePanelChange={(tab) =>
-                setLayout((l) => ({ ...l, sidePanel: tab }))
-              }
+              onSidePanelChange={setSidePanel}
               mode={layout.mode}
-              onToggleMode={toggleMode}
+              onToggleMode={() =>
+                setMode(layout.mode === "scene" ? "focus" : "scene")
+              }
               waitingCount={waitingCount}
             />
           </div>
@@ -144,14 +110,7 @@ export function AppShell() {
                       ?.title ?? ""
                   }
                   context={mockContext[agent.id]}
-                  onMinimise={() =>
-                    setLayout((l) => ({
-                      ...l,
-                      windows: l.windows.map((w) =>
-                        w.agentId === agent.id ? { ...w, minimised: true } : w,
-                      ),
-                    }))
-                  }
+                  onMinimise={() => toggleMinimised(agent.id)}
                 />
               ))}
             </div>
@@ -178,10 +137,8 @@ export function AppShell() {
           <aside className="pointer-events-auto overflow-y-auto rounded-xl bg-panel p-2 text-ink shadow-lg [grid-area:panel]">
             <SidePanel
               tab={layout.sidePanel}
-              onTabChange={(tab) =>
-                setLayout((l) => ({ ...l, sidePanel: tab }))
-              }
-              onClose={() => setLayout((l) => ({ ...l, sidePanel: null }))}
+              onTabChange={setSidePanel}
+              onClose={() => setSidePanel(null)}
               agents={agents}
               setAgents={setAgents}
               selectedSlot={selectedSlot}
