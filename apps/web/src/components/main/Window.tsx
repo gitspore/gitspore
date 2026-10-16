@@ -1,7 +1,8 @@
 "use client";
 
-import type { Agent } from "@gitspore/shared";
+import type { Agent, AgentId } from "@gitspore/shared";
 import { Minus } from "lucide-react";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { UsageMeter, type ContextUsage } from "@/components/shell/UsageMeter";
@@ -9,12 +10,19 @@ import { STATUS_COLOUR, STATUS_ICON, STATUS_WORD } from "@/lib/status";
 
 // One agent's terminal window.
 
+// xterm.js needs the browser, so the panel is never rendered on the server.
+const TerminalPanel = dynamic(
+  () => import("./TerminalPanel").then((m) => m.TerminalPanel),
+  { ssr: false },
+);
+
 type WindowProps = {
   agent: Agent;
   issueTitle: string;
   // Missing until the daemon sends it (#42): the meter stays hidden
   context?: ContextUsage;
   onMinimise: () => void;
+  terminalAgentId: AgentId;
 };
 
 export function Window({
@@ -22,6 +30,7 @@ export function Window({
   issueTitle,
   context,
   onMinimise,
+  terminalAgentId,
 }: WindowProps) {
   const StatusIcon = STATUS_ICON[agent.status];
 
@@ -63,8 +72,8 @@ export function Window({
         </Button>
       </header>
 
-      <div className="flex-1 p-3 font-mono text-terminal-fg">
-        Terminal for {agent.branch}
+      <div className="min-h-0 flex-1 p-3">
+        <TerminalPanel agentId={terminalAgentId} />
       </div>
     </div>
   );

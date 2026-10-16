@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { Agent } from "@gitspore/shared";
+import { OVERVIEW_AGENT_ID, type Agent } from "@gitspore/shared";
 import { useGreenhouseStore } from "@/lib/client/GreenhouseClientProvider";
 import { mainGrid, shellGrid } from "@/lib/layout";
 import { mockAgents, mockContext, mockIssues, mockUsage } from "@/lib/mock";
@@ -23,6 +23,11 @@ export function AppShell() {
   const setMode = useGreenhouseStore((s) => s.setMode);
   const openWindow = useGreenhouseStore((s) => s.openWindow);
   const toggleMinimised = useGreenhouseStore((s) => s.toggleMinimised);
+
+  // mock or live, from the URL. Not layout.mode (scene or focus).
+  // Live, every window shows the overview agent's terminal for now: it is
+  // the only agent the daemon runs, and the windows still use mockAgents (#8).
+  const clientMode = useGreenhouseStore((s) => s.mode);
 
   // Shared by the top bar and the side panel. Moves to the store with #8.
   const [agents, setAgents] = useState<Agent[]>(mockAgents);
@@ -110,6 +115,10 @@ export function AppShell() {
                       ?.title ?? ""
                   }
                   context={mockContext[agent.id]}
+                  terminalAgentId={
+                    clientMode === "live" ? OVERVIEW_AGENT_ID : agent.id
+                  }
+
                   onMinimise={() => toggleMinimised(agent.id)}
                 />
               ))}
