@@ -148,7 +148,14 @@ describe("WorktreeService", () => {
     it("gives branch_exists when the other call made the folder after the branch check", async () => {
       const branch = `${BRANCH_PREFIX}42-fix-bug`;
       const path = join(parent, ".gitspore-worktrees", "my-repo", "42-fix-bug");
-      await simpleGit(repo).raw(["worktree", "add", "-b", branch, path, "main"]);
+      await simpleGit(repo).raw([
+        "worktree",
+        "add",
+        "-b",
+        branch,
+        path,
+        "main",
+      ]);
       // The branch check that ran before the other call was done.
       jest
         .spyOn(
