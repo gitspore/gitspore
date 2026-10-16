@@ -62,4 +62,48 @@ describe("TerminalSession", () => {
     await session.open("a1");
     expect(terminal.text).toBe(GREETING);
   });
+
+  it("shows the exit code, keeps the screen and stops input on exit", async () => {
+    // The mock numbers its sessions, so the first open is mock-session-1.
+    const { clock, terminal, session } = setup([
+      {
+        at: 1000,
+        event: "terminal:exit",
+        payload: { sessionId: "mock-session-1", exitCode: 0 },
+      },
+    ]);
+
+    await session.open("a1");
+    clock.advance(1000);
+    terminal.type("ls\r");
+
+    expect(terminal.text).toBe(
+      GREETING + "\r\n[process exited with code 0]\r\n",
+    );
+    expect(terminal.options.disableStdin).toBe(true);
+  });
+
+  it("says so when the daemon refuses the open", async () => {
+    const { terminal, session } = setup();
+
+    await session.open("nobody");
+
+    expect(terminal.text).toBe("Could not open the terminal\r\n");
+  });
+
+  it("gives the session back when disposed before the ack", async () => {
+    const { client, actions, terminal } = setup();
+    const closeTerminal = jest.fn(actions.closeTerminal);
+    const session = new TerminalSession(terminal, client, {
+      ...actions,
+      closeTerminal,
+    });
+
+    // StrictMode: mount, unmount before the ack arrives.
+    const opened = session.open("a1");
+    session.dispose();
+    await opened;
+
+    expect(closeTerminal).toHaveBeenCalledWith("mock-session-1");
+  });
 });

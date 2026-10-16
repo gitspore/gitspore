@@ -29,6 +29,7 @@ export class TerminalSession {
   private sessionId: SessionId | null = null;
   private waiting = false;
   private early: TerminalDataPayload[] = [];
+  private disposed = false;
   private size = { cols: 0, rows: 0 };
   private sentSize = { cols: 0, rows: 0 };
   private readonly input: { dispose(): void };
@@ -49,6 +50,15 @@ export class TerminalSession {
     this.waiting = false;
     const early = this.early;
     this.early = [];
+
+    // Disposed while waiting
+    // (unmount, StrictMode):
+    // nobody shows this session,
+    // so give it back.
+    if (this.disposed) {
+      if (sessionId) this.actions.closeTerminal(sessionId);
+      return;
+    }
 
     if (sessionId === null) {
       this.screen.write("Could not open the terminal\r\n");
@@ -72,6 +82,8 @@ export class TerminalSession {
   // Stops listening and detaches.
   // agent running.
   dispose(): void {
+    this.disposed = true;
+
     this.client.off("terminal:data", this.onOutput);
     this.client.off("terminal:exit", this.onExit);
 
