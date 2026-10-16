@@ -58,6 +58,16 @@ export class WorktreeService implements OnModuleInit {
     }
 
     if (await this.pathExists(path)) {
+      // Another create() for the same issue may have made the folder since
+      // the check above. `worktree add -b` makes the branch before the
+      // folder, so then the branch exists by now. A folder without its
+      // branch is a leftover.
+      if (await this.branchExists(branch)) {
+        throw new WorktreeError(
+          "branch_exists",
+          `Branch ${branch} already exists.`,
+        );
+      }
       throw new WorktreeError("path_exists", `Folder ${path} already exists.`);
     }
 
