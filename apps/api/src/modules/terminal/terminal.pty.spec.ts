@@ -75,7 +75,7 @@ describe("TerminalService with a real PTY", () => {
     });
     output = scrollback;
 
-    // Resolves once `found(output)` is true; fails after 10 s showing the output.
+    // Resolves once `found(output)` is true; fails after 10 s (20 s on Windows) showing the output.
     function waitFor(
       found: (output: string) => boolean,
       what: string,
@@ -83,7 +83,7 @@ describe("TerminalService with a real PTY", () => {
       return new Promise((resolve, reject) => {
         const timer = setTimeout(
           () => reject(new Error(`No ${what} within 10s:\n${output}`)),
-          10_000,
+          process.platform === "win32" ? 20_000 : 10_000,
         );
         check = () => {
           if (found(output)) {
@@ -131,6 +131,7 @@ describe("TerminalService with a real PTY", () => {
       args: ["gitspore"],
     });
     const browserTab = attachTab("agent-1");
+    await browserTab.waitForLine("gitspore");
 
     service.resize(browserTab.sessionId, "socket-1", 100, 30);
     service.write(browserTab.sessionId, "socket-1", `${ASK_COLUMNS}\r`);
@@ -148,6 +149,7 @@ describe("TerminalService with a real PTY", () => {
         args: ["gitspore"],
       });
       const browserTab = attachTab("agent-1");
+      await browserTab.waitForLine("gitspore");
 
       // Typed as octal escapes, so the real bytes only appear in the output:
       // \033 = ESC, \303\274 = ü, \360\237\214\261 = 🌱
@@ -170,6 +172,7 @@ describe("TerminalService with a real PTY", () => {
       args: ["gitspore"],
     });
     const browserTab = attachTab("agent-1");
+    await browserTab.waitForLine("gitspore");
 
     service.write(browserTab.sessionId, "socket-1", `${COUNT_TO_10000}\r`);
     await browserTab.waitForLine("10000");
@@ -202,6 +205,7 @@ describe("TerminalService with a real PTY", () => {
       args: ["gitspore"],
     });
     const browserTab = attachTab("agent-1");
+    await browserTab.waitForLine("gitspore");
 
     service.write(browserTab.sessionId, "socket-1", "exit\r");
 

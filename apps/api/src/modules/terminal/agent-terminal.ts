@@ -53,7 +53,13 @@ function toCommandLine(command: string, args: string[]): string {
 //(in case we want to hardcode claude when calling the terminal.)
 function startInShell(spawnPty: SpawnPty, options: AgentTerminalOptions): Pty {
   const commandLine = toCommandLine(options.command, options.args);
-  const pty = spawnPty(getDefaultShell(), [], {
+  const platform = options.platform ?? process.platform;
+  // ConPTY can drop keys typed before PowerShell reads input,
+  // so Windows gets the command as an argument.
+  // -NoExit keeps the shell afterwards.
+  const shellArgs =
+    platform === "win32" ? ["-NoExit", "-Command", commandLine] : [];
+  const pty = spawnPty(getDefaultShell(platform), shellArgs, {
     name: TERMINAL_NAME,
     cols: DEFAULT_COLS,
     rows: DEFAULT_ROWS,
@@ -61,7 +67,9 @@ function startInShell(spawnPty: SpawnPty, options: AgentTerminalOptions): Pty {
     env: { ...process.env, TERM: TERMINAL_NAME, COLORTERM: "truecolor" },
   });
 
-  pty.write(`${commandLine}\r`);
+  if (platform !== "win32") {
+    pty.write(`${commandLine}\r`);
+  }
   return pty;
 }
 
