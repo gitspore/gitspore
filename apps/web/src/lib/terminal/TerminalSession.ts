@@ -1,4 +1,9 @@
-import type { AgentId, SessionId, TerminalDataPayload } from "@gitspore/shared";
+import type {
+  AgentId,
+  SessionId,
+  TerminalDataPayload,
+  TerminalExitPayload,
+} from "@gitspore/shared";
 import type { GreenhouseClient } from "../client/GreenhouseClient";
 import type { GreenhouseStoreState } from "../store/greenhouseStore";
 //
@@ -24,14 +29,18 @@ export class TerminalSession {
   private sessionId: SessionId | null = null;
   private waiting = false;
   private early: TerminalDataPayload[] = [];
-
+  private size = { cols: 0, rows: 0 };
+  private sentSize = { cols: 0, rows: 0 };
   private readonly input: { dispose(): void };
+
   constructor(
     private readonly screen: TerminalScreen,
     private readonly client: GreenhouseClient,
     private readonly actions: TerminalActions,
   ) {
     client.on("terminal:data", this.onOutput);
+    client.on("terminal:exit", this.onExit);
+
     this.input = screen.onData(this.onInput);
   }
   async open(agentId: AgentId): Promise<void> {
@@ -40,20 +49,46 @@ export class TerminalSession {
     this.waiting = false;
     const early = this.early;
     this.early = [];
+
+    if (sessionId === null) {
+      this.screen.write("Could not open the terminal\r\n");
+      return;
+    }
+
     this.sessionId = sessionId;
     for (const payload of early) {
       if (payload.sessionId === sessionId) this.screen.write(payload.chunk);
     }
+    this.sendSize();
+  }
+
+  // after every fit.
+  // Sent on size change.
+  resize(cols: number, rows: number): void {
+    this.size = { cols, rows };
+    this.sendSize();
   }
 
   // Stops listening and detaches.
   // agent running.
   dispose(): void {
     this.client.off("terminal:data", this.onOutput);
+    this.client.off("terminal:exit", this.onExit);
+
     this.input.dispose();
     if (this.sessionId) this.actions.closeTerminal(this.sessionId);
     this.sessionId = null;
   }
+
+  // open() sends size when session present.
+  private sendSize(): void {
+    const { cols, rows } = this.size;
+    if (!this.sessionId || cols === 0) return;
+    if (cols === this.sentSize.cols && rows === this.sentSize.rows) return;
+    this.sentSize = this.size;
+    this.actions.resizeTerminal(this.sessionId, cols, rows);
+  }
+
   // session output arrives here
   private readonly onOutput = (payload: TerminalDataPayload) => {
     if (payload.sessionId === this.sessionId) {
@@ -61,6 +96,14 @@ export class TerminalSession {
     } else if (this.waiting) {
       this.early.push(payload);
     }
+  };
+
+  // screen stays, input stops.
+  private readonly onExit = ({ sessionId, exitCode }: TerminalExitPayload) => {
+    if (sessionId !== this.sessionId) return;
+    this.screen.write(`\r\n[process exited with code ${exitCode}]\r\n`);
+    this.screen.options.disableStdin = true;
+    this.sessionId = null;
   };
 
   private readonly onInput = (data: string) => {
