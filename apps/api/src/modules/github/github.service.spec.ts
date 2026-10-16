@@ -52,9 +52,7 @@ function fakeApi() {
     openIssues: jest
       .fn()
       .mockResolvedValue({ changed: true, issues: [] as Issue[] }),
-    pullRequestFor: jest
-      .fn()
-      .mockResolvedValue({ changed: true, pullRequest: null }),
+    pullRequestFor: jest.fn().mockResolvedValue(null),
     getIssue: jest.fn(),
   };
 }
@@ -377,10 +375,7 @@ describe("GitHubService: pull requests", () => {
   it("emits one event when a pull request appears", async () => {
     const { api, service, changes } =
       await startWithAgents("spore/42-fix-login");
-    api.pullRequestFor.mockResolvedValue({
-      changed: true,
-      pullRequest: pullRequest(7),
-    });
+    api.pullRequestFor.mockResolvedValue(pullRequest(7));
 
     await nextPoll();
     await nextPoll();
@@ -403,18 +398,15 @@ describe("GitHubService: pull requests", () => {
       "spore/42-a",
       "spore/43-b",
     );
-    api.pullRequestFor.mockImplementation(async (branch: string) => ({
-      changed: true,
-      pullRequest: pullRequest(branch === "spore/42-a" ? 7 : 8),
-    }));
+    api.pullRequestFor.mockImplementation(async (branch: string) =>
+      pullRequest(branch === "spore/42-a" ? 7 : 8),
+    );
     await nextPoll();
-    api.pullRequestFor.mockImplementation(async (branch: string) => ({
-      changed: true,
-      pullRequest:
-        branch === "spore/42-a"
-          ? pullRequest(7, "merged")
-          : pullRequest(8, "closed"),
-    }));
+    api.pullRequestFor.mockImplementation(async (branch: string) =>
+      branch === "spore/42-a"
+        ? pullRequest(7, "merged")
+        : pullRequest(8, "closed"),
+    );
 
     await nextPoll();
 
@@ -427,18 +419,33 @@ describe("GitHubService: pull requests", () => {
     service.stop();
   });
 
-  it("emits nothing when GitHub answers 304", async () => {
+  it("emits nothing while the pull request stays the same", async () => {
     const { api, service, changes } = await startWithAgents("spore/42-a");
-    api.pullRequestFor.mockResolvedValueOnce({
-      changed: true,
-      pullRequest: pullRequest(7),
-    });
+    api.pullRequestFor.mockResolvedValue(pullRequest(7));
     await nextPoll();
-    api.pullRequestFor.mockResolvedValue({ changed: false });
 
     await nextPoll();
 
     expect(changes).toHaveLength(1);
+    service.stop();
+  });
+
+  it("knows the pull request again when its agent comes back, without a new event", async () => {
+    const { api, store, service, changes } =
+      await startWithAgents("spore/42-a");
+    api.pullRequestFor.mockResolvedValue(pullRequest(7));
+    await nextPoll();
+    store.apply([{ type: "agent:remove", agentId: "agent-spore/42-a" }]);
+    await nextPoll();
+    expect(service.pullRequestFor("spore/42-a")).toBeNull();
+
+    store.apply([{ type: "agent:upsert", agent: agent("spore/42-a") }]);
+    await nextPoll();
+    await nextPoll();
+
+    expect(service.pullRequestFor("spore/42-a")).toEqual(pullRequest(7));
+    // Once when it appeared, once when the agent came back, nothing after.
+    expect(changes).toHaveLength(2);
     service.stop();
   });
 

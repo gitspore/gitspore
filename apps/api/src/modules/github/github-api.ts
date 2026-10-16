@@ -119,14 +119,12 @@ export class GitHubApi {
    * The newest pull request whose head is `branch` in this repo, in any
    * state, or `null` if there is none.
    *
-   * `{ changed: false }` when GitHub answered 304, i.e. nothing about the
-   * branch's pull requests changed since the last call for it.
+   * Always the current answer, also when GitHub answered 304: then it is the
+   * one remembered from the last call for the branch. The caller compares it
+   * with what it knows, so it doesn't matter whether the caller forgot the
+   * branch in between.
    */
-  async pullRequestFor(
-    branch: string,
-  ): Promise<
-    { changed: false } | { changed: true; pullRequest: PullRequest | null }
-  > {
+  async pullRequestFor(branch: string): Promise<PullRequest | null> {
     const result = await this.conditional(`pulls/${branch}`, (headers) =>
       this.octokit.rest.pulls.list({
         owner: this.repo.owner,
@@ -137,24 +135,19 @@ export class GitHubApi {
         headers,
       }),
     );
-    if (!result.changed) return { changed: false };
-
     // Newest first by default. An older closed pull request of the same
     // branch doesn't matter once a new one exists.
     const newest = result.data[0];
-    if (!newest) return { changed: true, pullRequest: null };
+    if (!newest) return null;
 
     return {
-      changed: true,
-      pullRequest: {
-        number: newest.number,
-        url: newest.html_url,
-        state: newest.merged_at
-          ? "merged"
-          : newest.state === "open"
-            ? "open"
-            : "closed",
-      },
+      number: newest.number,
+      url: newest.html_url,
+      state: newest.merged_at
+        ? "merged"
+        : newest.state === "open"
+          ? "open"
+          : "closed",
     };
   }
 

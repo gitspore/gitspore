@@ -305,7 +305,7 @@ describe("GitHubApi.pullRequestFor", () => {
 
     const result = await api.pullRequestFor("spore/42-fix-login");
 
-    expect(result).toEqual({ changed: true, pullRequest: null });
+    expect(result).toBeNull();
   });
 
   it("returns an open pull request", async () => {
@@ -315,12 +315,9 @@ describe("GitHubApi.pullRequestFor", () => {
     const result = await api.pullRequestFor("spore/42-fix-login");
 
     expect(result).toEqual({
-      changed: true,
-      pullRequest: {
-        number: 7,
-        url: "https://github.com/owner/repo/pull/7",
-        state: "open",
-      },
+      number: 7,
+      url: "https://github.com/owner/repo/pull/7",
+      state: "open",
     });
   });
 
@@ -341,8 +338,8 @@ describe("GitHubApi.pullRequestFor", () => {
     const merged = await api.pullRequestFor("spore/42-fix-login");
     const closed = await api.pullRequestFor("spore/43-other");
 
-    expect(merged).toMatchObject({ pullRequest: { state: "merged" } });
-    expect(closed).toMatchObject({ pullRequest: { state: "closed" } });
+    expect(merged).toMatchObject({ state: "merged" });
+    expect(closed).toMatchObject({ state: "closed" });
   });
 
   it("takes the newest pull request when the branch has several", async () => {
@@ -355,10 +352,10 @@ describe("GitHubApi.pullRequestFor", () => {
 
     const result = await api.pullRequestFor("spore/42-fix-login");
 
-    expect(result).toMatchObject({ pullRequest: { number: 9 } });
+    expect(result).toMatchObject({ number: 9 });
   });
 
-  it("reports no change when GitHub answers 304", async () => {
+  it("returns the remembered pull request when GitHub answers 304", async () => {
     const fetch = jest
       .fn()
       .mockResolvedValueOnce(json([gitHubPull(7)], 200, { etag: '"pr"' }))
@@ -369,7 +366,11 @@ describe("GitHubApi.pullRequestFor", () => {
     const result = await api.pullRequestFor("spore/42-fix-login");
 
     expect(sentHeaders(fetch, 1)["if-none-match"]).toBe('"pr"');
-    expect(result).toEqual({ changed: false });
+    expect(result).toEqual({
+      number: 7,
+      url: "https://github.com/owner/repo/pull/7",
+      state: "open",
+    });
   });
 
   it("keeps the ETags of branches and issue pages apart", async () => {
