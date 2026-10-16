@@ -204,11 +204,10 @@ export class GitHubService implements OnApplicationBootstrap, OnModuleDestroy {
     }
 
     for (const branch of branches) {
-      const result = await api.pullRequestFor(branch);
-      if (!result.changed) continue;
-
+      // The current pull request also on a 304. A branch that came back after
+      // its agent left is then reported as it is, not as "nothing".
+      const now = await api.pullRequestFor(branch);
       const before = this.pullRequests.get(branch) ?? null;
-      const now = result.pullRequest;
       this.pullRequests.set(branch, now);
 
       // A new ETag doesn't mean a new state: a comment changes it too.
