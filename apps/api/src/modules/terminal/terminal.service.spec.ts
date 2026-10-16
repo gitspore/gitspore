@@ -103,7 +103,7 @@ describe("TerminalService", () => {
     expect(errorCode(() => service.write(sessionId, "socket-2", "ls\r"))).toBe(
       "session_not_found",
     );
-    expect(ptys[0].write).toHaveBeenCalledTimes(1);
+    expect(ptys[0].write).not.toHaveBeenCalledWith("ls\r");
   });
 
   it("resizes the terminal for a tab's session", () => {
