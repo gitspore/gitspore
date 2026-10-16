@@ -57,6 +57,7 @@ describe("AgentTerminal", () => {
       cwd: "/repo/spore-42",
       command: "claude",
       args: ["--model=opus", ".gitspore/prompt-42.md"],
+      platform: "linux",
     });
 
     expect(pty.write).toHaveBeenCalledWith(

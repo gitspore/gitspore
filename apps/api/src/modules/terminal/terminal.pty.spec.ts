@@ -82,7 +82,7 @@ describe("TerminalService with a real PTY", () => {
     ): Promise<void> {
       return new Promise((resolve, reject) => {
         const timer = setTimeout(
-          () => reject(new Error(`No ${what} within 10s:\n${output}`)),
+          () => reject(new Error(`No ${what} in time:\n${output}`)),
           process.platform === "win32" ? 20_000 : 10_000,
         );
         check = () => {
@@ -102,10 +102,24 @@ describe("TerminalService with a real PTY", () => {
     const waitForOutput = (text: string) =>
       waitFor((raw) => raw.includes(text), JSON.stringify(text));
 
+    // The start command's output: a line ending in "gitspore" that isn't the
+    // typed "echo gitspore" itself. On macOS, bash's redraw can glue the output
+    // to the end of a line, so an exact line match misses it.
+    const waitForShell = () =>
+      waitFor(
+        (raw) =>
+          toLines(raw).some(
+            (line) =>
+              line.endsWith("gitspore") && !line.endsWith("echo gitspore"),
+          ),
+        "output of the start command",
+      );
+
     return {
       sessionId,
       waitForLine,
       waitForOutput,
+      waitForShell,
       chunkCount: () => chunks,
       exited,
     };
@@ -120,7 +134,7 @@ describe("TerminalService with a real PTY", () => {
     });
     const browserTab = attachTab("agent-1");
 
-    await browserTab.waitForLine("gitspore");
+    await browserTab.waitForShell();
   }, 30_000);
 
   it("resizes the terminal so the shell reports 100 columns", async () => {
@@ -131,7 +145,7 @@ describe("TerminalService with a real PTY", () => {
       args: ["gitspore"],
     });
     const browserTab = attachTab("agent-1");
-    await browserTab.waitForLine("gitspore");
+    await browserTab.waitForShell();
 
     service.resize(browserTab.sessionId, "socket-1", 100, 30);
     service.write(browserTab.sessionId, "socket-1", `${ASK_COLUMNS}\r`);
@@ -149,7 +163,7 @@ describe("TerminalService with a real PTY", () => {
         args: ["gitspore"],
       });
       const browserTab = attachTab("agent-1");
-      await browserTab.waitForLine("gitspore");
+      await browserTab.waitForShell();
 
       // Typed as octal escapes, so the real bytes only appear in the output:
       // \033 = ESC, \303\274 = ü, \360\237\214\261 = 🌱
@@ -172,7 +186,7 @@ describe("TerminalService with a real PTY", () => {
       args: ["gitspore"],
     });
     const browserTab = attachTab("agent-1");
-    await browserTab.waitForLine("gitspore");
+    await browserTab.waitForShell();
 
     service.write(browserTab.sessionId, "socket-1", `${COUNT_TO_10000}\r`);
     await browserTab.waitForLine("10000");
@@ -188,7 +202,7 @@ describe("TerminalService with a real PTY", () => {
       args: ["gitspore"],
     });
     const browserTab = attachTab("agent-1");
-    await browserTab.waitForLine("gitspore");
+    await browserTab.waitForShell();
 
     service.detach(browserTab.sessionId, "socket-1");
     const otherBrowserTab = attachTab("agent-1", "socket-2");
@@ -205,7 +219,7 @@ describe("TerminalService with a real PTY", () => {
       args: ["gitspore"],
     });
     const browserTab = attachTab("agent-1");
-    await browserTab.waitForLine("gitspore");
+    await browserTab.waitForShell();
 
     service.write(browserTab.sessionId, "socket-1", "exit\r");
 
