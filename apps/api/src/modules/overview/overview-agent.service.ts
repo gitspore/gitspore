@@ -9,10 +9,12 @@ import {
 import { StateStore } from "../state/state.store";
 import { TerminalService } from "../terminal/terminal.service";
 
+import { OVERVIEW_AGENT_ID } from "@gitspore/shared";
+
 //
 //
-//
-export const OVERVIEW_AGENT_ID = "overview";
+// moved to shared:
+// export const OVERVIEW_AGENT_ID = "overview";
 
 // A boolean has no class Nest could look it up by,
 // so it gets a token, like SPAWN_PTY. OverviewModule reads
