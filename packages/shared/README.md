@@ -40,14 +40,14 @@ One Claude Code session, running in its own git worktree and branch.
 
 Only the daemon changes it.
 
-| Status        | Meaning                                                     | Typical next                   |
-| ------------- | ----------------------------------------------------------- | ------------------------------ |
-| `starting`    | Worktree and branch are created, Claude Code launches       | `working`, `error`             |
-| `working`     | Claude Code runs and does not need the user                 | `needs_input`, `done`, `error` |
-| `needs_input` | Claude Code stopped and waits for the user                  | `working`                      |
-| `error`       | Claude Code or the git setup failed. The worktree is kept   | (`agent:stop`)                 |
-| `done`        | Claude Code finished; the branch waits for review and merge | `merged`                       |
-| `merged`      | The branch is merged. The agent is removed after cleanup    | (removed)                      |
+| Status        | Meaning                                                                                                         | Typical next                   |
+| ------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| `starting`    | Worktree and branch are created and pushed, Claude Code launches. Cannot be stopped yet                         | `working`, removed on failure  |
+| `working`     | Claude Code runs and does not need the user                                                                     | `needs_input`, `done`, `error` |
+| `needs_input` | Claude Code stopped and waits for the user                                                                      | `working`                      |
+| `error`       | Claude Code exited with an error, or the worktree of a stopped agent could not be removed. The worktree is kept | (`agent:stop`)                 |
+| `done`        | Claude Code finished; the branch waits for review and merge                                                     | `merged`                       |
+| `merged`      | The branch is merged. The agent is removed after cleanup                                                        | (removed)                      |
 
 ### Issue, TerminalSession, GreenhouseState
 
@@ -110,21 +110,21 @@ socket.emit("agent:dispatch", { issueNumber: 42, slotIndex: 0 }, (response) => {
 
 ## Events
 
-| Event             | Direction       | Payload                       | Ack                            | Purpose                                                                              |
-| ----------------- | --------------- | ----------------------------- | ------------------------------ | ------------------------------------------------------------------------------------ |
-| `agent:dispatch`  | Client → Server | `{ issueNumber, slotIndex }`  | `{ agentId }` \| `{ error }`   | Start Claude Code on an issue in a free slot, in a new worktree and `spore/…` branch |
-| `agent:stop`      | Client → Server | `{ agentId, removeWorktree }` | –                              | Stop an agent, free its slot, optionally delete the worktree                         |
-| `issues:refresh`  | Client → Server | `{}`                          | –                              | Fetch the open issues from GitHub again                                              |
-| `state:request`   | Client → Server | `{}`                          | –                              | Ask for a new `state:snapshot`, e.g. after a version gap                             |
-| `terminal:open`   | Client → Server | `{ agentId }`                 | `{ sessionId }` \| `{ error }` | Attach to an agent's terminal                                                        |
-| `terminal:input`  | Client → Server | `{ sessionId, data }`         | –                              | Keystrokes into the terminal                                                         |
-| `terminal:resize` | Client → Server | `{ sessionId, cols, rows }`   | –                              | Resize the terminal to its window                                                    |
-| `terminal:close`  | Client → Server | `{ sessionId }`               | –                              | Detach; the agent keeps running                                                      |
-| `state:snapshot`  | Server → Client | `GreenhouseState`             | –                              | The full state, on connect and on `state:request`                                    |
-| `state:patch`     | Server → Client | `{ version, ops }`            | –                              | Changes since the previous version                                                   |
-| `terminal:data`   | Server → Client | `{ sessionId, chunk }`        | –                              | Terminal output, ANSI codes included                                                 |
-| `terminal:exit`   | Server → Client | `{ sessionId, exitCode }`     | –                              | The terminal's process ended; the session is closed                                  |
-| `error`           | Server → Client | `{ code, message, context? }` | –                              | A request without an ack failed, or a background step failed                         |
+| Event             | Direction       | Payload                       | Ack                            | Purpose                                                                                                                                                                   |
+| ----------------- | --------------- | ----------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `agent:dispatch`  | Client → Server | `{ issueNumber, slotIndex }`  | `{ agentId }` \| `{ error }`   | Start Claude Code on an issue in a free slot, in a new worktree and pushed `spore/…` branch. Rolled back on failure                                                       |
+| `agent:stop`      | Client → Server | `{ agentId, removeWorktree }` | –                              | Stop an agent, free its slot, optionally delete the worktree. Refused while `starting` (`agent_starting`); a dirty worktree keeps the agent in `error` (`worktree_dirty`) |
+| `issues:refresh`  | Client → Server | `{}`                          | –                              | Fetch the open issues from GitHub again                                                                                                                                   |
+| `state:request`   | Client → Server | `{}`                          | –                              | Ask for a new `state:snapshot`, e.g. after a version gap                                                                                                                  |
+| `terminal:open`   | Client → Server | `{ agentId }`                 | `{ sessionId }` \| `{ error }` | Attach to an agent's terminal                                                                                                                                             |
+| `terminal:input`  | Client → Server | `{ sessionId, data }`         | –                              | Keystrokes into the terminal                                                                                                                                              |
+| `terminal:resize` | Client → Server | `{ sessionId, cols, rows }`   | –                              | Resize the terminal to its window                                                                                                                                         |
+| `terminal:close`  | Client → Server | `{ sessionId }`               | –                              | Detach; the agent keeps running                                                                                                                                           |
+| `state:snapshot`  | Server → Client | `GreenhouseState`             | –                              | The full state, on connect and on `state:request`                                                                                                                         |
+| `state:patch`     | Server → Client | `{ version, ops }`            | –                              | Changes since the previous version                                                                                                                                        |
+| `terminal:data`   | Server → Client | `{ sessionId, chunk }`        | –                              | Terminal output, ANSI codes included                                                                                                                                      |
+| `terminal:exit`   | Server → Client | `{ sessionId, exitCode }`     | –                              | The terminal's process ended; the session is closed                                                                                                                       |
+| `error`           | Server → Client | `{ code, message, context? }` | –                              | A request without an ack failed, or a background step failed                                                                                                              |
 
 ### Acks
 
@@ -134,17 +134,21 @@ An ack is the callback the client passes as the last argument of `emit`. The ser
 
 `ServerError` is `{ code, message, context? }`. `message` is for the developer, not for display as-is. `context` holds the ids or values the error refers to, for example `{ agentId }`.
 
-| Code                | Meaning                                                         |
-| ------------------- | --------------------------------------------------------------- |
-| `invalid_payload`   | The payload is missing fields or has values of the wrong type   |
-| `slot_unavailable`  | The slot index is out of range or the slot already has an agent |
-| `issue_not_found`   | No open issue with this number                                  |
-| `issue_taken`       | An agent already works on this issue                            |
-| `agent_not_found`   | No agent with this id                                           |
-| `session_not_found` | No terminal session with this id                                |
-| `git_failed`        | Creating or removing the worktree or branch failed              |
-| `github_failed`     | GitHub could not be reached or refused the request              |
-| `internal`          | Anything else; `message` says what                              |
+| Code                | Meaning                                                                    |
+| ------------------- | -------------------------------------------------------------------------- |
+| `invalid_payload`   | The payload is missing fields or has values of the wrong type              |
+| `slot_unavailable`  | The slot index is out of range or the slot already has an agent            |
+| `issue_not_found`   | No open issue with this number                                             |
+| `issue_taken`       | An agent already works on this issue                                       |
+| `agent_not_found`   | No agent with this id                                                      |
+| `session_not_found` | No terminal session with this id                                           |
+| `git_failed`        | Creating or removing the worktree or branch failed                         |
+| `git_push_failed`   | Pushing the agent's branch to origin failed (no login, no rights, offline) |
+| `worktree_dirty`    | The worktree has uncommitted changes, so it was not removed                |
+| `agent_starting`    | The agent is still starting and cannot be stopped yet                      |
+| `claude_not_found`  | Claude Code is not installed or not found                                  |
+| `github_failed`     | GitHub could not be reached or refused the request                         |
+| `internal`          | Anything else; `message` says what                                         |
 
 ## Patches
 
@@ -201,15 +205,15 @@ The daemon sends facts. The client works out the rest:
 The user plants issue #42 in the first slot and answers the agent once.
 
 1. On connect the client receives `state:snapshot` with `version: 7`: no agents, issue #42 among the issues.
-2. Client sends `agent:dispatch { issueNumber: 42, slotIndex: 0 }`. The daemon creates the worktree and branch `spore/42-fix-login`, starts Claude Code and acks `{ agentId: "a1" }`.
-3. `state:patch { version: 8, ops: [agent:upsert a1, status "starting"] }`. Claude Code is up: `version: 9`, `status: "working"`.
+2. Client sends `agent:dispatch { issueNumber: 42, slotIndex: 0 }`.
+3. At once: `state:patch { version: 8, ops: [agent:upsert a1, status "starting"] }`, so the pot shows while the daemon works. It creates the worktree and branch `spore/42-fix-login`, pushes the branch and starts Claude Code. Then it acks `{ agentId: "a1" }` and sends `version: 9`, `status: "working"`. If a step fails, the daemon undoes everything, sends `agent:remove a1` and answers the ack with `{ error }`; the slot and the issue are free again.
 4. Claude Code asks a question: `version: 10`, `status: "needs_input"`, `statusSince` now. The client counts the waiting time from `statusSince`.
 5. Client sends `terminal:open { agentId: "a1" }`, gets `{ sessionId: "s1" }`, and `terminal:data { sessionId: "s1", chunk }` starts to flow.
 6. The user answers: `terminal:input { sessionId: "s1", data: "y\r" }`. The xterm window reports its size with `terminal:resize`.
 7. Claude Code continues (`working`), finishes (`done`), the branch is merged (`merged`). Each step is one `agent:upsert`.
 8. The daemon cleans up: `agent:remove a1` and `issue:remove 42` in one patch. The slot is free again.
 
-`terminal:close` detaches the window at any point without stopping the agent. `agent:stop` stops it and ends with an `agent:remove` patch.
+`terminal:close` detaches the window at any point without stopping the agent. `agent:stop` stops it and ends with an `agent:remove` patch. Two exceptions: while the agent is `starting`, `agent:stop` is refused with `agent_starting`. With `removeWorktree: true` and uncommitted changes, the process is stopped but nothing is deleted: the agent stays in `error` and an `error` event `worktree_dirty` is sent. Stop it again with `removeWorktree: false`.
 
 ## Changing the contract
 
@@ -231,7 +235,7 @@ These go beyond or differ from the first ticket text:
 2. `state:request` is new. The ticket says the server sends a snapshot "on request" but names no event for asking.
 3. `applyPatch` lives here, so the web store, the mock server and replay share one set of rules.
 4. The `ErrorCode` list is a proposal. The api side should check it.
-5. `done` means "ready for review". `agent:stop` ends with an `agent:remove` patch.
+5. `done` means "ready for review". `agent:stop` ends with an `agent:remove` patch, except for `agent_starting` and `worktree_dirty` (see The core flow).
 6. **Not decided:** whether `terminal:open` sends the buffered history first (the daemon keeps the last lines of each session, see the terminal ticket) and then live output. The client needs that to restore a destroyed window or to reconnect. This README does not promise it yet.
 7. **Not decided:** whether a patch with an empty `ops` list raises the version.
 
