@@ -40,16 +40,17 @@ export function TerminalPanel({ agentId }: { agentId: AgentId }) {
     terminal.loadAddon(fitAddon);
     terminal.open(container);
     const session = new TerminalSession(terminal, client, actions);
-    void session.open(agentId);
     // hidden = no size
     // fitting when hidden would shrink the agent's terminal
     // to 2 × 1 because of xterm minimum
-
     const fitToContainer = () => {
       if (container.clientWidth === 0 || container.clientHeight === 0) return;
       fitAddon.fit();
       session.resize(terminal.cols, terminal.rows);
     };
+    fitToContainer();
+    void session.open(agentId);
+
     // first fit after observe().
     let timer: ReturnType<typeof setTimeout> | undefined;
     const observer = new ResizeObserver(() => {
