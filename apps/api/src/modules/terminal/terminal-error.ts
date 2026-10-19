@@ -3,7 +3,8 @@ export type TerminalErrorCode =
   | "agent_not_found"
   | "already_running"
   | "limit_reached"
-  | "session_not_found";
+  | "session_not_found"
+  | "claude_not_found";
 
 export class TerminalError extends Error {
   constructor(
