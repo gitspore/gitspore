@@ -1,4 +1,6 @@
 "use client";
+
+import { xtermTheme } from "@/theme/tokens";
 import type { AgentId } from "@gitspore/shared";
 import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
@@ -17,7 +19,16 @@ import { TerminalSession } from "@/lib/terminal/TerminalSession";
 const RESIZE_DEBOUNCE_MS = 100;
 // xterm needs browser.
 // ssr: false
-export function TerminalPanel({ agentId }: { agentId: AgentId }) {
+
+export type TerminalTheme = keyof typeof xtermTheme;
+
+export function TerminalPanel({
+  agentId,
+  theme,
+}: {
+  agentId: AgentId;
+  theme: TerminalTheme;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const client = useGreenhouseClient();
   // openTerminal waits connection to load.
@@ -32,10 +43,18 @@ export function TerminalPanel({ agentId }: { agentId: AgentId }) {
       closeTerminal: state.closeTerminal,
     })),
   );
+
   useEffect(() => {
     const container = containerRef.current;
     if (!client || !connected || !container) return;
-    const terminal = new Terminal();
+    const terminal = new Terminal({ theme: xtermTheme[theme] });
+    // Don't answer "which terminal are you?"
+    // (CSI c)
+    // question is replayed from scrollback
+    // on every open. Answer would
+    // reach shell as typed text ("1;2c").
+    terminal.parser.registerCsiHandler({ final: "c" }, () => true);
+
     const fitAddon = new FitAddon();
     terminal.loadAddon(fitAddon);
     terminal.open(container);
@@ -64,6 +83,6 @@ export function TerminalPanel({ agentId }: { agentId: AgentId }) {
       session.dispose();
       terminal.dispose();
     };
-  }, [client, connected, agentId, actions]);
+  }, [client, connected, agentId, actions, theme]);
   return <div ref={containerRef} className="size-full" />;
 }
