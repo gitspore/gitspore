@@ -165,6 +165,17 @@ export class AgentTerminal {
     this.resizePty(cols, rows);
   }
 
+  kill(): void {
+    if (this.exited) {
+      return;
+    }
+    try {
+      this.pty.kill();
+    } catch {
+      // The process has just exited on its own; onExit follows.
+    }
+  }
+
   private broadcast(chunk: string): void {
     this.scrollback.push(chunk);
     for (const viewer of this.viewers.values()) {

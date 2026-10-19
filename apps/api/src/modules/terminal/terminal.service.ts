@@ -82,6 +82,10 @@ export class TerminalService {
     this.terminalOfSession(sessionId, ownerId).write(data);
   }
 
+  kill(agentId: AgentId): void {
+    this.terminalOfAgent(agentId).kill();
+  }
+
   resize(
     sessionId: SessionId,
     ownerId: string,

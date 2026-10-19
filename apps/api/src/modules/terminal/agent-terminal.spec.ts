@@ -411,3 +411,37 @@ describe("AgentTerminal", () => {
     });
   });
 });
+
+describe("kill", () => {
+  it("kills the PTY", () => {
+    const pty = new FakePty();
+    const terminal = new AgentTerminal(() => pty, OPTIONS);
+
+    terminal.kill();
+
+    expect(pty.kill).toHaveBeenCalledTimes(1);
+  });
+
+  it("does nothing once the PTY has exited", () => {
+    const pty = new FakePty();
+    const terminal = new AgentTerminal(() => pty, {
+      ...OPTIONS,
+      platform: "linux",
+    });
+    pty.exit(0);
+
+    terminal.kill();
+
+    expect(pty.kill).not.toHaveBeenCalled();
+  });
+
+  it("ignores a kill the PTY refuses because the process just exited", () => {
+    const pty = new FakePty();
+    const terminal = new AgentTerminal(() => pty, OPTIONS);
+    pty.kill.mockImplementation(() => {
+      throw new Error("Process already exited");
+    });
+
+    expect(() => terminal.kill()).not.toThrow();
+  });
+});
