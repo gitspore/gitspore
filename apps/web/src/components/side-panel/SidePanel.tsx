@@ -1,13 +1,21 @@
 "use client";
 
-import { useState, type Dispatch, type SetStateAction } from "react";
-import { MAX_SLOTS, type Agent } from "@gitspore/shared";
+import { useState } from "react";
+import { MAX_SLOTS, type Agent, type ErrorCode } from "@gitspore/shared";
 import { X } from "lucide-react";
+import { useShallow } from "zustand/react/shallow";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { SidePanelTab } from "@/lib/layout";
 import { ConfirmDialog } from "@/components/attention/ConfirmDialog";
-import { mockDirtyWorktrees, mockIssues } from "@/lib/mock";
+import { useGreenhouseStore } from "@/lib/client/GreenhouseClientProvider";
+import {
+  freeSlots,
+  needsInputCount,
+  openIssuesWithoutAgent,
+  selectAgents,
+  selectIssues,
+} from "@/lib/store/selectors";
 import { AgentRow, FreeSlotRow } from "./AgentRow";
 import { IssueRow } from "./IssueRow";
 
@@ -23,76 +31,63 @@ type SidePanelProps = {
   tab: SidePanelTab;
   onTabChange: (tab: SidePanelTab) => void;
   onClose: () => void;
-  // Shared with the top bar, so they live in AppShell. Move to the store with #8.
-  agents: Agent[];
-  setAgents: Dispatch<SetStateAction<Agent[]>>;
-  selectedSlot: number | null;
-  setSelectedSlot: (slot: number | null) => void;
 };
 
-export function SidePanel({
-  tab,
-  onTabChange,
-  onClose,
-  agents,
-  setAgents,
-  selectedSlot,
-  setSelectedSlot,
-}: SidePanelProps) {
+export function SidePanel({ tab, onTabChange, onClose }: SidePanelProps) {
+  const agents = useGreenhouseStore(selectAgents);
+  const issues = useGreenhouseStore(selectIssues);
+  const waiting = useGreenhouseStore(needsInputCount);
+  const selectedSlot = useGreenhouseStore((s) => s.selectedSlot);
+  const selectSlot = useGreenhouseStore((s) => s.selectSlot);
+  const slots = useGreenhouseStore(useShallow(freeSlots));
+  // Open issues without a running agent
+  const unplanted = useGreenhouseStore(useShallow(openIssuesWithoutAgent));
+  const lastError = useGreenhouseStore((s) => s.lastError);
+  const setError = useGreenhouseStore((s) => s.setError);
+  const dispatchAgent = useGreenhouseStore((s) => s.dispatchAgent);
+  const stopAgent = useGreenhouseStore((s) => s.stopAgent);
+
   // The agent the stop dialog asks about; null while the dialog is closed
   const [stopping, setStopping] = useState<Agent | null>(null);
   const [removeWorktree, setRemoveWorktree] = useState(false);
-  const [stopError, setStopError] = useState<string>();
+  // True once Stop was sent: the dialog waits for the agent:remove patch
+  const [stopSent, setStopSent] = useState(false);
 
   const planted = agents.filter((a) => a.slotIndex !== null).length;
-  const waiting = agents.filter((a) => a.status === "needs_input").length;
+  const freeSlot = slots[0];
 
-  const freeSlot = Array.from({ length: MAX_SLOTS }, (_, i) => i).find(
-    (i) => !agents.some((a) => a.slotIndex === i),
-  );
-  // Open issues without a running agent
-  const unplanted = mockIssues.filter(
-    (issue) => !agents.some((a) => a.issueNumber === issue.number),
-  );
+  // The agent is gone: the stop went through, the dialog closes.
+  // Set during render, so the dialog never shows a removed agent.
+  if (stopping && stopSent && !agents.some((a) => a.id === stopping.id)) {
+    setStopping(null);
+    setStopSent(false);
+  }
+  // A refusal arrives later as an error event, not as an answer to Stop.
+  // The daemon keeps the agent and the dialog stays open with the reason.
+  const stopError =
+    stopping && stopSent && lastError?.context?.agentId === stopping.id
+      ? stopErrorText(stopping, lastError.code)
+      : undefined;
 
-  // Later this sends `agent:dispatch { issueNumber, slotIndex }` to the daemon
+  // The agent arrives as a patch, first as "starting"
   function plant(issueNumber: number) {
     if (freeSlot === undefined) return;
-    const now = new Date().toISOString();
-    setAgents((list) => [
-      ...list,
-      {
-        id: `agent-${freeSlot}-${issueNumber}`,
-        slotIndex: freeSlot,
-        issueNumber,
-        branch: `spore/${issueNumber}`,
-        worktreePath: `/tmp/gitspore/${issueNumber}`,
-        status: "starting",
-        statusSince: now,
-        startedAt: now,
-      },
-    ]);
+    dispatchAgent(issueNumber, freeSlot);
   }
 
   function openStop(agent: Agent) {
     setStopping(agent);
     setRemoveWorktree(false);
-    setStopError(undefined);
+    setStopSent(false);
   }
 
-  // Later this sends `agent:stop { agentId, removeWorktree }` to the daemon
+  // The result arrives as a patch (agent:remove) or as an error, see above
   function stop() {
     if (!stopping) return;
-    if (removeWorktree && mockDirtyWorktrees.has(stopping.branch)) {
-      // WORKTREE_DIRTY: the daemon keeps the agent
-      setStopError(
-        `${stopping.branch} has uncommitted changes, so the worktree can't be removed. The agent keeps running.`,
-      );
-      return;
-    }
-    setAgents((list) => list.filter((a) => a.id !== stopping.id));
-    if (selectedSlot === stopping.slotIndex) setSelectedSlot(null);
-    setStopping(null);
+    // An older error must not be taken for the answer to this stop
+    setError(null);
+    setStopSent(true);
+    stopAgent(stopping.id, removeWorktree);
   }
 
   return (
@@ -152,11 +147,11 @@ export function SidePanel({
                 key={agent.id}
                 agent={agent}
                 issueTitle={
-                  mockIssues.find((i) => i.number === agent.issueNumber)
-                    ?.title ?? ""
+                  issues.find((i) => i.number === agent.issueNumber)?.title ??
+                  ""
                 }
                 selected={selectedSlot === slotIndex}
-                onSelect={() => setSelectedSlot(slotIndex)}
+                onSelect={() => selectSlot(slotIndex)}
                 onStop={() => openStop(agent)}
               />
             );
@@ -200,7 +195,8 @@ export function SidePanel({
             checked={removeWorktree}
             onChange={(e) => {
               setRemoveWorktree(e.target.checked);
-              setStopError(undefined);
+              // Hides the refusal; Stop sends again
+              setStopSent(false);
             }}
             className="size-4 accent-plate"
           />
@@ -209,4 +205,12 @@ export function SidePanel({
       </ConfirmDialog>
     </div>
   );
+}
+
+// What the stop dialog says when the daemon refused. A dirty worktree comes
+// as git_failed: the contract has no code of its own for it yet.
+function stopErrorText(agent: Agent, code: ErrorCode): string {
+  if (code === "git_failed")
+    return `The worktree of ${agent.branch} can't be removed, maybe it has uncommitted changes. The agent keeps running.`;
+  return "The agent couldn't be stopped and keeps running.";
 }

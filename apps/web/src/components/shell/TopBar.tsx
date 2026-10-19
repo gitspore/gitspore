@@ -1,5 +1,16 @@
+"use client";
+
 import type { ReactNode } from "react";
-import type { Agent, Issue } from "@gitspore/shared";
+import {
+  useGreenhouseStore,
+  useMockClient,
+} from "@/lib/client/GreenhouseClientProvider";
+import type { ConnectionStatus as ClientStatus } from "@/lib/client/GreenhouseClient";
+import {
+  agentBySlot,
+  issueTitle,
+  needsInputCount,
+} from "@/lib/store/selectors";
 import { ConnectionStatus, type Connection } from "./ConnectionStatus";
 import { Logo } from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
@@ -7,33 +18,32 @@ import { WaitBadge } from "./WaitBadge";
 import { HelpPopover } from "./HelpPopover";
 import { UsageMeter, type PlanUsage } from "./UsageMeter";
 
-// The bar along the top.
+// The bar along the top. Agents, selection and connection come from the store.
 
 type TopBarProps = {
-  agents: Agent[];
-  issues: Issue[];
-  selectedSlot: number | null;
-  connection: Connection;
   // Plan limits; a missing window hides its meter
   usage?: PlanUsage;
-  // Name of the mock scenario while the app runs on fake data
-  mockScenario?: string;
   // Temporary controls until the rail and the hotbar exist
   children?: ReactNode;
 };
 
-export function TopBar({
-  agents,
-  issues,
-  selectedSlot,
-  connection,
-  usage,
-  mockScenario,
-  children,
-}: TopBarProps) {
-  const waiting = agents.filter((a) => a.status === "needs_input").length;
-  const focused = agents.find((a) => a.slotIndex === selectedSlot);
-  const focusedIssue = issues.find((i) => i.number === focused?.issueNumber);
+const CONNECTION: Record<ClientStatus["kind"], Connection> = {
+  connected: "online",
+  reconnecting: "reconnecting",
+  offline: "offline",
+};
+
+export function TopBar({ usage, children }: TopBarProps) {
+  const waiting = useGreenhouseStore(needsInputCount);
+  const selectedSlot = useGreenhouseStore((s) => s.selectedSlot);
+  const focused = useGreenhouseStore(agentBySlot(selectedSlot ?? -1));
+  const focusedTitle = useGreenhouseStore(
+    issueTitle(focused?.issueNumber ?? null),
+  );
+  const connection = useGreenhouseStore((s) => CONNECTION[s.connection.kind]);
+  const isMock = useGreenhouseStore((s) => s.mode === "mock");
+  // The mock client knows which scenario it plays
+  const mockScenario = useMockClient()?.scenarioName;
 
   return (
     <div className="flex h-full items-center gap-4 px-4">
@@ -43,7 +53,7 @@ export function TopBar({
       {focused && (
         <p className="min-w-0 truncate text-ui-meta">
           <span className="font-bold">
-            #{focused.issueNumber} {focusedIssue?.title}
+            #{focused.issueNumber} {focusedTitle}
           </span>
           <span className="text-muted-foreground"> · {focused.branch}</span>
         </p>
@@ -55,7 +65,7 @@ export function TopBar({
 
       <WaitBadge count={waiting} />
       {/* #18: so nobody mistakes mock data for real agents */}
-      {mockScenario && (
+      {isMock && (
         <span className="rounded-sm bg-panel-2 px-2 py-1 text-ui-meta">
           Mock: {mockScenario}
         </span>
