@@ -204,7 +204,7 @@ describe("JSON round trip", () => {
     ["acks", acks],
     ["errors", errors],
     ["server payloads", serverPayloads],
-  ] as const)("keeps all errors unchanged", (_, payloads) => {
+  ] as const)("keeps all %s unchanged", (_, payloads) => {
     expect(roundTrip(payloads)).toStrictEqual(payloads);
   });
 });
