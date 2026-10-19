@@ -1,6 +1,7 @@
 "use client";
 
-import type { Agent } from "@gitspore/shared";
+import { OVERVIEW_AGENT_ID, type Agent } from "@gitspore/shared";
+
 import { useShallow } from "zustand/react/shallow";
 import { useGreenhouseStore } from "@/lib/client/GreenhouseClientProvider";
 import { mainGrid, shellGrid } from "@/lib/layout";
@@ -24,6 +25,11 @@ export function AppShell() {
   const setSidePanel = useGreenhouseStore((s) => s.setSidePanel);
   const setMode = useGreenhouseStore((s) => s.setMode);
   const toggleMinimised = useGreenhouseStore((s) => s.toggleMinimised);
+  const openWindow = useGreenhouseStore((s) => s.openWindow);
+  // Slot 0 toggles: a visible overview window is minimised, otherwise opened
+  const overviewVisible = layout.windows.some(
+    (w) => w.agentId === OVERVIEW_AGENT_ID && !w.minimised,
+  );
 
   // No scene with ?scene=off or without WebGL; the interface works the same (#18)
   const showScene = useSceneEnabled();
@@ -108,9 +114,20 @@ export function AppShell() {
               </div>
             ))}
             <div className="h-10 w-0.5 bg-line" />
-            <div className="hotbar-slot grid place-items-center rounded-xl bg-panel-2 font-mono">
+            {/* Slot 0 is the overview agent (ADR 0004, 0005) */}
+            <button
+              type="button"
+              aria-label="Open the overview agent"
+              onClick={() =>
+                overviewVisible
+                  ? toggleMinimised(OVERVIEW_AGENT_ID)
+                  : openWindow(OVERVIEW_AGENT_ID, { alone: true })
+              }
+
+              className="hotbar-slot grid place-items-center rounded-xl bg-panel-2 font-mono"
+            >
               0
-            </div>
+            </button>
           </div>
         </section>
 
