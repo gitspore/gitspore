@@ -156,6 +156,32 @@ describe("MockClient", () => {
     });
   });
 
+  describe("agent:stop", () => {
+    it("removes the agent with a patch", () => {
+      const { client, patches } = setup();
+
+      client.emit("agent:stop", { agentId: agent.id, removeWorktree: true });
+
+      expect(patches).toEqual([
+        { version: 2, ops: [{ type: "agent:remove", agentId: agent.id }] },
+      ]);
+    });
+
+    it("reports an unknown agent as an error", () => {
+      const { client, patches, errors } = setup();
+
+      client.emit("agent:stop", { agentId: "nope", removeWorktree: false });
+
+      expect(patches).toHaveLength(0);
+      expect(errors).toEqual([
+        expect.objectContaining({
+          code: "agent_not_found",
+          context: { agentId: "nope" },
+        }),
+      ]);
+    });
+  });
+
   describe("snapshots on request", () => {
     it.each(["state:request", "issues:refresh"] as const)(
       "%s answers with the current state",

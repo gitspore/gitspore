@@ -1,6 +1,6 @@
 "use client";
 
-import type { Agent, AgentId } from "@gitspore/shared";
+import type { Agent } from "@gitspore/shared";
 import { Minus } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,6 @@ type WindowProps = {
   // Missing until the daemon sends it (#42): the meter stays hidden
   context?: ContextUsage;
   onMinimise: () => void;
-  terminalAgentId: AgentId;
 };
 
 export function Window({
@@ -30,7 +29,6 @@ export function Window({
   issueTitle,
   context,
   onMinimise,
-  terminalAgentId,
 }: WindowProps) {
   const StatusIcon = STATUS_ICON[agent.status];
 
@@ -73,7 +71,7 @@ export function Window({
       </header>
 
       <div className="min-h-0 flex-1 p-3">
-        <TerminalPanel agentId={terminalAgentId} />
+        <TerminalPanel agentId={agent.id} />
       </div>
     </div>
   );

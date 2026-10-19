@@ -8,7 +8,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useNow } from "@/lib/client/GreenhouseClientProvider";
 import { STATUS_COLOUR, STATUS_ICON, STATUS_WORD } from "@/lib/status";
+import { wiltStage } from "@/lib/store/wilting";
 import { formatSeconds, useSecondsSince } from "@/lib/time";
 import { cn } from "@/lib/utils";
 
@@ -30,9 +32,11 @@ export function AgentRow({
   const slot = (agent.slotIndex ?? 0) + 1;
   const waiting = agent.status === "needs_input";
   const seconds = useSecondsSince(agent.statusSince, waiting);
-  // Same stages as the wilting plant: emphasized from 15 s, stronger from 60 s
-  const waitStage =
-    seconds === null ? 0 : seconds >= 60 ? 2 : seconds >= 15 ? 1 : 0;
+  // Same stages as the wilting plant: emphasized while it droops, stronger
+  // once it yellows. Nothing before the first tick (now is 0).
+  const now = useNow();
+  const stage = now === 0 ? null : wiltStage(agent, now);
+  const waitStage = stage === "yellow" ? 2 : stage === "droop" ? 1 : 0;
 
   const Icon = STATUS_ICON[agent.status];
   const word =
