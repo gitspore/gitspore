@@ -51,7 +51,7 @@ export const mockContext: Record<string, ContextUsage> = {
   "agent-1": { percent: 84, tokens: 2_350_000 },
 };
 
-// Worktrees with uncommitted changes: removing them fails with WORKTREE_DIRTY
+// Worktrees with uncommitted changes: removing them fails with worktree_dirty
 export const mockDirtyWorktrees = new Set(["spore/12"]);
 
 export const mockIssues: Issue[] = [

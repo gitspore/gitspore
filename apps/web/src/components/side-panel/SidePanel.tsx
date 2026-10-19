@@ -84,9 +84,18 @@ export function SidePanel({
   function stop() {
     if (!stopping) return;
     if (removeWorktree && mockDirtyWorktrees.has(stopping.branch)) {
-      // WORKTREE_DIRTY: the daemon keeps the agent
+      // worktree_dirty: the process is stopped, the agent stays in `error`
+      const now = new Date().toISOString();
+      setAgents((list) =>
+        list.map((a) =>
+          a.id === stopping.id
+            ? { ...a, status: "error", statusSince: now }
+            : a,
+        ),
+      );
+      setRemoveWorktree(false);
       setStopError(
-        `${stopping.branch} has uncommitted changes, so the worktree can't be removed. The agent keeps running.`,
+        `${stopping.branch} has uncommitted changes, so the worktree wasn't removed. The agent has stopped. Stop it again without removing the worktree.`,
       );
       return;
     }
