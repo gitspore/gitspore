@@ -9,7 +9,9 @@ import type {
   TerminalDataPayload,
   TerminalOpenAck,
 } from "@gitspore/shared";
+import { RepoConfig } from "@/config/repo-config";
 import { FakePty } from "../../../test/fake-pty";
+import { GitHubService } from "../github/github.service";
 import { TerminalError } from "../terminal/terminal-error";
 import { SPAWN_PTY, TerminalService } from "../terminal/terminal.service";
 import { GatewayModule } from "./gateway.module";
@@ -38,6 +40,15 @@ describe("TerminalGateway", () => {
         ptys.push(pty);
         return pty;
       })
+      // GatewayModule also brings GitHub: no git, gh or GitHub in these tests.
+      .overrideProvider(GitHubService)
+      .useValue({
+        refresh: async () => {},
+        currentProblem: () => null,
+        onError: () => {},
+      })
+      .overrideProvider(RepoConfig)
+      .useValue(new RepoConfig(".", "main"))
       .compile();
     app = moduleRef.createNestApplication();
     await app.listen(0, "127.0.0.1");

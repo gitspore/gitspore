@@ -2,6 +2,9 @@ import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import type { AddressInfo } from "node:net";
 import { io, type Socket } from "socket.io-client";
+import type { ServerError } from "@gitspore/shared";
+import { RepoConfig } from "@/config/repo-config";
+import { GitHubService } from "../github/github.service";
 import { GatewayModule } from "./gateway.module";
 import { SessionAuth } from "./session-auth.service";
 
@@ -12,6 +15,17 @@ describe("StateGateway", () => {
   let auth: SessionAuth;
   let url: string;
   const sockets: Socket[] = [];
+
+  // Stands in for GitHubService, so no test here runs git, gh or reaches
+  // GitHub.
+  let githubError: (error: ServerError) => void = () => {};
+  const github = {
+    refresh: jest.fn().mockResolvedValue(undefined),
+    currentProblem: jest.fn().mockReturnValue(null),
+    onError: (listener: (error: ServerError) => void) => {
+      githubError = listener;
+    },
+  };
 
   const connect = (options: {
     token?: string;
@@ -41,7 +55,13 @@ describe("StateGateway", () => {
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [GatewayModule],
-    }).compile();
+    })
+      .overrideProvider(GitHubService)
+      .useValue(github)
+      // The real one checks GITSPORE_REPO and the base branch at startup.
+      .overrideProvider(RepoConfig)
+      .useValue(new RepoConfig(".", "main"))
+      .compile();
     app = moduleRef.createNestApplication();
     await app.listen(0, "127.0.0.1");
 
@@ -51,7 +71,10 @@ describe("StateGateway", () => {
     auth = app.get(SessionAuth);
   });
 
-  afterEach(() => sockets.splice(0).forEach((socket) => socket.close()));
+  afterEach(() => {
+    sockets.splice(0).forEach((socket) => socket.close());
+    github.currentProblem.mockReturnValue(null);
+  });
   afterAll(() => app.close());
 
   it("sends the snapshot to a client with token and allowed origin", async () => {
@@ -88,5 +111,51 @@ describe("StateGateway", () => {
       host: "evil.test",
     });
     await expect(outcome(socket)).resolves.toBe("rejected");
+  });
+
+  describe("GitHub", () => {
+    const connected = async () => {
+      const socket = connect({ token: auth.token, origin: ORIGIN });
+      await expect(outcome(socket)).resolves.toBe("snapshot");
+      return socket;
+    };
+
+    it("asks GitHubService to refresh on issues:refresh", async () => {
+      const socket = await connected();
+      github.refresh.mockClear();
+
+      socket.emit("issues:refresh", {});
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(github.refresh).toHaveBeenCalledTimes(1);
+    });
+
+    it("sends GitHub problems to every client", async () => {
+      const socket = await connected();
+      const received = new Promise((resolve) => socket.on("error", resolve));
+      const error: ServerError = {
+        code: "github_unreachable",
+        message: "GitHub could not be reached",
+      };
+
+      githubError(error);
+
+      await expect(received).resolves.toEqual(error);
+    });
+
+    it("tells a client that connects later about the current problem", async () => {
+      const problem: ServerError = {
+        code: "github_sync_disabled",
+        message: "No GitHub token.",
+      };
+      github.currentProblem.mockReturnValue(problem);
+      const socket = connect({ token: auth.token, origin: ORIGIN });
+
+      const received = await new Promise((resolve) =>
+        socket.on("error", resolve),
+      );
+
+      expect(received).toEqual(problem);
+    });
   });
 });
