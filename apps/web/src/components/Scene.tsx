@@ -7,13 +7,14 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { StatsGl, OrbitControls } from "@react-three/drei";
 import { tokens } from "@/theme/tokens";
 
-import { Pot } from "./spike/pot";
+import { Pots } from "./spike/Pot";
 
 // Night for now, the mode we measure in; part 2 follows the page mode
 // const t = tokens.night;
 const t = tokens.day;
 
-// Draw calls and triangles of the last frame, in a small panel of our own
+// Draw calls and triangles of the last frame,
+// in a small panel of our own
 function DrawCalls() {
   const box = useRef<HTMLDivElement>(null);
 
@@ -64,7 +65,12 @@ export function Scene() {
         intensity={t.scene.light.key}
       />
 
-      <Pot pot={t.color.scene.pot} soil={t.color.scene.soil} />
+      <Pots
+        pot={t.color.scene.pot}
+        soil={t.color.scene.soil}
+        stem={t.color.scene.stem}
+        leaf={t.color.scene.leaf}
+      />
 
       <OrbitControls />
       {/* StatsGl adds its own panel to <body>; the class places it */}
