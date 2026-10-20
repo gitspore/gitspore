@@ -1,5 +1,7 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+
 import type { Mode, tokens } from "@/theme/tokens";
 
 //
@@ -13,6 +15,12 @@ const STEM_R = 0.028;
 // The one leaf shape every leaf uses; size scales it
 const LEAF_LEN = 0.42;
 const LEAF_WID = 0.19;
+
+// How fast a plant moves to a new look: after 0.2 s about two
+// thirds of the way, after 0.6 s about 95 %
+const SPEED = 5;
+// A spare colour to hold the target, so useFrame creates no new objects
+const target = new THREE.Color();
 
 // One leaf: where on the stem (0 = soil, 1 = tip), turned how far
 // around it, and how big (0 = hidden, 1 = full leaf)
@@ -38,10 +46,10 @@ const SPROUT: Leaf[] = [
 ];
 
 // Waiting: four smaller leaves spread up the stem
-const SPREAD: Leaf[] = [0, 1, 2, 3].map((k) => ({
-  at: 0.35 + k * 0.17,
-  turn: k * 2.3,
-  size: (0.36 - k * 0.03) / LEAF_LEN,
+const SPREAD: Leaf[] = [0, 1, 2, 3].map((i) => ({
+  at: 0.35 + i * 0.17,
+  turn: i * 2.3,
+  size: (0.36 - i * 0.03) / LEAF_LEN,
 }));
 
 export const PLANT_STATES = [
@@ -53,33 +61,33 @@ export const PLANT_STATES = [
 export type PlantState = (typeof PLANT_STATES)[number];
 
 // The table: which look each state has; the colours come from the mode
-const LOOKS: Record<PlantState, (c: SceneColors) => Look> = {
-  working: (c) => ({
-    height: 0.72,
+const LOOKS: Record<PlantState, (colors: SceneColors) => Look> = {
+  working: (colors) => ({
+    height: 0.95,
     bend: 0,
-    stem: c.stem,
-    leaf: c.leaf,
+    stem: colors.stem,
+    leaf: colors.leaf,
     leaves: SPROUT,
   }),
-  waiting1: (c) => ({
+  waiting1: (colors) => ({
     height: 0.72,
     bend: 0.05,
-    stem: c["stem-waiting"]["1"],
-    leaf: c["leaf-waiting"]["1"],
+    stem: colors["stem-waiting"]["1"],
+    leaf: colors["leaf-waiting"]["1"],
     leaves: SPREAD,
   }),
-  waiting2: (c) => ({
+  waiting2: (colors) => ({
     height: 0.72,
     bend: 0.5,
-    stem: c["stem-waiting"]["2"],
-    leaf: c["leaf-waiting"]["2"],
+    stem: colors["stem-waiting"]["2"],
+    leaf: colors["leaf-waiting"]["2"],
     leaves: SPREAD,
   }),
-  waiting3: (c) => ({
+  waiting3: (colors) => ({
     height: 0.72,
     bend: 1,
-    stem: c["stem-waiting"]["3"],
-    leaf: c["leaf-waiting"]["3"],
+    stem: colors["stem-waiting"]["3"],
+    leaf: colors["leaf-waiting"]["3"],
     leaves: SPREAD,
   }),
 };
@@ -100,19 +108,19 @@ function stemCurve(h: number, bend: number, dir: number) {
 
 // A pointed leaf outline, filled, then curled: tip back, sides up
 function leafGeo(len: number, wid: number) {
-  const s = new THREE.Shape();
-  s.moveTo(0, 0);
-  s.quadraticCurveTo(wid, len * 0.45, 0, len);
-  s.quadraticCurveTo(-wid, len * 0.45, 0, 0);
-  const g = new THREE.ShapeGeometry(s, 10);
-  const p = g.attributes.position;
-  for (let i = 0; i < p.count; i++) {
-    const x = p.getX(i);
-    const y = p.getY(i);
-    p.setZ(i, (-0.35 * y * y) / len + 0.6 * x * x);
+  const shape = new THREE.Shape();
+  shape.moveTo(0, 0);
+  shape.quadraticCurveTo(wid, len * 0.45, 0, len);
+  shape.quadraticCurveTo(-wid, len * 0.45, 0, 0);
+  const geo = new THREE.ShapeGeometry(shape, 10);
+  const pos = geo.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const y = pos.getY(i);
+    pos.setZ(i, (-0.35 * y * y) / len + 0.6 * x * x);
   }
-  g.computeVertexNormals();
-  return g;
+  geo.computeVertexNormals();
+  return geo;
 }
 
 export function Plant({
@@ -124,37 +132,131 @@ export function Plant({
   state: PlantState;
   colors: SceneColors;
 }) {
-  // Each slot leans its own way, so the six plants don't look copied
+  // Each slot leans its own way
   const dir = slot * 1.7 + 0.6;
   const look = LOOKS[state](colors);
-  // How far the leaves point up from flat, less when the stem droops
-  const elev = 0.65 - look.bend * 1.6;
 
-  const curve = useMemo(
-    () => stemCurve(look.height, look.bend, dir),
-    [look.height, look.bend, dir],
+  // The look of the first render.
+  // The JSX only sets this starting point.
+  // then useFrame moves everything toward look
+  const [start] = useState(look);
+
+  // The stem of the first render; useFrame bends it from there
+  const startCurve = useMemo(
+    () => stemCurve(start.height, start.bend, dir),
+    [start, dir],
   );
+  // The real Three materials,
+  // so useFrame can change their colours
+  const stemMat = useRef<THREE.MeshStandardMaterial>(null);
+  const leafMats = useRef<(THREE.MeshStandardMaterial | null)[]>([]);
+
+  // Where the plant is right now, on its way from start to look.
+  // Copies, because useFrame changes them and the table must stay as it is
+  const now = useRef({
+    height: start.height,
+    bend: start.bend,
+    curve: startCurve,
+    leaves: start.leaves.map((leaf) => ({ ...leaf })),
+  });
+  // The leaf groups (place, turn, size) and leaf meshes (tilt)
+  const leafGroups = useRef<(THREE.Group | null)[]>([]);
+  const leafMeshes = useRef<(THREE.Mesh | null)[]>([]);
+  // The stem mesh, so useFrame can give it a new tube while it bends
+  const stemMesh = useRef<THREE.Mesh>(null);
+
+  // When the plant goes away, free the tube useFrame made last
+  useEffect(() => {
+    const stem = stemMesh.current;
+    return () => stem?.geometry.dispose();
+  }, []);
+
   // One leaf shape per plant, used by all its leaves
   const leafShape = useMemo(() => leafGeo(LEAF_LEN, LEAF_WID), []);
 
+  // Every frame: move colours, bend and leaves a step toward the current look
+  useFrame((_, delta) => {
+    // The share of the remaining way to go in this frame
+    const step = 1 - Math.exp(-SPEED * delta);
+
+    stemMat.current?.color.lerp(target.set(look.stem), step);
+    target.set(look.leaf);
+    for (const mat of leafMats.current) mat?.color.lerp(target, step);
+
+    const cur = now.current;
+    // The stem:
+    // rebuild only while it still has a visible way to go
+    const moving =
+      Math.abs(look.bend - cur.bend) > 0.001 ||
+      Math.abs(look.height - cur.height) > 0.001;
+    cur.bend += (look.bend - cur.bend) * step;
+    cur.height += (look.height - cur.height) * step;
+
+    const stem = stemMesh.current;
+    if (moving && stem) {
+      cur.curve = stemCurve(cur.height, cur.bend, dir);
+      const old = stem.geometry;
+      stem.geometry = new THREE.TubeGeometry(cur.curve, 24, STEM_R, 6);
+      // Free the old tube's memory on the GPU
+      old.dispose();
+    }
+
+    // How far the leaves point up from flat,
+    // less when the stem droops
+    const elev = 0.65 - cur.bend * 1.6;
+
+    look.leaves.forEach((goal, i) => {
+      const leaf = cur.leaves[i];
+      leaf.at += (goal.at - leaf.at) * step;
+      leaf.turn += (goal.turn - leaf.turn) * step;
+      leaf.size += (goal.size - leaf.size) * step;
+
+      const group = leafGroups.current[i];
+      if (group) {
+        cur.curve.getPointAt(leaf.at, group.position);
+
+        group.rotation.y = dir + leaf.turn;
+        group.scale.setScalar(leaf.size);
+        // A leaf shrinking to 0 never quite gets there
+        group.visible = leaf.size > 0.01;
+      }
+      const mesh = leafMeshes.current[i];
+      if (mesh) mesh.rotation.x = Math.PI / 2 - elev;
+    });
+  });
+
   return (
     <>
-      <mesh>
-        <tubeGeometry args={[curve, 24, STEM_R, 6]} />
-        <meshStandardMaterial color={look.stem} roughness={0.8} />
+      <mesh ref={stemMesh}>
+        <tubeGeometry args={[startCurve, 24, STEM_R, 6]} />
+
+        <meshStandardMaterial
+          ref={stemMat}
+          color={start.stem}
+          roughness={0.8}
+        />
       </mesh>
-      {look.leaves.map((l, k) => (
-        // Turn around the stem first (y), then tilt the leaf up (x)
+      {start.leaves.map((_, i) => (
+        // Turn around the stem first (y),
+        // then tilt the leaf up (x).
+        // useFrame sets both, and place and size
         <group
-          key={k}
-          position={curve.getPointAt(l.at)}
-          rotation-y={dir + l.turn}
-          scale={l.size}
-          visible={l.size > 0}
+          key={i}
+          ref={(group) => {
+            leafGroups.current[i] = group;
+          }}
         >
-          <mesh geometry={leafShape} rotation-x={Math.PI / 2 - elev}>
+          <mesh
+            ref={(mesh) => {
+              leafMeshes.current[i] = mesh;
+            }}
+            geometry={leafShape}
+          >
             <meshStandardMaterial
-              color={look.leaf}
+              ref={(mat) => {
+                leafMats.current[i] = mat;
+              }}
+              color={start.leaf}
               roughness={0.7}
               side={THREE.DoubleSide}
             />

@@ -87,20 +87,22 @@ export function Pots({ colors }: { colors: SceneColors }) {
   const soilGeo = useMemo(() => new THREE.CircleGeometry(SOIL_R, 24), []);
 
   // Spike only: "p" moves all six plants to the next state
-  const [step, setStep] = useState(0);
+  const [stateIndex, setStateIndex] = useState(0);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       // Typing in a field or the terminal must not change the plants
-      const t = e.target;
-      if (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement) {
+      const el = e.target;
+      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
         return;
       }
-      if (e.key === "p") setStep((s) => (s + 1) % PLANT_STATES.length);
+      if (e.key === "p") {
+        setStateIndex((i) => (i + 1) % PLANT_STATES.length);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
-  const state = PLANT_STATES[step];
+  const state = PLANT_STATES[stateIndex];
 
   return (
     <>
