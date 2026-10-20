@@ -48,6 +48,8 @@ function Pot({
   z,
   slot,
   state,
+  growth,
+  wholeScale,
   colors,
   bodyGeo,
   soilGeo,
@@ -56,6 +58,8 @@ function Pot({
   z: number;
   slot: number;
   state: PlantState;
+  growth: number;
+  wholeScale: boolean;
   colors: SceneColors;
 } & Shapes) {
   return (
@@ -75,11 +79,21 @@ function Pot({
       </mesh>
       {/* The plant stands on the soil, like the prototype's plantHolder */}
       <group position-y={SOIL_Y}>
-        <Plant slot={slot} state={state} colors={colors} />
+        <Plant
+          slot={slot}
+          state={state}
+          growth={growth}
+          colors={colors}
+          wholeScale={wholeScale}
+        />
       </group>
     </group>
   );
 }
+
+// Spike only: the growth values "g" steps through, starting at the
+// table's own size (0.5), then bigger, then from small up again
+const GROWTH_STEPS = [0.5, 0.75, 1, 0, 0.25];
 
 export function Pots({ colors }: { colors: SceneColors }) {
   // Built once while the scene is mounted, shared by all six pots
@@ -88,6 +102,11 @@ export function Pots({ colors }: { colors: SceneColors }) {
 
   // Spike only: "p" moves all six plants to the next state
   const [stateIndex, setStateIndex] = useState(0);
+  // and "g" to the next growth step
+  const [growthIndex, setGrowthIndex] = useState(0);
+  // and "s" switches the whole-plant scale on and off
+  const [wholeScale, setWholeScale] = useState(false);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       // Typing in a field or the terminal must not change the plants
@@ -98,11 +117,18 @@ export function Pots({ colors }: { colors: SceneColors }) {
       if (e.key === "p") {
         setStateIndex((i) => (i + 1) % PLANT_STATES.length);
       }
+      if (e.key === "g") {
+        setGrowthIndex((i) => (i + 1) % GROWTH_STEPS.length);
+      }
+      if (e.key === "s") {
+        setWholeScale((on) => !on);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
   const state = PLANT_STATES[stateIndex];
+  const growth = GROWTH_STEPS[growthIndex];
 
   return (
     <>
@@ -115,6 +141,8 @@ export function Pots({ colors }: { colors: SceneColors }) {
           bodyGeo={bodyGeo}
           soilGeo={soilGeo}
           state={state}
+          growth={growth}
+          wholeScale={wholeScale}
           colors={colors}
         />
       ))}

@@ -23,8 +23,9 @@ const SPEED = 5;
 const target = new THREE.Color();
 
 // One leaf: where on the stem (0 = soil, 1 = tip), turned how far
-// around it, and how big (0 = hidden, 1 = full leaf)
-type Leaf = { at: number; turn: number; size: number };
+// around it, how big (0 = hidden, 1 = full leaf), and from which
+// growth on it shows (leaves without from are always there)
+type Leaf = { at: number; turn: number; size: number; from?: number };
 
 // Everything that makes a state look the way it does
 type Look = {
@@ -41,8 +42,9 @@ type Look = {
 const SPROUT: Leaf[] = [
   { at: 0.72, turn: 0, size: 1 },
   { at: 0.8, turn: Math.PI, size: 1 },
-  { at: 0.8, turn: Math.PI, size: 0 },
-  { at: 0.8, turn: Math.PI, size: 0 },
+  // More leaves lower down once the plant has grown
+  { at: 0.45, turn: Math.PI / 2, size: 0.85, from: 0.75 },
+  { at: 0.3, turn: -Math.PI / 2, size: 0.75, from: 1 },
 ];
 
 // Waiting: four smaller leaves spread up the stem
@@ -92,6 +94,21 @@ const LOOKS: Record<PlantState, (colors: SceneColors) => Look> = {
   }),
 };
 
+// Growth 0..1 on top of the table: 0.5 is the table as it is,
+// less is a younger, smaller plant, more is taller with bigger leaves.
+// Leaves with a from only show once the plant has grown that far
+function grow(look: Look, growth: number): Look {
+  const leafScale = 0.7 + 0.6 * growth;
+  return {
+    ...look,
+    height: look.height * (0.75 + 0.5 * growth),
+    leaves: look.leaves.map((leaf) => ({
+      ...leaf,
+      size: growth >= (leaf.from ?? 0) ? leaf.size * leafScale : 0,
+    })),
+  };
+}
+
 // A smooth stem through four points, leaning out in direction dir
 function stemCurve(h: number, bend: number, dir: number) {
   const dx = Math.cos(dir);
@@ -104,6 +121,32 @@ function stemCurve(h: number, bend: number, dir: number) {
     V(0.1 + 0.42 * bend, h * (0.8 - 0.15 * bend)),
     V(0.14 + 0.72 * bend, h * (1 - 0.95 * bend)),
   ]);
+}
+
+// The pot's rim seen from the soil: how far out it starts and ends
+// (with room for the stem's thickness), and how high a stem crossing
+// it must stay: rim top 0.13 above the soil, plus the stem's radius
+// and a small gap
+const RIM_IN = 0.56;
+const RIM_OUT = 0.8;
+const RIM_CLEAR = 0.13 + STEM_R + 0.015;
+
+// A drooping stem must lie over the rim, not run through it.
+// Take 17 evenly spaced points along the stem, lift the ones that are
+// over the rim but too low, and draw a new smooth curve through them.
+// scale is the whole-plant scale, because the rim doesn't scale with it
+function overRim(curve: THREE.CatmullRomCurve3, scale: number) {
+  const points = curve.getSpacedPoints(16);
+  let lifted = false;
+  for (const point of points) {
+    const out = Math.hypot(point.x, point.z) * scale;
+    if (out > RIM_IN && out < RIM_OUT && point.y * scale < RIM_CLEAR) {
+      point.y = RIM_CLEAR / scale;
+      lifted = true;
+    }
+  }
+  // Untouched stems keep their own curve
+  return lifted ? new THREE.CatmullRomCurve3(points) : curve;
 }
 
 // A pointed leaf outline, filled, then curled: tip back, sides up
@@ -126,15 +169,25 @@ function leafGeo(len: number, wid: number) {
 export function Plant({
   slot,
   state,
+  growth,
+  wholeScale,
   colors,
 }: {
   slot: number;
   state: PlantState;
+  growth: number;
+  wholeScale: boolean;
   colors: SceneColors;
 }) {
   // Each slot leans its own way
   const dir = slot * 1.7 + 0.6;
-  const look = LOOKS[state](colors);
+  // The target look: the state's entry in the table, filled with this
+  // mode's colours, then grown
+  const makeLook = LOOKS[state];
+  const tableLook = makeLook(colors);
+  const look = grow(tableLook, growth);
+  // The extra layer: the whole plant scaled by growth, when it's on
+  const scaleGoal = wholeScale ? 0.85 + 0.3 * growth : 1;
 
   // The look of the first render.
   // The JSX only sets this starting point.
@@ -143,7 +196,8 @@ export function Plant({
 
   // The stem of the first render; useFrame bends it from there
   const startCurve = useMemo(
-    () => stemCurve(start.height, start.bend, dir),
+    // The whole-plant scale starts at 1 (see now)
+    () => overRim(stemCurve(start.height, start.bend, dir), 1),
     [start, dir],
   );
   // The real Three materials,
@@ -154,6 +208,7 @@ export function Plant({
   // Where the plant is right now, on its way from start to look.
   // Copies, because useFrame changes them and the table must stay as it is
   const now = useRef({
+    scale: 1,
     height: start.height,
     bend: start.bend,
     curve: startCurve,
@@ -164,6 +219,8 @@ export function Plant({
   const leafMeshes = useRef<(THREE.Mesh | null)[]>([]);
   // The stem mesh, so useFrame can give it a new tube while it bends
   const stemMesh = useRef<THREE.Mesh>(null);
+  // The group around the whole plant, for the extra scale
+  const plantRoot = useRef<THREE.Group>(null);
 
   // When the plant goes away, free the tube useFrame made last
   useEffect(() => {
@@ -188,13 +245,17 @@ export function Plant({
     // rebuild only while it still has a visible way to go
     const moving =
       Math.abs(look.bend - cur.bend) > 0.001 ||
-      Math.abs(look.height - cur.height) > 0.001;
+      Math.abs(look.height - cur.height) > 0.001 ||
+      // the rim's place in plant space shifts when the plant scales
+      Math.abs(scaleGoal - cur.scale) > 0.001;
     cur.bend += (look.bend - cur.bend) * step;
     cur.height += (look.height - cur.height) * step;
+    cur.scale += (scaleGoal - cur.scale) * step;
+    plantRoot.current?.scale.setScalar(cur.scale);
 
     const stem = stemMesh.current;
     if (moving && stem) {
-      cur.curve = stemCurve(cur.height, cur.bend, dir);
+      cur.curve = overRim(stemCurve(cur.height, cur.bend, dir), cur.scale);
       const old = stem.geometry;
       stem.geometry = new THREE.TubeGeometry(cur.curve, 24, STEM_R, 6);
       // Free the old tube's memory on the GPU
@@ -226,7 +287,7 @@ export function Plant({
   });
 
   return (
-    <>
+    <group ref={plantRoot}>
       <mesh ref={stemMesh}>
         <tubeGeometry args={[startCurve, 24, STEM_R, 6]} />
 
@@ -263,6 +324,6 @@ export function Plant({
           </mesh>
         </group>
       ))}
-    </>
+    </group>
   );
 }
