@@ -400,6 +400,56 @@ describe("WorktreeService", () => {
     });
   });
 
+  describe("isClean", () => {
+    it("is true for a new worktree and false after a new file", async () => {
+      const { path } = await service.create({
+        issueNumber: 42,
+        issueTitle: "Fix bug",
+      });
+      expect(await service.isClean(path)).toBe(true);
+
+      await writeFile(join(path, "new.txt"), "x");
+
+      expect(await service.isClean(path)).toBe(false);
+    });
+  });
+
+  describe("ensureExcluded", () => {
+    const excludeFile = () => join(repo, ".git", "info", "exclude");
+    const linesWith = async (pattern: string) =>
+      (await readFile(excludeFile(), "utf8"))
+        .split(/\r?\n/)
+        .filter((line) => line.trim() === pattern).length;
+
+    it("adds the pattern once, however often it is called", async () => {
+      await service.ensureExcluded(".gitspore/");
+      await service.ensureExcluded(".gitspore/");
+
+      expect(await linesWith(".gitspore/")).toBe(1);
+    });
+
+    it("starts a new line when the file does not end with one", async () => {
+      await writeFile(excludeFile(), "*.log");
+
+      await service.ensureExcluded(".gitspore/");
+
+      expect(await readFile(excludeFile(), "utf8")).toBe("*.log\n.gitspore/\n");
+    });
+
+    it("keeps .gitspore/ out of git status in every worktree", async () => {
+      const { path } = await service.create({
+        issueNumber: 42,
+        issueTitle: "Fix bug",
+      });
+      await service.ensureExcluded(".gitspore/");
+
+      await mkdir(join(path, ".gitspore"));
+      await writeFile(join(path, ".gitspore", "task.md"), "# Task");
+
+      expect(await service.isClean(path)).toBe(true);
+    });
+  });
+
   describe("startup", () => {
     it("cleans up a worktree whose folder was deleted while the daemon was down", async () => {
       const { path } = await service.create({

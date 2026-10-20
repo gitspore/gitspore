@@ -4,7 +4,7 @@ import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { basename, dirname, join, resolve } from "node:path";
 import { simpleGit, SimpleGit } from "simple-git";
 import { WorktreeError } from "./worktree-error";
-import { access } from "node:fs/promises";
+import { access, appendFile, mkdir, readFile } from "node:fs/promises";
 
 export type Worktree = { branch: string; path: string };
 
@@ -76,6 +76,37 @@ export class WorktreeService implements OnModuleInit {
 
   async fetch(): Promise<void> {
     await this.run(["fetch", "origin", this.config.baseBranch()]);
+  }
+
+  async isClean(path: string): Promise<boolean> {
+    return (await this.statusOf(path)) === "";
+  }
+
+  async ensureExcluded(pattern: string): Promise<void> {
+    const commonDir = (
+      await this.run([
+        "rev-parse",
+        "--path-format=absolute",
+        "--git-common-dir",
+      ])
+    ).trim();
+    const file = join(commonDir, "info", "exclude");
+    await mkdir(dirname(file), { recursive: true });
+
+    let current = "";
+    try {
+      current = await readFile(file, "utf8");
+    } catch (error) {
+      // No file yet is fine; anything else is a real problem.
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+
+    if (current.split(/\r?\n/).some((line) => line.trim() === pattern)) {
+      return;
+    }
+    // Without a newline at the end, the new line would stick to the last one.
+    const separator = current === "" || current.endsWith("\n") ? "" : "\n";
+    await appendFile(file, `${separator}${pattern}\n`);
   }
 
   async create(issue: {
