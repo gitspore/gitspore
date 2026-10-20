@@ -5,6 +5,7 @@ import {
   type GreenhouseState,
   type JsonValue,
   type PatchOp,
+  type RepoCheckAck,
   type RepoChooseAck,
   type ServerToClientEvents,
   type TerminalOpenAck,
@@ -90,6 +91,7 @@ const clientPayloads: {
   "issues:refresh": {},
   "state:request": {},
   "repo:choose": { path: "/home/dev/repo", baseBranch: "main" },
+  "repo:check": { path: "/home/dev/repo", baseBranch: "main" },
   "terminal:open": { agentId: "agent-1" },
   "terminal:input": { sessionId: "session-1", data: "y\r" },
   "terminal:resize": { sessionId: "session-1", cols: 80, rows: 24 },
@@ -103,6 +105,7 @@ const acks: {
   openError: TerminalOpenAck;
   repoOk: RepoChooseAck;
   repoProblems: RepoChooseAck;
+  repoChecks: RepoCheckAck;
 } = {
   dispatchOk: { agentId: "agent-2" },
   dispatchError: {
@@ -127,6 +130,14 @@ const acks: {
         code: "no_base_branch",
         message: 'Branch "main" does not exist. Choose the base branch.',
       },
+    ],
+  },
+  repoChecks: {
+    checks: [
+      { item: "git", result: "ok", detail: "repo" },
+      { item: "base_branch", result: "fail", detail: "No branch main" },
+      { item: "github", result: "warn", detail: "No GitHub remote" },
+      { item: "claude", result: "ok", detail: "found" },
     ],
   },
 };

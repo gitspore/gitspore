@@ -126,6 +126,23 @@ export type RepoProblem = {
 
 export type RepoChooseAck = { repo: RepoInfo } | { problems: RepoProblem[] };
 
+/** What `repo:check` looked at, one line each on the setup screen. */
+export type RepoCheckItem = "git" | "base_branch" | "github" | "claude";
+
+export type RepoCheck = {
+  item: RepoCheckItem;
+  /**
+   * "warn": gitspore works without it, e.g. GitHub off. "fail": agents
+   * can't run there; fix it before choosing the repo.
+   */
+  result: "ok" | "warn" | "fail";
+  /** For display: what was found ("main exists"), or what to do. */
+  detail: string;
+};
+
+/** In the order above. Checks that need a git repo are left out without one. */
+export type RepoCheckAck = { checks: RepoCheck[] };
+
 // --- Payloads: Server → Client --------------------------------------------
 
 export type TerminalDataPayload = {
@@ -181,6 +198,15 @@ export interface ClientToServerEvents {
   "repo:choose": (
     payload: RepoChoosePayload,
     ack: (response: RepoChooseAck) => void,
+  ) => void;
+
+  /**
+   * Client → Server. Check a repository without choosing it, for the setup
+   * screen to show before the user commits. Changes nothing.
+   */
+  "repo:check": (
+    payload: RepoChoosePayload,
+    ack: (response: RepoCheckAck) => void,
   ) => void;
 
   /**
