@@ -7,6 +7,8 @@ import {
   type PatchOp,
   type ServerToClientEvents,
   type TerminalOpenAck,
+  type ServerError,
+  type ErrorCode,
 } from "./index";
 
 // Typed as JsonValue, so a payload that isn't plain JSON (a Date, a Map, an
@@ -113,6 +115,68 @@ const acks: {
   },
 };
 
+const errors: { [C in ErrorCode]: ServerError & { code: C } } = {
+  invalid_payload: { code: "invalid_payload", message: "Invalid payload" },
+  slot_unavailable: {
+    code: "slot_unavailable",
+    message: "Slot 0 already has agent agent-1",
+    context: { slotIndex: 0, agentId: "agent-1" },
+  },
+  issue_not_found: { code: "issue_not_found", message: "No open issue #99" },
+  issue_taken: {
+    code: "issue_taken",
+    message: "Issue #42 already has agent agent-1",
+    context: { issueNumber: 42, agentId: "agent-1" },
+  },
+  agent_not_found: { code: "agent_not_found", message: "Agent not found" },
+  session_not_found: {
+    code: "session_not_found",
+    message: "No session session-9",
+  },
+  git_failed: {
+    code: "git_failed",
+    message: "Branch spore/42-fix-login already exists",
+  },
+  git_push_failed: {
+    code: "git_push_failed",
+    message: "Could not push spore/42-fix-login to origin: no login",
+    context: { branch: "spore/42-fix-login" },
+  },
+  worktree_dirty: {
+    code: "worktree_dirty",
+    message: "The worktree has uncommitted changes",
+    context: { agentId: "agent-1" },
+  },
+  agent_starting: {
+    code: "agent_starting",
+    message: "Agent agent-1 is still starting",
+    context: { agentId: "agent-1" },
+  },
+  claude_not_found: {
+    code: "claude_not_found",
+    message:
+      "Claude Code was not found. Install it from https://claude.com/claude-code",
+  },
+  github_failed: { code: "github_failed", message: "GitHub answered with 500" },
+  github_sync_disabled: {
+    code: "github_sync_disabled",
+    message: "No GitHub token found",
+  },
+  github_unreachable: {
+    code: "github_unreachable",
+    message: "api.github.com is not reachable",
+  },
+  github_rate_limited: {
+    code: "github_rate_limited",
+    message: "Rate limit reached",
+  },
+  github_auth_failed: {
+    code: "github_auth_failed",
+    message: "GitHub rejected the token",
+  },
+  internal: { code: "internal", message: "Unexpected error" },
+};
+
 const serverPayloads: {
   [E in keyof ServerToClientEvents]: Parameters<ServerToClientEvents[E]>[0];
 } = {
@@ -123,7 +187,7 @@ const serverPayloads: {
     chunk: "\u001b[32m✔\u001b[0m Tests passed\r\n",
   },
   "terminal:exit": { sessionId: "session-1", exitCode: 0 },
-  error: { code: "git_failed", message: "worktree remove failed" },
+  error: { code: errors.git_failed.code, message: "worktree remove failed" },
 };
 
 describe("JSON round trip", () => {
@@ -138,6 +202,7 @@ describe("JSON round trip", () => {
   it.each([
     ["client payloads", clientPayloads],
     ["acks", acks],
+    ["errors", errors],
     ["server payloads", serverPayloads],
   ] as const)("keeps all %s unchanged", (_, payloads) => {
     expect(roundTrip(payloads)).toStrictEqual(payloads);
