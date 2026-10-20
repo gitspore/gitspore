@@ -3,6 +3,7 @@ import allStates from "./all-states.json";
 import coreLoop from "./core-loop.json";
 import empty from "./empty.json";
 import stress from "./stress.json";
+import noRepo from "./no-repo.json";
 import { validateScenario } from "@/lib/mock/validateScenario";
 
 const RAW_SCENARIOS = {
@@ -10,6 +11,7 @@ const RAW_SCENARIOS = {
   "all-states": allStates,
   "core-loop": coreLoop,
   stress,
+  "no-repo": noRepo,
 };
 
 export type ScenarioName = keyof typeof RAW_SCENARIOS;
