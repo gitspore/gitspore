@@ -10,7 +10,12 @@ type PatchListener = (patch: StatePatch) => void;
 
 @Injectable()
 export class StateStore {
-  private state: GreenhouseState = { version: 0, agents: [], issues: [] };
+  private state: GreenhouseState = {
+    version: 0,
+    repo: null,
+    agents: [],
+    issues: [],
+  };
   private readonly listeners: PatchListener[] = [];
 
   snapshot(): GreenhouseState {

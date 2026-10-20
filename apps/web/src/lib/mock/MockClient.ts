@@ -69,7 +69,12 @@ export class MockClient implements GreenhouseClient {
 
   // The state as the UI has it: every patch sent is applied here as well.
   // This is what a snapshot on request contains.
-  private state: GreenhouseState = { agents: [], issues: [], version: 0 };
+  private state: GreenhouseState = {
+    agents: [],
+    issues: [],
+    version: 0,
+    repo: null,
+  };
   // How far the mock's own patches have pushed the scenario's version
   // numbers. A scenario patch is sent as `version + versionOffset`.
   private versionOffset = 0;

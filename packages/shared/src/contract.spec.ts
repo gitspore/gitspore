@@ -5,6 +5,7 @@ import {
   type GreenhouseState,
   type JsonValue,
   type PatchOp,
+  type RepoChooseAck,
   type ServerToClientEvents,
   type TerminalOpenAck,
 } from "./index";
@@ -17,6 +18,7 @@ function roundTrip(value: JsonValue): unknown {
 
 const snapshot: GreenhouseState = {
   version: 7,
+  repo: { path: "/home/dev/repo", baseBranch: "main", github: "on" },
   agents: [
     {
       id: "agent-1",
@@ -87,6 +89,7 @@ const clientPayloads: {
   "agent:stop": { agentId: "agent-1", removeWorktree: true },
   "issues:refresh": {},
   "state:request": {},
+  "repo:choose": { path: "/home/dev/repo", baseBranch: "main" },
   "terminal:open": { agentId: "agent-1" },
   "terminal:input": { sessionId: "session-1", data: "y\r" },
   "terminal:resize": { sessionId: "session-1", cols: 80, rows: 24 },
@@ -98,6 +101,8 @@ const acks: {
   dispatchError: AgentDispatchAck;
   openOk: TerminalOpenAck;
   openError: TerminalOpenAck;
+  repoOk: RepoChooseAck;
+  repoProblems: RepoChooseAck;
 } = {
   dispatchOk: { agentId: "agent-2" },
   dispatchError: {
@@ -110,6 +115,19 @@ const acks: {
   openOk: { sessionId: "session-1" },
   openError: {
     error: { code: "agent_not_found", message: "No agent agent-9" },
+  },
+  repoOk: { repo: snapshot.repo! },
+  repoProblems: {
+    problems: [
+      {
+        code: "not_a_repo",
+        message: "/home/dev/photos is not a git repository.",
+      },
+      {
+        code: "no_base_branch",
+        message: 'Branch "main" does not exist. Choose the base branch.',
+      },
+    ],
   },
 };
 
@@ -155,6 +173,7 @@ describe("applyPatch", () => {
       status: "applied",
       state: {
         version: 8,
+        repo: snapshot.repo,
         agents: [snapshot.agents[1]],
         issues: [snapshot.issues[0], ops["issue:upsert"].issue],
       },

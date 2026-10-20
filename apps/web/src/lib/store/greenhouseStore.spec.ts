@@ -26,7 +26,7 @@ function issue(number: number): Issue {
 }
 
 function state(overrides: Partial<GreenhouseState> = {}): GreenhouseState {
-  return { version: 1, agents: [], issues: [], ...overrides };
+  return { version: 1, repo: null, agents: [], issues: [], ...overrides };
 }
 
 const serverError: ServerError = { code: "slot_unavailable", message: "taken" };
@@ -163,6 +163,7 @@ describe("createGreenhouseStore", () => {
 
       expect(store.getState().server).toEqual({
         version: 2,
+        repo: null,
         agents: [agent({ status: "needs_input" })],
         issues: [],
       });

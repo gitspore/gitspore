@@ -39,10 +39,17 @@ const issueSchema = z.object({
   labels: z.array(z.string()),
 }) satisfies z.ZodType<Issue>;
 
+const repoSchema = z.object({
+  path: z.string(),
+  baseBranch: z.string(),
+  github: z.enum(["on", "off"]),
+});
+
 const greenhouseStateSchema = z.object({
   agents: z.array(agentSchema),
   issues: z.array(issueSchema),
   version: z.number(),
+  repo: repoSchema.nullable(),
 }) satisfies z.ZodType<GreenhouseState>;
 
 const patchOpSchema = z.discriminatedUnion("type", [

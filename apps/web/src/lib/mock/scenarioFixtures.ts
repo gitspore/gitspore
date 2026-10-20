@@ -22,7 +22,12 @@ export function makeScenario(events: ScenarioEntry[] = []): Scenario {
   return {
     name: "test",
     anchor: ANCHOR,
-    snapshot: { version: 1, agents: [agent], issues: [] },
+    snapshot: {
+      version: 1,
+      repo: { path: "/mock/repo", baseBranch: "main", github: "on" },
+      agents: [agent],
+      issues: [],
+    },
     events,
   };
 }

@@ -29,7 +29,12 @@ describe("StateStore", () => {
 
   describe("initial state", () => {
     it("starts at version 0 without agents and issues", () => {
-      expect(store.snapshot()).toEqual({ version: 0, agents: [], issues: [] });
+      expect(store.snapshot()).toEqual({
+        version: 0,
+        repo: null,
+        agents: [],
+        issues: [],
+      });
     });
   });
 
@@ -103,6 +108,7 @@ describe("StateStore", () => {
 
       expect(store.snapshot()).toEqual({
         version: 1,
+        repo: null,
         agents: [],
         issues: [issue(1)],
       });
@@ -113,7 +119,12 @@ describe("StateStore", () => {
 
       store.apply([{ type: "issue:upsert", issue: issue(1) }]);
 
-      expect(before).toEqual({ version: 0, agents: [], issues: [] });
+      expect(before).toEqual({
+        version: 0,
+        repo: null,
+        agents: [],
+        issues: [],
+      });
     });
   });
 

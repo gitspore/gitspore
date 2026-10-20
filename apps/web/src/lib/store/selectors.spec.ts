@@ -32,7 +32,13 @@ function storeWith(server: Partial<GreenhouseState> | null) {
   if (server)
     store
       .getState()
-      .applySnapshot({ version: 1, agents: [], issues: [], ...server });
+      .applySnapshot({
+        version: 1,
+        repo: null,
+        agents: [],
+        issues: [],
+        ...server,
+      });
   return store.getState();
 }
 

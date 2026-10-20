@@ -11,6 +11,7 @@ import type {
   GreenhouseState,
   Issue,
   JsonValue,
+  RepoInfo,
   SessionId,
 } from "./models";
 
@@ -110,6 +111,21 @@ export type TerminalResizePayload = {
 
 export type TerminalClosePayload = { sessionId: SessionId };
 
+export type RepoChoosePayload = {
+  /** Absolute path, or a folder inside the repo. */
+  path: string;
+  /** Defaults to "main". */
+  baseBranch?: string;
+};
+
+/** Why a path can't be used. `message` is for display and says what to do. */
+export type RepoProblem = {
+  code: "not_found" | "not_a_repo" | "no_base_branch" | "agents_running";
+  message: string;
+};
+
+export type RepoChooseAck = { repo: RepoInfo } | { problems: RepoProblem[] };
+
 // --- Payloads: Server → Client --------------------------------------------
 
 export type TerminalDataPayload = {
@@ -155,6 +171,17 @@ export interface ClientToServerEvents {
    * patch versions.
    */
   "state:request": (payload: EmptyPayload) => void;
+
+  /**
+   * Client → Server. Choose the repository gitspore works in. The daemon
+   * checks the path; the ack carries the repo or every problem found. On
+   * success all clients get a new `state:snapshot` for that repo. Refused
+   * while agents run.
+   */
+  "repo:choose": (
+    payload: RepoChoosePayload,
+    ack: (response: RepoChooseAck) => void,
+  ) => void;
 
   /**
    * Client → Server. Attach to an agent's terminal. The ack carries the
