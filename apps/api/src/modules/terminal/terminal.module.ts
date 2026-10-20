@@ -11,6 +11,6 @@ import { ClaudeLocator, LOCATOR_DEPS, systemDeps } from "./claude-locator";
     { provide: LOCATOR_DEPS, useFactory: systemDeps },
     { provide: SPAWN_PTY, useValue: spawn satisfies SpawnPty },
   ],
-  exports: [TerminalService],
+  exports: [TerminalService, ClaudeLocator],
 })
 export class TerminalModule {}
