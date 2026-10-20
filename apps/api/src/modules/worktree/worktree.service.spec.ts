@@ -19,6 +19,8 @@ import {
 } from "node:fs/promises";
 import { simpleGit } from "simple-git";
 import { existsSync } from "node:fs";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 
 //
 //
@@ -470,6 +472,53 @@ describe("WorktreeService", () => {
     beforeEach(async () => {
       origin = await initOrigin(repo, join(parent, "origin.git"));
     });
+    // A server that wants a login: publish must fail fast with push_failed.
+    // The test runs without a credential helper, so the machine's (Git
+    // Credential Manager on Windows) cannot open a window, and on CI nobody
+    // would answer it. Under Jest git has no console to ask in, so this test
+    // also passes without GIT_TERMINAL_PROMPT=0; it does not prove that the
+    // variable works. A dispatch without a login is checked by hand.
+
+    it("fails at once instead of asking for a login", async () => {
+      const server = createServer((_request, response) => {
+        response.writeHead(401, {
+          "WWW-Authenticate": 'Basic realm="gitspore"',
+        });
+        response.end();
+      });
+      await new Promise<void>((resolve) =>
+        server.listen(0, "127.0.0.1", resolve),
+      );
+      const { port } = server.address() as AddressInfo;
+
+      try {
+        // Without startPoint: create does not talk to origin.
+        const { branch } = await service.create({
+          issueNumber: 42,
+          issueTitle: "Fix bug",
+        });
+        await simpleGit(repo).remote([
+          "set-url",
+          "origin",
+          `http://127.0.0.1:${port}/repo.git`,
+        ]);
+
+        await simpleGit({
+          baseDir: repo,
+          unsafe: { allowUnsafeCredentialHelper: true },
+        }).raw(["config", "credential.helper", ""]);
+
+        const started = Date.now();
+
+        await expect(service.publish(branch)).rejects.toMatchObject({
+          code: "push_failed",
+        });
+        expect(Date.now() - started).toBeLessThan(10_000);
+      } finally {
+        server.closeAllConnections();
+        server.close();
+      }
+    }, 30_000);
 
     describe("fetch", () => {
       it("brings origin/main up to date and leaves the local main alone", async () => {
