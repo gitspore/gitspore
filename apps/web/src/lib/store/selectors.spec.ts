@@ -30,15 +30,13 @@ function storeWith(server: Partial<GreenhouseState> | null) {
   } as GreenhouseClient;
   const store = createGreenhouseStore(client, "live");
   if (server)
-    store
-      .getState()
-      .applySnapshot({
-        version: 1,
-        repo: null,
-        agents: [],
-        issues: [],
-        ...server,
-      });
+    store.getState().applySnapshot({
+      version: 1,
+      repo: null,
+      agents: [],
+      issues: [],
+      ...server,
+    });
   return store.getState();
 }
 
