@@ -1,13 +1,16 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import * as THREE from "three";
 
-import { Plant } from "./Plant";
+import {
+  Plant,
+  PLANT_STATES,
+  type PlantState,
+  type SceneColors,
+} from "./Plant";
 
 //
 //
 //
-
-type Colors = { pot: string; soil: string; stem: string; leaf: string };
 
 type Shapes = {
   bodyGeo: THREE.BufferGeometry;
@@ -44,18 +47,22 @@ function Pot({
   x,
   z,
   slot,
+  state,
+  colors,
   bodyGeo,
   soilGeo,
-  pot,
-  soil,
-  stem,
-  leaf,
-}: { x: number; z: number; slot: number } & Shapes & Colors) {
+}: {
+  x: number;
+  z: number;
+  slot: number;
+  state: PlantState;
+  colors: SceneColors;
+} & Shapes) {
   return (
     <group position={[x, 0, z]}>
       <mesh geometry={bodyGeo}>
         {/* <latheGeometry args={[POT_PROFILE, 24]} /> */}
-        <meshStandardMaterial color={pot} roughness={0.9} />
+        <meshStandardMaterial color={colors.pot} roughness={0.9} />
       </mesh>
       {/* Soil: A flat disc just above the pot's inner floor, laid flat */}
       <mesh
@@ -64,20 +71,36 @@ function Pot({
         position-y={SOIL_Y + 0.005}
       >
         {/* <circleGeometry args={[SOIL_R, 24]} /> */}
-        <meshStandardMaterial color={soil} roughness={1} />
+        <meshStandardMaterial color={colors.soil} roughness={1} />
       </mesh>
       {/* The plant stands on the soil, like the prototype's plantHolder */}
       <group position-y={SOIL_Y}>
-        <Plant slot={slot} stem={stem} leaf={leaf} />
+        <Plant slot={slot} state={state} colors={colors} />
       </group>
     </group>
   );
 }
 
-export function Pots({ pot, soil, stem, leaf }: Colors) {
+export function Pots({ colors }: { colors: SceneColors }) {
   // Built once while the scene is mounted, shared by all six pots
   const bodyGeo = useMemo(() => new THREE.LatheGeometry(POT_PROFILE, 24), []);
   const soilGeo = useMemo(() => new THREE.CircleGeometry(SOIL_R, 24), []);
+
+  // Spike only: "p" moves all six plants to the next state
+  const [step, setStep] = useState(0);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      // Typing in a field or the terminal must not change the plants
+      const t = e.target;
+      if (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement) {
+        return;
+      }
+      if (e.key === "p") setStep((s) => (s + 1) % PLANT_STATES.length);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+  const state = PLANT_STATES[step];
 
   return (
     <>
@@ -89,10 +112,8 @@ export function Pots({ pot, soil, stem, leaf }: Colors) {
           slot={slot}
           bodyGeo={bodyGeo}
           soilGeo={soilGeo}
-          pot={pot}
-          soil={soil}
-          stem={stem}
-          leaf={leaf}
+          state={state}
+          colors={colors}
         />
       ))}
     </>

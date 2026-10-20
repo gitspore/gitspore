@@ -65,12 +65,7 @@ export function Scene() {
         intensity={t.scene.light.key}
       />
 
-      <Pots
-        pot={t.color.scene.pot}
-        soil={t.color.scene.soil}
-        stem={t.color.scene.stem}
-        leaf={t.color.scene.leaf}
-      />
+      <Pots colors={t.color.scene} />
 
       <OrbitControls />
       {/* StatsGl adds its own panel to <body>; the class places it */}
