@@ -2,6 +2,7 @@ import {
   applyPatch as applyStatePatch,
   type AgentId,
   type GreenhouseState,
+  type RepoChooseAck,
   type ServerError,
   type SessionId,
   type StatePatch,
@@ -30,6 +31,10 @@ export type GreenhouseStoreState = {
   // Snapshots never touch it.
   layout: LayoutSettings;
 
+  // The user opened the setup screen to switch repos. Without a repo the
+  // screen shows anyway, see showSetup in selectors.ts.
+  setupOpen: boolean;
+
   applySnapshot: (state: GreenhouseState) => void;
   applyPatch: (patch: StatePatch) => void;
   selectSlot: (slot: number | null) => void;
@@ -46,6 +51,15 @@ export type GreenhouseStoreState = {
   openWindow: (agentId: AgentId, options?: { alone?: boolean }) => void;
   closeWindow: (agentId: AgentId) => void;
   toggleMinimised: (agentId: AgentId) => void;
+  openSetup: () => void;
+  closeSetup: () => void;
+
+  /**
+   * Resolves with the daemon's answer: the repo, or the problems to show next
+   * to the path. On success the new repo's state arrives as a snapshot and
+   * the setup screen closes.
+   */
+  chooseRepo: (path: string) => Promise<RepoChooseAck>;
 
   dispatchAgent: (issueNumber: number, slotIndex: number) => void;
   stopAgent: (agentId: AgentId, removeWorktree: boolean) => void;
@@ -72,6 +86,7 @@ export function createGreenhouseStore(
     mode,
     lastError: null,
     layout: { sidePanel: "agents", mode: "scene", windows: [] },
+    setupOpen: false,
     selectSlot: (slot) => set({ selectedSlot: slot }),
     setConnection: (status) => set({ connection: status }),
     setError: (error) => set({ lastError: error }),
@@ -131,6 +146,15 @@ export function createGreenhouseStore(
           } else {
             resolve(response.sessionId);
           }
+        });
+      }),
+    openSetup: () => set({ setupOpen: true }),
+    closeSetup: () => set({ setupOpen: false }),
+    chooseRepo: (path) =>
+      new Promise((resolve) => {
+        client.emit("repo:choose", { path }, (response) => {
+          if ("repo" in response) set({ setupOpen: false });
+          resolve(response);
         });
       }),
     // Terminal traffic touches no state: input goes straight out, output

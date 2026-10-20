@@ -491,6 +491,35 @@ describe("createGreenhouseStore", () => {
       expect(store.getState().lastError).toBe(serverError);
     });
 
+    it("chooseRepo emits repo:choose, resolves with the repo and closes the setup screen", async () => {
+      const { store, client, ack } = setup();
+      const repo = { path: "/r", baseBranch: "main", github: "on" } as const;
+      store.getState().openSetup();
+
+      const chosen = store.getState().chooseRepo("/r");
+      ack("repo:choose", { repo });
+
+      await expect(chosen).resolves.toEqual({ repo });
+      expect(client.emit).toHaveBeenCalledWith(
+        "repo:choose",
+        { path: "/r" },
+        expect.any(Function),
+      );
+      expect(store.getState().setupOpen).toBe(false);
+    });
+
+    it("chooseRepo resolves with the problems and keeps the setup screen open", async () => {
+      const { store, ack } = setup();
+      const problems = [{ code: "not_found", message: "/r does not exist." }];
+      store.getState().openSetup();
+
+      const chosen = store.getState().chooseRepo("/r");
+      ack("repo:choose", { problems });
+
+      await expect(chosen).resolves.toEqual({ problems });
+      expect(store.getState().setupOpen).toBe(true);
+    });
+
     it("sends terminal input, resize and close", () => {
       const { store, client } = setup();
 
