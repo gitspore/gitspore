@@ -2,6 +2,7 @@ import {
   applyPatch as applyStatePatch,
   type AgentId,
   type GreenhouseState,
+  type RepoCheckAck,
   type RepoChooseAck,
   type ServerError,
   type SessionId,
@@ -59,7 +60,9 @@ export type GreenhouseStoreState = {
    * to the path. On success the new repo's state arrives as a snapshot and
    * the setup screen closes.
    */
-  chooseRepo: (path: string) => Promise<RepoChooseAck>;
+  chooseRepo: (path: string, baseBranch: string) => Promise<RepoChooseAck>;
+  /** Resolves with what the daemon found; chooses nothing. */
+  checkRepo: (path: string, baseBranch: string) => Promise<RepoCheckAck>;
 
   dispatchAgent: (issueNumber: number, slotIndex: number) => void;
   stopAgent: (agentId: AgentId, removeWorktree: boolean) => void;
@@ -150,12 +153,16 @@ export function createGreenhouseStore(
       }),
     openSetup: () => set({ setupOpen: true }),
     closeSetup: () => set({ setupOpen: false }),
-    chooseRepo: (path) =>
+    chooseRepo: (path, baseBranch) =>
       new Promise((resolve) => {
-        client.emit("repo:choose", { path }, (response) => {
+        client.emit("repo:choose", { path, baseBranch }, (response) => {
           if ("repo" in response) set({ setupOpen: false });
           resolve(response);
         });
+      }),
+    checkRepo: (path, baseBranch) =>
+      new Promise((resolve) => {
+        client.emit("repo:check", { path, baseBranch }, resolve);
       }),
     // Terminal traffic touches no state: input goes straight out, output
     // (terminal:data) goes straight to xterm.js and never through the store.

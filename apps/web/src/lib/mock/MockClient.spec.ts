@@ -3,6 +3,7 @@ import type {
   AgentDispatchAck,
   AgentStatus,
   GreenhouseState,
+  RepoCheckAck,
   RepoChooseAck,
   ServerError,
   StatePatch,
@@ -63,6 +64,12 @@ function openTerminal(client: MockClient, agentId: string): TerminalOpenAck {
 function chooseRepo(client: MockClient, path: string): RepoChooseAck {
   const acks: RepoChooseAck[] = [];
   client.emit("repo:choose", { path }, (ack) => acks.push(ack));
+  return acks[0];
+}
+
+function checkRepo(client: MockClient, path: string): RepoCheckAck {
+  const acks: RepoCheckAck[] = [];
+  client.emit("repo:check", { path }, (ack) => acks.push(ack));
   return acks[0];
 }
 
@@ -190,6 +197,43 @@ describe("MockClient", () => {
     });
   });
 
+  describe("repo:check", () => {
+    it("passes every check for a plain path and changes nothing", () => {
+      const { client, snapshots } = setup([], []);
+
+      expect(checkRepo(client, "/home/dev/shop")).toEqual({
+        checks: [
+          { item: "git", result: "ok", detail: "shop" },
+          { item: "base_branch", result: "ok", detail: "main exists" },
+          { item: "github", result: "ok", detail: expect.any(String) },
+          { item: "claude", result: "ok", detail: "found" },
+        ],
+      });
+      expect(snapshots).toHaveLength(1); // only the one of connect
+    });
+
+    it("leaves out the repo checks without a git repo", () => {
+      const { client } = setup([], []);
+
+      expect(
+        checkRepo(client, "/home/dev/not-git").checks.map((c) => c.item),
+      ).toEqual(["git", "claude"]);
+    });
+
+    it.each([
+      ["/home/dev/missing", "git", "fail"],
+      ["/home/dev/no-branch", "base_branch", "fail"],
+      ["/home/dev/no-github", "github", "warn"],
+      ["/home/dev/no-claude", "claude", "fail"],
+    ])("reports %s as %s %s", (path, item, result) => {
+      const { client } = setup([], []);
+
+      expect(checkRepo(client, path).checks).toContainEqual(
+        expect.objectContaining({ item, result }),
+      );
+    });
+  });
+
   describe("repo:choose", () => {
     it("acks with the repo and sends a snapshot of it without agents", () => {
       const { client, snapshots } = setup([], []);
@@ -218,6 +262,7 @@ describe("MockClient", () => {
     it.each([
       ["/home/dev/missing", "not_found"],
       ["/home/dev/not-git", "not_a_repo"],
+      ["/home/dev/no-branch", "no_base_branch"],
     ])("refuses %s with %s and keeps the state", (path, code) => {
       const { client, snapshots } = setup([], []);
 

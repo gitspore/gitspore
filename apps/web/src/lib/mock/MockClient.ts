@@ -5,6 +5,7 @@ import {
   type ClientToServerEvents,
   type GreenhouseState,
   type PatchOp,
+  type RepoCheck,
   type RepoInfo,
   type RepoProblem,
   type ServerToClientEvents,
@@ -45,7 +46,7 @@ type Handlers = {
  *   moment of connect(): an agent that waited 20 minutes before the anchor has
  *   waited 20 minutes when the UI connects.
  * - Commands are answered locally, see `handlers`: `agent:dispatch`,
- *   `agent:stop`, `repo:choose`, `terminal:open`, `terminal:input`, `terminal:close`,
+ *   `agent:stop`, `repo:check`, `repo:choose`, `terminal:open`, `terminal:input`, `terminal:close`,
  *   `state:request` and `issues:refresh`. Every other command
  *   (`terminal:resize`) does nothing.
  * - Versions follow the contract: a patch is numbered after the one before.
@@ -146,11 +147,68 @@ export class MockClient implements GreenhouseClient {
       this.sendPatch([{ type: "agent:remove", agentId }]);
     },
 
-    // There is no disk here: the path itself says what the check finds,
-    // see MOCK_PATHS. Agents with a slot block a switch, the overview agent
-    // does not (the switch restarts it). On success the mock "moves into"
-    // the repo: the scenario stops, the agents go, the issues stay so the
-    // greenhouse has something to plant, and every listener gets a snapshot.
+    // There is no disk here: words in the path say what the check finds:
+    // "missing", "not-git", "no-branch", "no-github", "no-claude". Every
+    // other path is a git repo with the branch, GitHub and Claude Code.
+    "repo:check": ({ path, baseBranch = "main" }, ack) => {
+      const name = path.split("/").filter(Boolean).at(-1) ?? path;
+      const checks: RepoCheck[] = [];
+      if (path.includes("missing")) {
+        checks.push({
+          item: "git",
+          result: "fail",
+          detail: `${path} does not exist.`,
+        });
+      } else if (path.includes("not-git")) {
+        checks.push({
+          item: "git",
+          result: "fail",
+          detail: "Not a git repository. Run git init there.",
+        });
+      } else {
+        checks.push(
+          { item: "git", result: "ok", detail: name },
+          path.includes("no-branch")
+            ? {
+                item: "base_branch",
+                result: "fail",
+                detail: `No branch ${baseBranch}. Choose another one.`,
+              }
+            : {
+                item: "base_branch",
+                result: "ok",
+                detail: `${baseBranch} exists`,
+              },
+          path.includes("no-github")
+            ? {
+                item: "github",
+                result: "warn",
+                detail: "No GitHub remote. Agents work, issues don't sync.",
+              }
+            : {
+                item: "github",
+                result: "ok",
+                detail: `gitspore/${name} · ${this.state.issues.length} open`,
+              },
+        );
+      }
+      checks.push(
+        path.includes("no-claude")
+          ? {
+              item: "claude",
+              result: "fail",
+              detail: "Not found. Install Claude Code, then check again.",
+            }
+          : { item: "claude", result: "ok", detail: "found" },
+      );
+      ack({ checks });
+    },
+
+    // The path words of repo:check apply here too. Agents with a slot block
+    // a switch, the overview agent does not (the switch restarts it). On
+    // success the mock "moves into" the repo: the scenario stops, the agents
+    // go, the issues stay so the greenhouse has something to plant, and
+    // every listener gets a snapshot.
     "repo:choose": ({ path, baseBranch = "main" }, ack) => {
       const problems: RepoProblem[] = [];
       if (path.includes("missing")) {
@@ -162,6 +220,11 @@ export class MockClient implements GreenhouseClient {
         problems.push({
           code: "not_a_repo",
           message: `${path} is not a git repository. Run git init there, or choose another folder.`,
+        });
+      } else if (path.includes("no-branch")) {
+        problems.push({
+          code: "no_base_branch",
+          message: `Branch "${baseBranch}" does not exist. Choose the base branch.`,
         });
       }
       if (this.state.agents.some((a) => a.slotIndex !== null)) {

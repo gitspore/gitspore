@@ -496,13 +496,13 @@ describe("createGreenhouseStore", () => {
       const repo = { path: "/r", baseBranch: "main", github: "on" } as const;
       store.getState().openSetup();
 
-      const chosen = store.getState().chooseRepo("/r");
+      const chosen = store.getState().chooseRepo("/r", "main");
       ack("repo:choose", { repo });
 
       await expect(chosen).resolves.toEqual({ repo });
       expect(client.emit).toHaveBeenCalledWith(
         "repo:choose",
-        { path: "/r" },
+        { path: "/r", baseBranch: "main" },
         expect.any(Function),
       );
       expect(store.getState().setupOpen).toBe(false);
@@ -513,11 +513,26 @@ describe("createGreenhouseStore", () => {
       const problems = [{ code: "not_found", message: "/r does not exist." }];
       store.getState().openSetup();
 
-      const chosen = store.getState().chooseRepo("/r");
+      const chosen = store.getState().chooseRepo("/r", "main");
       ack("repo:choose", { problems });
 
       await expect(chosen).resolves.toEqual({ problems });
       expect(store.getState().setupOpen).toBe(true);
+    });
+
+    it("checkRepo emits repo:check and resolves with the checks", async () => {
+      const { store, client, ack } = setup();
+      const checks = [{ item: "git", result: "ok", detail: "r" }];
+
+      const checked = store.getState().checkRepo("/r", "dev");
+      ack("repo:check", { checks });
+
+      await expect(checked).resolves.toEqual({ checks });
+      expect(client.emit).toHaveBeenCalledWith(
+        "repo:check",
+        { path: "/r", baseBranch: "dev" },
+        expect.any(Function),
+      );
     });
 
     it("sends terminal input, resize and close", () => {
