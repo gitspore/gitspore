@@ -5,6 +5,8 @@ import {
   type ClientToServerEvents,
   type GreenhouseState,
   type PatchOp,
+  type RepoInfo,
+  type RepoProblem,
   type ServerToClientEvents,
   type StatePatch,
 } from "@gitspore/shared";
@@ -43,7 +45,7 @@ type Handlers = {
  *   moment of connect(): an agent that waited 20 minutes before the anchor has
  *   waited 20 minutes when the UI connects.
  * - Commands are answered locally, see `handlers`: `agent:dispatch`,
- *   `agent:stop`, `terminal:open`, `terminal:input`, `terminal:close`,
+ *   `agent:stop`, `repo:choose`, `terminal:open`, `terminal:input`, `terminal:close`,
  *   `state:request` and `issues:refresh`. Every other command
  *   (`terminal:resize`) does nothing.
  * - Versions follow the contract: a patch is numbered after the one before.
@@ -143,6 +145,53 @@ export class MockClient implements GreenhouseClient {
       }
       this.sendPatch([{ type: "agent:remove", agentId }]);
     },
+
+    // There is no disk here: the path itself says what the check finds,
+    // see MOCK_PATHS. Agents with a slot block a switch, the overview agent
+    // does not (the switch restarts it). On success the mock "moves into"
+    // the repo: the scenario stops, the agents go, the issues stay so the
+    // greenhouse has something to plant, and every listener gets a snapshot.
+    "repo:choose": ({ path, baseBranch = "main" }, ack) => {
+      const problems: RepoProblem[] = [];
+      if (path.includes("missing")) {
+        problems.push({
+          code: "not_found",
+          message: `${path} does not exist.`,
+        });
+      } else if (path.includes("not-git")) {
+        problems.push({
+          code: "not_a_repo",
+          message: `${path} is not a git repository. Run git init there, or choose another folder.`,
+        });
+      }
+      if (this.state.agents.some((a) => a.slotIndex !== null)) {
+        problems.push({
+          code: "agents_running",
+          message: "Agents are still running. Stop them before switching.",
+        });
+      }
+      if (problems.length > 0) {
+        ack({ problems });
+        return;
+      }
+
+      const repo: RepoInfo = {
+        path,
+        baseBranch,
+        github: path.includes("no-github") ? "off" : "on",
+      };
+      ack({ repo });
+      // The scenario plays in the old repo; its later events don't belong here.
+      this.player.stop();
+      this.state = {
+        ...this.state,
+        version: this.state.version + 1,
+        repo,
+        agents: [],
+      };
+      this.sendSnapshot();
+    },
+
     // Acks with a session id for a known agent (from the scenario or from a
     // dispatch), then prints GREETING. An unknown agent gets an error ack.
     "terminal:open": (payload, ack) => {

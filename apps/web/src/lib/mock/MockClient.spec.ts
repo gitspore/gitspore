@@ -1,7 +1,9 @@
 import type {
+  Agent,
   AgentDispatchAck,
   AgentStatus,
   GreenhouseState,
+  RepoChooseAck,
   ServerError,
   StatePatch,
   TerminalOpenAck,
@@ -29,9 +31,9 @@ function patchEntry(
 }
 
 // A connected client that records what it receives.
-function setup(events: ScenarioEntry[] = []) {
+function setup(events: ScenarioEntry[] = [], agents?: Agent[]) {
   const clock = createFakeClock(Date.parse(ANCHOR));
-  const client = new MockClient(makeScenario(events), clock);
+  const client = new MockClient(makeScenario(events, agents), clock);
   const patches: StatePatch[] = [];
   const snapshots: GreenhouseState[] = [];
   const chunks: string[] = [];
@@ -55,6 +57,12 @@ function dispatchAgent(client: MockClient): AgentDispatchAck {
 function openTerminal(client: MockClient, agentId: string): TerminalOpenAck {
   const acks: TerminalOpenAck[] = [];
   client.emit("terminal:open", { agentId }, (ack) => acks.push(ack));
+  return acks[0];
+}
+
+function chooseRepo(client: MockClient, path: string): RepoChooseAck {
+  const acks: RepoChooseAck[] = [];
+  client.emit("repo:choose", { path }, (ack) => acks.push(ack));
   return acks[0];
 }
 
@@ -179,6 +187,70 @@ describe("MockClient", () => {
           context: { agentId: "nope" },
         }),
       ]);
+    });
+  });
+
+  describe("repo:choose", () => {
+    it("acks with the repo and sends a snapshot of it without agents", () => {
+      const { client, snapshots } = setup([], []);
+
+      const ack = chooseRepo(client, "/home/dev/shop");
+
+      expect(ack).toEqual({
+        repo: { path: "/home/dev/shop", baseBranch: "main", github: "on" },
+      });
+      expect(snapshots).toHaveLength(2); // connect, then the new repo
+      expect(snapshots[1]).toMatchObject({
+        version: 2,
+        repo: { path: "/home/dev/shop" },
+        agents: [],
+      });
+    });
+
+    it("turns GitHub off for a path with no-github", () => {
+      const { client } = setup([], []);
+
+      expect(chooseRepo(client, "/home/dev/no-github")).toMatchObject({
+        repo: { github: "off" },
+      });
+    });
+
+    it.each([
+      ["/home/dev/missing", "not_found"],
+      ["/home/dev/not-git", "not_a_repo"],
+    ])("refuses %s with %s and keeps the state", (path, code) => {
+      const { client, snapshots } = setup([], []);
+
+      expect(chooseRepo(client, path)).toEqual({
+        problems: [expect.objectContaining({ code })],
+      });
+      expect(snapshots).toHaveLength(1); // only the one of connect
+    });
+
+    it("refuses while an agent with a slot runs", () => {
+      const { client } = setup(); // the fixture's agent sits in slot 0
+
+      expect(chooseRepo(client, "/home/dev/shop")).toEqual({
+        problems: [expect.objectContaining({ code: "agents_running" })],
+      });
+    });
+
+    it("does not count the overview agent as running", () => {
+      const { client } = setup([], [{ ...agent, slotIndex: null }]);
+
+      expect(chooseRepo(client, "/home/dev/shop")).toHaveProperty("repo");
+    });
+
+    it("stops the scenario, whose events belong to the old repo", () => {
+      const { client, clock, patches } = setup(
+        [patchEntry(1000, 2, "done")],
+        [],
+      );
+
+      chooseRepo(client, "/home/dev/shop");
+      clock.advance(1000);
+
+      expect(patches).toHaveLength(0);
     });
   });
 
