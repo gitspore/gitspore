@@ -65,6 +65,10 @@ export class WorktreeService implements OnModuleInit {
     );
   }
 
+  async fetch(): Promise<void> {
+    await this.run(["fetch", "origin", this.config.baseBranch()]);
+  }
+
   async create(issue: {
     issueNumber: number;
     issueTitle: string;

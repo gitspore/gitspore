@@ -1,7 +1,11 @@
 import { BRANCH_PREFIX } from "@gitspore/shared";
 import { RepoConfig } from "@/config/repo-config";
 import { WorktreeService } from "./worktree.service";
-import { initRepo } from "../../../test/git-repo";
+import {
+  initOrigin,
+  initRepo,
+  pushFromElsewhere,
+} from "../../../test/git-repo";
 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -407,6 +411,30 @@ describe("WorktreeService", () => {
       await service.onModuleInit();
 
       expect(await service.list()).toEqual([]);
+    });
+  });
+
+  describe("with an origin", () => {
+    let origin: string;
+
+    beforeEach(async () => {
+      origin = await initOrigin(repo, join(parent, "origin.git"));
+    });
+
+    describe("fetch", () => {
+      it("brings origin/main up to date and leaves the local main alone", async () => {
+        const localMain = await simpleGit(repo).revparse(["main"]);
+        const theirs = await pushFromElsewhere(
+          origin,
+          join(parent, "elsewhere"),
+        );
+
+        await service.fetch();
+
+        const git = simpleGit(repo);
+        expect(await git.revparse(["origin/main"])).toBe(theirs);
+        expect(await git.revparse(["main"])).toBe(localMain);
+      });
     });
   });
 });
