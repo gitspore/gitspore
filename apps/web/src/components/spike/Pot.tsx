@@ -17,6 +17,9 @@ type Shapes = {
   soilGeo: THREE.BufferGeometry;
 };
 
+// The prototype's pot: the profile (x = radius, y = height) that
+// LatheGeometry spins round, the soil disc at the pot's inner floor,
+// and the six spots on the table (the prototype's POS)
 const POT_PROFILE = [
   [0, 0],
   [0.47, 0],
@@ -43,6 +46,13 @@ const POS_POTS = [
   [2.15, 0.42],
 ];
 
+// One pot at its spot: body, soil and the plant.
+// - Body: casts and receives shadows. shadowSide FrontSide draws its front
+//   faces into the shadow map; the default back faces, with the biases,
+//   left a lit sliver at every pot's foot
+// - Soil: a flat disc laid just above the pot's inner floor; it receives
+//   the plant's shadow
+// - The plant stands on the soil, like the prototype's plantHolder
 function Pot({
   x,
   z,
@@ -64,20 +74,21 @@ function Pot({
 } & Shapes) {
   return (
     <group position={[x, 0, z]}>
-      <mesh geometry={bodyGeo}>
-        {/* <latheGeometry args={[POT_PROFILE, 24]} /> */}
-        <meshStandardMaterial color={colors.pot} roughness={0.9} />
+      <mesh geometry={bodyGeo} castShadow receiveShadow>
+        <meshStandardMaterial
+          color={colors.pot}
+          roughness={0.9}
+          shadowSide={THREE.FrontSide}
+        />
       </mesh>
-      {/* Soil: A flat disc just above the pot's inner floor, laid flat */}
       <mesh
         geometry={soilGeo}
+        receiveShadow
         rotation-x={-Math.PI / 2}
         position-y={SOIL_Y + 0.005}
       >
-        {/* <circleGeometry args={[SOIL_R, 24]} /> */}
         <meshStandardMaterial color={colors.soil} roughness={1} />
       </mesh>
-      {/* The plant stands on the soil, like the prototype's plantHolder */}
       <group position-y={SOIL_Y}>
         <Plant
           slot={slot}
@@ -95,21 +106,21 @@ function Pot({
 // table's own size (0.5), then bigger, then from small up again
 const GROWTH_STEPS = [0.5, 0.75, 1, 0, 0.25];
 
+// All six pots. The two shapes are built once while the scene is mounted
+// and shared by all six.
+// Spike keys: "p" moves all six plants to the next state, "g" to the next
+// growth step, "s" switches the whole-plant scale on and off. Typing in a
+// field or the terminal must not change the plants
 export function Pots({ colors }: { colors: SceneColors }) {
-  // Built once while the scene is mounted, shared by all six pots
   const bodyGeo = useMemo(() => new THREE.LatheGeometry(POT_PROFILE, 24), []);
   const soilGeo = useMemo(() => new THREE.CircleGeometry(SOIL_R, 24), []);
 
-  // Spike only: "p" moves all six plants to the next state
   const [stateIndex, setStateIndex] = useState(0);
-  // and "g" to the next growth step
   const [growthIndex, setGrowthIndex] = useState(0);
-  // and "s" switches the whole-plant scale on and off
   const [wholeScale, setWholeScale] = useState(false);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      // Typing in a field or the terminal must not change the plants
       const el = e.target;
       if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
         return;

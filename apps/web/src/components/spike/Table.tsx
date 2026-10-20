@@ -8,14 +8,12 @@ import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.j
 //
 //
 
-// Everything of one mode, day or night
 type ModeTokens = (typeof tokens)[Mode];
 type WoodColors = ModeTokens["color"]["wood"];
 
-// The prototype's table (cozyEnv): nine planks, four legs, an apron
-// across the front, and the floor. The top of the planks is at y = 0.
+// The table: nine planks with their top at y = 0, taking the four wood
+// colours in turn, on four legs (their x, z spots)
 const PLANK_COUNT = 9;
-// The planks take the four wood colours in turn
 const PLANK_WOODS = ["1", "2", "3", "4"] as const;
 const LEG_SPOTS = [
   [-3.6, -2.4],
@@ -24,23 +22,29 @@ const LEG_SPOTS = [
   [3.6, 3.05],
 ];
 
-// Try: the plank edges, "rounded" (RoundedBoxGeometry) or "chamfer" (own shape)
+// One plank's size and edge. PLANK_EDGE picks the chamfered shape below
+// or a RoundedBoxGeometry. CHAMFER is the cut on every edge, SOFTEN the
+// small rounding where the chamfer meets the top and sides
 const PLANK_EDGE: "rounded" | "chamfer" = "chamfer";
-
 const PLANK_LENGTH = 7.8;
 const PLANK_THICKNESS = 0.3;
 const PLANK_DEPTH = 0.64;
-// The flat cut along each edge, and the slight rounding where it meets the faces
 const CHAMFER = 0.03;
 const SOFTEN = 0.008;
 
-// A plank with a flat chamfer on every edge, its borders slightly softened
+// A plank with a flat chamfer on every edge, in four steps:
+// 1. The cross-section, seen from the plank's end: a rectangle with its
+//    four corners cut off (eight corners)
+// 2. The outline, corner by corner, each corner rounded off with a small
+//    curve, so the chamfer meets the top and sides softly
+// 3. Pushed out along the plank's length. The bevel cuts the same chamfer
+//    at both ends; bevelOffset keeps the cross-section at its size instead
+//    of growing by the chamfer, and depth leaves room for both bevels
+// 4. Drawn across and pushed along z, so turned to run along x, and
+//    centred, so the plank's position is its middle
 function chamferedPlank() {
   const halfDepth = PLANK_DEPTH / 2;
   const halfThickness = PLANK_THICKNESS / 2;
-
-  // The cross-section, seen from the plank's end: a rectangle with its
-  // four corners cut off, so eight corners
   const corners = [
     [-halfDepth + CHAMFER, -halfThickness],
     [halfDepth - CHAMFER, -halfThickness],
@@ -52,8 +56,6 @@ function chamferedPlank() {
     [-halfDepth, -halfThickness + CHAMFER],
   ].map(([x, y]) => new THREE.Vector2(x, y));
 
-  // Each corner becomes a tiny curve: it starts SOFTEN before the corner,
-  // bends around it and ends SOFTEN after it
   const shape = new THREE.Shape();
   corners.forEach((corner, index) => {
     const previous = corners[(index + corners.length - 1) % corners.length];
@@ -71,9 +73,6 @@ function chamferedPlank() {
   });
   shape.closePath();
 
-  // Pushed out along the plank's length. The bevel cuts the same chamfer
-  // at both ends; bevelOffset keeps the plank at its size instead of
-  // growing by the chamfer on every side
   const geometry = new THREE.ExtrudeGeometry(shape, {
     depth: PLANK_LENGTH - 2 * CHAMFER,
     curveSegments: 2,
@@ -83,21 +82,21 @@ function chamferedPlank() {
     bevelOffset: -CHAMFER,
     bevelSegments: 1,
   });
-  // Drawn across and pushed along z; turned so the length runs along x
   geometry.rotateY(Math.PI / 2);
   geometry.center();
   return geometry;
 }
 
+// One plank shape for all nine planks and one box for all four legs, like
+// the shared pot shape. The rounded variant: 1 segment, radius 0.03.
+// Planks cast and receive shadows, legs only cast, the floor receives.
+// The floor is a large plane laid flat, where the legs end
 export function Table({ wood, floor }: { wood: WoodColors; floor: string }) {
-  // One box for all planks and one for all legs, like the shared pot shape
-  // Try: 0.3 thick instead of 0.14, no apron
   const plankGeo = useMemo(
     () =>
       PLANK_EDGE === "chamfer"
         ? chamferedPlank()
-        : // A slightly rounded chamfer: 1 segment, radius 0.03
-          new RoundedBoxGeometry(
+        : new RoundedBoxGeometry(
             PLANK_LENGTH,
             PLANK_THICKNESS,
             PLANK_DEPTH,
@@ -115,7 +114,9 @@ export function Table({ wood, floor }: { wood: WoodColors; floor: string }) {
         <mesh
           key={index}
           geometry={plankGeo}
-          position={[0, -0.15, -2.27 + index * 0.66]}
+          castShadow
+          receiveShadow
+          position={[0, -PLANK_THICKNESS / 2, -2.27 + index * 0.66]}
         >
           <meshStandardMaterial
             color={wood[PLANK_WOODS[index % PLANK_WOODS.length]]}
@@ -124,19 +125,16 @@ export function Table({ wood, floor }: { wood: WoodColors; floor: string }) {
         </mesh>
       ))}
       {LEG_SPOTS.map(([x, z]) => (
-        <mesh key={`${x},${z}`} geometry={legGeo} position={[x, -1.05, z]}>
+        <mesh
+          key={`${x},${z}`}
+          geometry={legGeo}
+          castShadow
+          position={[x, -1.05, z]}
+        >
           <meshStandardMaterial color={wood.leg} roughness={0.8} />
         </mesh>
       ))}
-      {/* Apron: the board across the front, just under the table top */}
-      {/* Try: no apron
-      <mesh position={[0, -0.32, 3.34]}>
-        <boxGeometry args={[7.8, 0.36, 0.08]} />
-        <meshStandardMaterial color={wood["3"]} roughness={0.85} />
-      </mesh>
-      */}
-      {/* Floor: a large plane laid flat, where the legs end */}
-      <mesh rotation-x={-Math.PI / 2} position-y={-2}>
+      <mesh rotation-x={-Math.PI / 2} position-y={-2} receiveShadow>
         <planeGeometry args={[40, 40]} />
         <meshStandardMaterial color={floor} roughness={1} />
       </mesh>

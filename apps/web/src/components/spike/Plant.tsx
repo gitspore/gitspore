@@ -11,8 +11,9 @@ import type { Mode, tokens } from "@/theme/tokens";
 // The scene colours of one mode; day and night have the same keys
 export type SceneColors = (typeof tokens)[Mode]["color"]["scene"];
 
+// The stem's radius, and the leaf shape's length and width;
+// each leaf scales the shape by its size
 const STEM_R = 0.028;
-// The one leaf shape every leaf uses; size scales it
 const LEAF_LEN = 0.42;
 const LEAF_WID = 0.19;
 
@@ -27,22 +28,21 @@ const target = new THREE.Color();
 // growth on it shows (leaves without from are always there)
 type Leaf = { at: number; turn: number; size: number; from?: number };
 
-// Everything that makes a state look the way it does
+// Everything that makes a state look the way it does. bend: 0 = upright,
+// 1 = drooping right over. leaves: always four, so states blend leaf by leaf
 type Look = {
   height: number;
-  // 0 = upright, 1 = drooping right over
   bend: number;
   stem: string;
   leaf: string;
-  // Always four, so states can blend leaf by leaf later
   leaves: Leaf[];
 };
 
-// Working: two leaves near the top, opposite each other
+// Working: two leaves near the top, opposite each other, and two more
+// lower down once the plant has grown (from)
 const SPROUT: Leaf[] = [
   { at: 0.72, turn: 0, size: 1 },
   { at: 0.8, turn: Math.PI, size: 1 },
-  // More leaves lower down once the plant has grown
   { at: 0.45, turn: Math.PI / 2, size: 0.85, from: 0.75 },
   { at: 0.3, turn: -Math.PI / 2, size: 0.75, from: 1 },
 ];
@@ -109,11 +109,11 @@ function grow(look: Look, growth: number): Look {
   };
 }
 
-// A smooth stem through four points, leaning out in direction dir
+// A smooth stem through four points, leaning out in direction dir.
+// V(r, y): a point r out from the pot's centre, y above the soil
 function stemCurve(h: number, bend: number, dir: number) {
   const dx = Math.cos(dir);
   const dz = Math.sin(dir);
-  // r = how far out from the pot's centre, y = height above the soil
   const V = (r: number, y: number) => new THREE.Vector3(dx * r, y, dz * r);
   return new THREE.CatmullRomCurve3([
     V(0, 0),
@@ -134,6 +134,7 @@ const RIM_CLEAR = 0.13 + STEM_R + 0.015;
 // A drooping stem must lie over the rim, not run through it.
 // Take 17 evenly spaced points along the stem, lift the ones that are
 // over the rim but too low, and draw a new smooth curve through them.
+// Untouched stems keep their own curve.
 // scale is the whole-plant scale, because the rim doesn't scale with it
 function overRim(curve: THREE.CatmullRomCurve3, scale: number) {
   const points = curve.getSpacedPoints(16);
@@ -145,7 +146,6 @@ function overRim(curve: THREE.CatmullRomCurve3, scale: number) {
       lifted = true;
     }
   }
-  // Untouched stems keep their own curve
   return lifted ? new THREE.CatmullRomCurve3(points) : curve;
 }
 
@@ -166,6 +166,8 @@ function leafGeo(len: number, wid: number) {
   return geo;
 }
 
+// One plant: a stem tube and four leaves. The props give the target look;
+// useFrame eases the meshes toward it, so a change never remounts anything
 export function Plant({
   slot,
   state,
@@ -179,34 +181,33 @@ export function Plant({
   wholeScale: boolean;
   colors: SceneColors;
 }) {
-  // Each slot leans its own way
+  // The target look. Each slot leans its own way (dir). The state's entry
+  // in the table, filled with this mode's colours, then grown. On top, the
+  // whole plant scaled by growth, when it's on
   const dir = slot * 1.7 + 0.6;
-  // The target look: the state's entry in the table, filled with this
-  // mode's colours, then grown
   const makeLook = LOOKS[state];
   const tableLook = makeLook(colors);
   const look = grow(tableLook, growth);
-  // The extra layer: the whole plant scaled by growth, when it's on
   const scaleGoal = wholeScale ? 0.85 + 0.3 * growth : 1;
 
-  // The look of the first render.
-  // The JSX only sets this starting point.
+  // The starting point: the look of the first render and its stem, at
+  // whole-plant scale 1 (see now). The JSX only sets this starting point;
   // then useFrame moves everything toward look
   const [start] = useState(look);
-
-  // The stem of the first render; useFrame bends it from there
   const startCurve = useMemo(
-    // The whole-plant scale starts at 1 (see now)
     () => overRim(stemCurve(start.height, start.bend, dir), 1),
     [start, dir],
   );
-  // The real Three materials,
-  // so useFrame can change their colours
+
+  // What useFrame changes, kept in refs so nothing re-renders:
+  // - the real Three materials, for their colours
+  // - now: where the plant is right now, on its way from start to look.
+  //   Copies, because useFrame changes them and the table must stay as it is
+  // - the leaf groups (place, turn, size) and leaf meshes (tilt)
+  // - the stem mesh, which gets a new tube while it bends
+  // - the group around the whole plant, for the extra scale
   const stemMat = useRef<THREE.MeshStandardMaterial>(null);
   const leafMats = useRef<(THREE.MeshStandardMaterial | null)[]>([]);
-
-  // Where the plant is right now, on its way from start to look.
-  // Copies, because useFrame changes them and the table must stay as it is
   const now = useRef({
     scale: 1,
     height: start.height,
@@ -214,12 +215,9 @@ export function Plant({
     curve: startCurve,
     leaves: start.leaves.map((leaf) => ({ ...leaf })),
   });
-  // The leaf groups (place, turn, size) and leaf meshes (tilt)
   const leafGroups = useRef<(THREE.Group | null)[]>([]);
   const leafMeshes = useRef<(THREE.Mesh | null)[]>([]);
-  // The stem mesh, so useFrame can give it a new tube while it bends
   const stemMesh = useRef<THREE.Mesh>(null);
-  // The group around the whole plant, for the extra scale
   const plantRoot = useRef<THREE.Group>(null);
 
   // When the plant goes away, free the tube useFrame made last
@@ -231,9 +229,14 @@ export function Plant({
   // One leaf shape per plant, used by all its leaves
   const leafShape = useMemo(() => leafGeo(LEAF_LEN, LEAF_WID), []);
 
-  // Every frame: move colours, bend and leaves a step toward the current look
+  // Every frame: move colours, bend and leaves a step toward the current
+  // look. step is the share of the remaining way to go in this frame.
+  // - The stem is rebuilt only while bend, height or scale still have a
+  //   visible way to go (scale too, because the rim's place in plant space
+  //   shifts when the plant scales); the old tube's GPU memory is freed
+  // - elev: how far the leaves point up from flat, less when the stem droops
+  // - A leaf shrinking to 0 never quite gets there, so it's hidden below 0.01
   useFrame((_, delta) => {
-    // The share of the remaining way to go in this frame
     const step = 1 - Math.exp(-SPEED * delta);
 
     stemMat.current?.color.lerp(target.set(look.stem), step);
@@ -241,12 +244,9 @@ export function Plant({
     for (const mat of leafMats.current) mat?.color.lerp(target, step);
 
     const cur = now.current;
-    // The stem:
-    // rebuild only while it still has a visible way to go
     const moving =
       Math.abs(look.bend - cur.bend) > 0.001 ||
       Math.abs(look.height - cur.height) > 0.001 ||
-      // the rim's place in plant space shifts when the plant scales
       Math.abs(scaleGoal - cur.scale) > 0.001;
     cur.bend += (look.bend - cur.bend) * step;
     cur.height += (look.height - cur.height) * step;
@@ -258,12 +258,9 @@ export function Plant({
       cur.curve = overRim(stemCurve(cur.height, cur.bend, dir), cur.scale);
       const old = stem.geometry;
       stem.geometry = new THREE.TubeGeometry(cur.curve, 24, STEM_R, 6);
-      // Free the old tube's memory on the GPU
       old.dispose();
     }
 
-    // How far the leaves point up from flat,
-    // less when the stem droops
     const elev = 0.65 - cur.bend * 1.6;
 
     look.leaves.forEach((goal, i) => {
@@ -278,7 +275,6 @@ export function Plant({
 
         group.rotation.y = dir + leaf.turn;
         group.scale.setScalar(leaf.size);
-        // A leaf shrinking to 0 never quite gets there
         group.visible = leaf.size > 0.01;
       }
       const mesh = leafMeshes.current[i];
@@ -286,11 +282,14 @@ export function Plant({
     });
   });
 
+  // The stem and the leaves. Each leaf's group turns it around the stem (y),
+  // its mesh tilts it up (x); useFrame sets both, and place and size.
+  // Stem and leaves cast shadows but don't receive them: the double-sided
+  // leaves would risk shadow acne
   return (
     <group ref={plantRoot}>
-      <mesh ref={stemMesh}>
+      <mesh ref={stemMesh} castShadow>
         <tubeGeometry args={[startCurve, 24, STEM_R, 6]} />
-
         <meshStandardMaterial
           ref={stemMat}
           color={start.stem}
@@ -298,9 +297,6 @@ export function Plant({
         />
       </mesh>
       {start.leaves.map((_, i) => (
-        // Turn around the stem first (y),
-        // then tilt the leaf up (x).
-        // useFrame sets both, and place and size
         <group
           key={i}
           ref={(group) => {
@@ -312,6 +308,7 @@ export function Plant({
               leafMeshes.current[i] = mesh;
             }}
             geometry={leafShape}
+            castShadow
           >
             <meshStandardMaterial
               ref={(mat) => {
