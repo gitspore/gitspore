@@ -480,5 +480,87 @@ describe("WorktreeService", () => {
         expect((await simpleGit(repo).branchLocal()).all).not.toContain(branch);
       });
     });
+
+    describe("publish", () => {
+      it("pushes the branch to origin and sets its upstream", async () => {
+        const { branch } = await service.create({
+          issueNumber: 42,
+          issueTitle: "Fix bug",
+          startPoint: "origin/main",
+        });
+
+        await service.publish(branch);
+
+        const onOrigin = await simpleGit(repo).raw([
+          "ls-remote",
+          "--heads",
+          "origin",
+          `refs/heads/${branch}`,
+        ]);
+        expect(onOrigin.trim()).not.toBe("");
+        const upstream = await simpleGit(repo).revparse([
+          "--abbrev-ref",
+          `${branch}@{upstream}`,
+        ]);
+        expect(upstream).toBe(`origin/${branch}`);
+      });
+
+      it("gives push_failed when origin is not there", async () => {
+        const { branch } = await service.create({
+          issueNumber: 42,
+          issueTitle: "Fix bug",
+        });
+        await simpleGit(repo).remote([
+          "set-url",
+          "origin",
+          join(parent, "missing.git"),
+        ]);
+
+        await expect(service.publish(branch)).rejects.toMatchObject({
+          code: "push_failed",
+        });
+      });
+
+      it("refuses a branch that is not ours", async () => {
+        await expect(service.publish("main")).rejects.toMatchObject({
+          code: "not_ours",
+        });
+      });
+    });
+
+    describe("deleteRemoteBranch", () => {
+      it("deletes the branch on origin", async () => {
+        const { branch } = await service.create({
+          issueNumber: 42,
+          issueTitle: "Fix bug",
+          startPoint: "origin/main",
+        });
+        await service.publish(branch);
+
+        await service.deleteRemoteBranch(branch);
+
+        const onOrigin = await simpleGit(repo).raw([
+          "ls-remote",
+          "--heads",
+          "origin",
+          `refs/heads/${branch}`,
+        ]);
+        expect(onOrigin.trim()).toBe("");
+      });
+
+      it("refuses main and leaves it on origin", async () => {
+        await expect(service.deleteRemoteBranch("main")).rejects.toMatchObject({
+          code: "not_ours",
+        });
+
+        const onOrigin = await simpleGit(repo).raw([
+          "ls-remote",
+          "--heads",
+          "origin",
+          "refs/heads/main",
+        ]);
+        expect(onOrigin.trim()).not.toBe("");
+      });
+    });
   });
 });

@@ -56,6 +56,15 @@ export class WorktreeService implements OnModuleInit {
     );
   }
 
+  private assertOurs(branch: string): void {
+    if (!branch.startsWith(BRANCH_PREFIX)) {
+      throw new WorktreeError(
+        "not_ours",
+        `${branch} is not a ${BRANCH_PREFIX} branch.`,
+      );
+    }
+  }
+
   async onModuleInit(): Promise<void> {
     await this.run(["worktree", "prune"]);
     const worktrees = await this.list();
@@ -217,6 +226,24 @@ export class WorktreeService implements OnModuleInit {
     if (options.deleteBranch) {
       await this.run(["branch", "-D", worktree.branch]);
     }
+  }
+
+  async publish(branch: string): Promise<void> {
+    this.assertOurs(branch);
+    try {
+      await this.run(["push", "-u", "origin", branch]);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new WorktreeError(
+        "push_failed",
+        `Could not push ${branch} to origin: ${message}`,
+      );
+    }
+  }
+
+  async deleteRemoteBranch(branch: string): Promise<void> {
+    this.assertOurs(branch);
+    await this.run(["push", "origin", "--delete", branch]);
   }
 
   // error check helpers
