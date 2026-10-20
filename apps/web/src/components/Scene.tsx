@@ -4,14 +4,14 @@
 
 import { useEffect, useRef } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { StatsGl, OrbitControls } from "@react-three/drei";
+import { StatsGl } from "@react-three/drei";
 import { tokens } from "@/theme/tokens";
 
 import { Pots } from "./spike/Pot";
 
 // Night for now, the mode we measure in; part 2 follows the page mode
-// const t = tokens.night;
-const t = tokens.day;
+const t = tokens.night;
+// const t = tokens.day;
 
 // Draw calls and triangles of the last frame,
 // in a small panel of our own
@@ -31,9 +31,11 @@ function DrawCalls() {
   useFrame(({ gl }) => {
     // Runs before this frame is drawn, so info still holds the last frame
     const { calls, triangles } = gl.info.render;
+    // Geometries on the GPU; reset() doesn't clear it, so a leak shows here
+    const { geometries } = gl.info.memory;
     gl.info.reset();
     if (box.current) {
-      box.current.textContent = `${calls} calls · ${triangles} tris`;
+      box.current.textContent = `${calls} calls · ${triangles} tris · ${geometries} geos`;
     }
   });
   return null;
@@ -67,7 +69,6 @@ export function Scene() {
 
       <Pots colors={t.color.scene} />
 
-      <OrbitControls />
       {/* StatsGl adds its own panel to <body>; the class places it */}
       {/* No trackGPU: its timer queries pile up on the HD 530 and cost 18 ms CPU */}
 
