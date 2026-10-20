@@ -9,16 +9,16 @@ import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 //
 
 // The prototype's environment: a small made-up room, blurred into soft light
-// from all around. Built once; the mode only changes how strong it is.
+// from all around (0.04: a little extra blur, like the prototype). Built
+// once per renderer; the room and the generator's helpers are freed right
+// away. The mode only changes how strong it is.
 export function RoomLight({ intensity }: { intensity: number }) {
   const gl = useThree((state) => state.gl);
 
   const map = useMemo(() => {
     const generator = new THREE.PMREMGenerator(gl);
     const room = new RoomEnvironment();
-    // 0.04: a little extra blur, like the prototype
     const texture = generator.fromScene(room, 0.04).texture;
-    // The room and the generator's helpers are no longer needed
     room.dispose();
     generator.dispose();
     return texture;
