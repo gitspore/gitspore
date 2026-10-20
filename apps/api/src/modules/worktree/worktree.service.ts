@@ -8,8 +8,29 @@ import { access } from "node:fs/promises";
 
 export type Worktree = { branch: string; path: string };
 
-//
-//
+// Commands that talk to origin wait for the network. simple-git sets the
+// timeout per instance, and a second instance would have its own queue, so
+// two git commands could run at once. One timeout for all commands instead.
+const GIT_TIMEOUT_MS = 60_000;
+
+// simple-git refuses these when they are passed through .env(), and drops
+// them from the ambient environment otherwise (simple-git 4, environment
+// guard). VS Code sets GIT_ASKPASS, many shells set EDITOR.
+const GUARDED_ENV = /^(GIT_|EDITOR$|PAGER$|PREFIX$|SSH_ASKPASS$|VISUAL$)/i;
+
+function gitEnv(): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    if (!GUARDED_ENV.test(key)) env[key] = value;
+  }
+  return {
+    ...env,
+    // A missing login fails at once instead of waiting for a password.
+    GIT_TERMINAL_PROMPT: "0",
+    // The same for Git Credential Manager on Windows; ignored elsewhere.
+    GCM_INTERACTIVE: "never",
+  };
+}
 
 @Injectable()
 export class WorktreeService implements OnModuleInit {
@@ -22,11 +43,12 @@ export class WorktreeService implements OnModuleInit {
     // switch repos, it has to create a new instance.
     const repo = config.repoPath();
     this.git = simpleGit({
-      // baseDir: config.repoPath(),
       baseDir: repo,
       maxConcurrentProcesses: 1,
-      timeout: { block: 30_000 },
-    });
+      timeout: { block: GIT_TIMEOUT_MS },
+      allowEnvironment: ["GIT_TERMINAL_PROMPT"],
+    }).env(gitEnv());
+
     this.worktreeRoot = join(
       dirname(repo),
       ".gitspore-worktrees",
