@@ -72,6 +72,7 @@ export class WorktreeService implements OnModuleInit {
   async create(issue: {
     issueNumber: number;
     issueTitle: string;
+    startPoint?: string;
   }): Promise<Worktree> {
     const branch = branchForIssue(issue.issueNumber, issue.issueTitle);
     const path = join(this.worktreeRoot, branch.slice(BRANCH_PREFIX.length));
@@ -80,6 +81,16 @@ export class WorktreeService implements OnModuleInit {
       throw new WorktreeError(
         "branch_exists",
         `Branch ${branch} already exists.`,
+      );
+    }
+
+    if (
+      issue.startPoint !== undefined &&
+      (await this.branchExistsOnOrigin(branch))
+    ) {
+      throw new WorktreeError(
+        "branch_exists",
+        `Branch ${branch} already exists on origin.`,
       );
     }
 
@@ -104,7 +115,7 @@ export class WorktreeService implements OnModuleInit {
         "-b",
         branch,
         path,
-        this.config.baseBranch(),
+        issue.startPoint ?? this.config.baseBranch(),
       ]);
     } catch (error) {
       // Another create() for the same issue can pass the checks at the same
@@ -216,6 +227,16 @@ export class WorktreeService implements OnModuleInit {
     } catch {
       return false;
     }
+  }
+
+  private async branchExistsOnOrigin(branch: string): Promise<boolean> {
+    const output = await this.run([
+      "ls-remote",
+      "--heads",
+      "origin",
+      `refs/heads/${branch}`,
+    ]);
+    return output.trim() !== "";
   }
 
   private async pathExists(path: string): Promise<boolean> {

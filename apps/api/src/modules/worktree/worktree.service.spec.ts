@@ -436,5 +436,49 @@ describe("WorktreeService", () => {
         expect(await git.revparse(["main"])).toBe(localMain);
       });
     });
+
+    describe("create from origin", () => {
+      it("starts the branch at origin/main, not at the local main", async () => {
+        const theirs = await pushFromElsewhere(
+          origin,
+          join(parent, "elsewhere"),
+        );
+        await service.fetch();
+
+        const { path } = await service.create({
+          issueNumber: 42,
+          issueTitle: "Fix bug",
+          startPoint: "origin/main",
+        });
+
+        expect(await simpleGit(path).revparse(["HEAD"])).toBe(theirs);
+      });
+
+      it("refuses a branch that exists only on origin, and creates nothing", async () => {
+        const branch = `${BRANCH_PREFIX}42-fix-bug`;
+        await simpleGit(repo).raw([
+          "push",
+          "origin",
+          `main:refs/heads/${branch}`,
+        ]);
+
+        await expect(
+          service.create({
+            issueNumber: 42,
+            issueTitle: "Fix bug",
+            startPoint: "origin/main",
+          }),
+        ).rejects.toMatchObject({ code: "branch_exists" });
+
+        const path = join(
+          parent,
+          ".gitspore-worktrees",
+          "my-repo",
+          "42-fix-bug",
+        );
+        expect(existsSync(path)).toBe(false);
+        expect((await simpleGit(repo).branchLocal()).all).not.toContain(branch);
+      });
+    });
   });
 });
