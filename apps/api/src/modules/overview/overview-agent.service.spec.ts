@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { initRepo } from "../../../test/git-repo";
 import { StateStore } from "../state/state.store";
+import type { ClaudeLocator } from "../terminal/claude-locator";
 import type { TerminalService } from "../terminal/terminal.service";
 import { OverviewAgentService } from "./overview-agent.service";
 
@@ -26,15 +27,23 @@ class FakeTerminals {
   }
 }
 
+// Stands in for ClaudeLocator: a fixed path, and a record of invalidate().
+class FakeLocator {
+  readonly resolve = jest.fn(async () => "/bin/claude");
+  readonly invalidate = jest.fn();
+}
+
 describe("OverviewAgentService", () => {
   let repo: string;
   let terminals: FakeTerminals;
+  let locator: FakeLocator;
   let store: StateStore;
 
   beforeEach(async () => {
     repo = await mkdtemp(join(tmpdir(), "gitspore-overview-"));
     await initRepo(repo);
     terminals = new FakeTerminals();
+    locator = new FakeLocator();
     store = new StateStore();
   });
 
@@ -47,18 +56,20 @@ describe("OverviewAgentService", () => {
   const start = (enabled: boolean) =>
     new OverviewAgentService(
       terminals as unknown as TerminalService,
+      locator as unknown as ClaudeLocator,
       store,
       new RepoConfig(repo, "main"),
       enabled,
     ).onApplicationBootstrap();
 
-  it("starts claude in the repo root when the flag is set", async () => {
+  it("starts claude from the locator in the repo root, without a shell", async () => {
     await start(true);
 
     expect(terminals.spawn).toHaveBeenCalledWith({
       agentId: "overview",
       cwd: repo,
-      command: "claude",
+      mode: "exec",
+      command: "/bin/claude",
       args: ["--permission-mode", "plan"],
     });
   });
@@ -85,6 +96,7 @@ describe("OverviewAgentService", () => {
   it("starts nothing without the flag", async () => {
     await start(false);
 
+    expect(locator.resolve).not.toHaveBeenCalled();
     expect(terminals.spawn).not.toHaveBeenCalled();
     expect(store.snapshot().agents).toEqual([]);
   });
@@ -113,5 +125,31 @@ describe("OverviewAgentService", () => {
 
     expect(logError).toHaveBeenCalledWith(expect.stringContaining("no shell"));
     expect(store.snapshot().agents).toEqual([]);
+  });
+
+  it("makes the locator look again after a failed spawn", async () => {
+    jest.spyOn(Logger.prototype, "error").mockImplementation(() => {});
+    terminals.spawn.mockImplementation(() => {
+      throw new Error("File not found");
+    });
+
+    await start(true);
+
+    expect(locator.invalidate).toHaveBeenCalledTimes(1);
+  });
+
+  it("starts nothing and keeps running when Claude is not found", async () => {
+    const logError = jest
+      .spyOn(Logger.prototype, "error")
+      .mockImplementation(() => {});
+    locator.resolve.mockRejectedValue(new Error("Claude Code was not found"));
+
+    await expect(start(true)).resolves.toBeUndefined();
+
+    expect(terminals.spawn).not.toHaveBeenCalled();
+    expect(store.snapshot().agents).toEqual([]);
+    expect(logError).toHaveBeenCalledWith(
+      expect.stringContaining("Claude Code was not found"),
+    );
   });
 });

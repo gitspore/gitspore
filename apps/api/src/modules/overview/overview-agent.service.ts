@@ -8,6 +8,7 @@ import {
 } from "@nestjs/common";
 import { StateStore } from "../state/state.store";
 import { TerminalService } from "../terminal/terminal.service";
+import { ClaudeLocator } from "../terminal/claude-locator";
 
 //
 //
@@ -25,6 +26,7 @@ export class OverviewAgentService implements OnApplicationBootstrap {
 
   constructor(
     private readonly terminals: TerminalService,
+    private readonly locator: ClaudeLocator,
     private readonly store: StateStore,
     private readonly config: RepoConfig,
     @Inject(START_OVERVIEW) private readonly enabled: boolean,
@@ -51,15 +53,22 @@ export class OverviewAgentService implements OnApplicationBootstrap {
     // The branch checked out in the repo root, read once at startup.
     const branch = await simpleGit(repo).revparse(["--abbrev-ref", "HEAD"]);
 
+    const claude = await this.locator.resolve();
+
     // Read-only (plan mode) while it runs in our own repo.
-    // No prompt:
-    // nothing user-controlled is typed into the shell atm.
-    this.terminals.spawn({
-      agentId: OVERVIEW_AGENT_ID,
-      cwd: repo,
-      command: "claude",
-      args: ["--permission-mode", "plan"],
-    });
+    try {
+      this.terminals.spawn({
+        agentId: OVERVIEW_AGENT_ID,
+        cwd: repo,
+        mode: "exec",
+        command: claude,
+        args: ["--permission-mode", "plan"],
+      });
+    } catch (error) {
+      // The file may have moved since startup: look again next time.
+      this.locator.invalidate();
+      throw error;
+    }
 
     const now = new Date().toISOString();
     this.store.apply([
