@@ -10,8 +10,9 @@ import { tokens } from "@/theme/tokens";
 import { Pots } from "./spike/Pot";
 import { useTheme } from "next-themes";
 import { RoomLight } from "./spike/RoomLight";
+import { Table } from "./spike/Table";
 
-// // Night for now, the mode we measure in; part 2 follows the page mode
+// // Night and day hardcode tests:
 // const t = tokens.night;
 // // const t = tokens.day;
 
@@ -101,6 +102,7 @@ export function Scene() {
       />
 
       <Pots colors={t.color.scene} />
+      <Table wood={t.color.wood} floor={t.color.scene.floor} />
 
       <OrbitControls />
 
