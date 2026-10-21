@@ -34,6 +34,16 @@ describe("WorktreeService", () => {
 
   afterEach(() => rm(parent, { recursive: true, force: true }));
 
+  describe("without a repo", () => {
+    it("starts without git and refuses work with no_repo", async () => {
+      service = new WorktreeService(new RepoConfig(null, "main"));
+
+      await service.onModuleInit();
+
+      await expect(service.list()).rejects.toMatchObject({ code: "no_repo" });
+    });
+  });
+
   describe("reconfigure", () => {
     it("makes new worktrees next to the repo RepoConfig names now", async () => {
       const config = new RepoConfig(repo, "main");

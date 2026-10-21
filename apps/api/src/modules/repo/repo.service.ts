@@ -1,7 +1,13 @@
 import type { RepoCheck, RepoChooseAck, RepoProblem } from "@gitspore/shared";
-import { Injectable, OnModuleInit } from "@nestjs/common";
+import {
+  Injectable,
+  Logger,
+  OnApplicationBootstrap,
+  OnModuleInit,
+} from "@nestjs/common";
 import { branchExists, findRepoRoot } from "@/config/find-repo";
 import { RepoConfig } from "@/config/repo-config";
+import { RepoMemory } from "@/config/repo-memory";
 import { StateStore } from "../state/state.store";
 import { GitHubCredentialsProvider } from "../github/credentials";
 import { RepoGitHubSource } from "../github/github-source";
@@ -11,28 +17,40 @@ import { checkRepo, claudeOnPath, expandHome } from "./check-repo";
 
 /**
  * The repo gitspore works in (#58): puts it into the state at startup,
- * checks paths for the setup screen and switches to another repo.
+ * checks paths for the setup screen, switches to another repo and
+ * remembers it for the next start. Starts GitHub sync once a repo is known.
  */
 @Injectable()
-export class RepoService implements OnModuleInit {
+export class RepoService implements OnModuleInit, OnApplicationBootstrap {
+  private readonly logger = new Logger(RepoService.name);
+
   constructor(
     private readonly store: StateStore,
     private readonly config: RepoConfig,
     private readonly credentials: GitHubCredentialsProvider,
     private readonly github: GitHubService,
     private readonly worktrees: WorktreeService,
+    private readonly memory: RepoMemory,
   ) {}
 
   // Nest awaits this before the gateway listens, so the first snapshot a
-  // client gets already has the repo. GitHubService connects on its own
-  // too; this asks once more, only for "on" or "off".
+  // client gets already has the repo. Without one the state keeps
+  // repo: null and the setup screen shows. GitHub is asked here only for
+  // "on" or "off"; the sync starts in onApplicationBootstrap.
   async onModuleInit(): Promise<void> {
+    if (!this.config.isSet()) return;
     const path = this.config.repoPath();
     this.store.setRepo({
       path,
       baseBranch: this.config.baseBranch(),
       github: await this.githubStatus(path),
     });
+  }
+
+  // Not awaited: asking gh for a token and GitHub for the issues takes a
+  // moment, and the daemon should accept connections meanwhile.
+  onApplicationBootstrap(): void {
+    if (this.config.isSet()) void this.github.start();
   }
 
   check(path: string, baseBranch: string): Promise<RepoCheck[]> {
@@ -96,7 +114,19 @@ export class RepoService implements OnModuleInit {
     this.store.setRepo(repo);
     // Not awaited: the new issues arrive as patches, problems as `error`.
     void this.github.restart();
+    await this.remember(repo.path, baseBranch);
     return { repo };
+  }
+
+  // The switch already happened; a file that can't be written only means
+  // the setup screen shows again on the next start.
+  private async remember(path: string, baseBranch: string): Promise<void> {
+    try {
+      await this.memory.remember({ path, baseBranch });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Could not remember ${path}: ${message}`);
+    }
   }
 
   private async githubStatus(top: string): Promise<"on" | "off"> {

@@ -1,6 +1,29 @@
 import { resolve } from "node:path";
 import { RepoConfig } from "./repo-config";
 import { branchExists, findRepoRoot } from "./find-repo";
+import type { RepoMemory } from "./repo-memory";
+
+/**
+ * The repo the daemon starts with (#58): GITSPORE_REPO when it is set (a
+ * wrong one stops the daemon, see loadRepoConfig), otherwise the last repo
+ * chosen on the setup screen if it still has its base branch, otherwise
+ * none, and the setup screen shows.
+ */
+export async function startRepoConfig(
+  env: NodeJS.ProcessEnv,
+  memory: RepoMemory,
+): Promise<RepoConfig> {
+  if (env.GITSPORE_REPO) return loadRepoConfig(env);
+
+  const [last] = await memory.recent();
+  if (last) {
+    const root = await findRepoRoot(last.path);
+    if ("top" in root && (await branchExists(root.top, last.baseBranch))) {
+      return new RepoConfig(root.top, last.baseBranch);
+    }
+  }
+  return new RepoConfig(null, env.GITSPORE_BASE_BRANCH ?? "main");
+}
 
 //
 //

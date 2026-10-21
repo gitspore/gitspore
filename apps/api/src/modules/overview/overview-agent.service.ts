@@ -35,6 +35,11 @@ export class OverviewAgentService implements OnApplicationBootstrap {
   // Nest calls this once, after every module is set up.
   async onApplicationBootstrap(): Promise<void> {
     if (!this.enabled) return;
+    // Without a repo there is nothing to look at; the setup screen shows.
+    if (!this.config.isSet()) {
+      this.logger.log("No repository chosen yet; overview agent not started");
+      return;
+    }
 
     // A throw here would stop the daemon.
     // Without the overview agent

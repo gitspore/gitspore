@@ -3,12 +3,7 @@ import {
   MAX_SLOTS,
   type ServerError,
 } from "@gitspore/shared";
-import {
-  Injectable,
-  Logger,
-  OnApplicationBootstrap,
-  OnModuleDestroy,
-} from "@nestjs/common";
+import { Injectable, Logger, OnModuleDestroy } from "@nestjs/common";
 import { StateStore } from "../state/state.store";
 import { diffIssues } from "./diff-issues";
 import type { GitHubApi, IssueDetails, PullRequest } from "./github-api";
@@ -45,7 +40,7 @@ type PullRequestListener = (change: PullRequestChange) => void;
  * after a poll succeeded in between.
  */
 @Injectable()
-export class GitHubService implements OnApplicationBootstrap, OnModuleDestroy {
+export class GitHubService implements OnModuleDestroy {
   private readonly logger = new Logger(GitHubService.name);
 
   // null while starting and once sync is off (no remote, no token, 401).
@@ -77,17 +72,14 @@ export class GitHubService implements OnApplicationBootstrap, OnModuleDestroy {
     private readonly source: GitHubSource,
   ) {}
 
-  // Not awaited: asking gh for a token and GitHub for the issues takes a
-  // moment, and the daemon should accept connections meanwhile.
-  onApplicationBootstrap(): void {
-    void this.start();
-  }
-
   onModuleDestroy(): void {
     this.stop();
   }
 
-  /** Connects and runs the first poll. Called at startup and by restart(). */
+  /**
+   * Connects and runs the first poll. RepoService calls it once a repo is
+   * known: at startup, or after the setup screen through restart().
+   */
   async start(): Promise<void> {
     const generation = this.generation;
     const connection = await this.source.connect();

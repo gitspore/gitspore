@@ -52,6 +52,20 @@ describe("OverviewAgentService", () => {
       enabled,
     ).onApplicationBootstrap();
 
+  it("starts nothing without a repo, even with the flag", async () => {
+    jest.spyOn(Logger.prototype, "log").mockImplementation(() => {});
+
+    await new OverviewAgentService(
+      terminals as unknown as TerminalService,
+      store,
+      new RepoConfig(null, "main"),
+      true,
+    ).onApplicationBootstrap();
+
+    expect(terminals.spawn).not.toHaveBeenCalled();
+    expect(store.snapshot().agents).toEqual([]);
+  });
+
   it("starts claude in the repo root when the flag is set", async () => {
     await start(true);
 
