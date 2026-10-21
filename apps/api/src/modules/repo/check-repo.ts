@@ -1,12 +1,8 @@
 import type { RepoCheck } from "@gitspore/shared";
-import { execFile } from "node:child_process";
 import { homedir } from "node:os";
 import { basename, join } from "node:path";
-import { promisify } from "node:util";
 import { branchExists, findRepoRoot } from "@/config/find-repo";
 import type { GitHubConnection } from "../github/github-source";
-
-const execFileAsync = promisify(execFile);
 
 // GitHub and Claude Code come in as parameters, so tests run neither gh nor
 // claude.
@@ -80,15 +76,4 @@ export function expandHome(path: string): string {
   if (path === "~") return homedir();
   if (path.startsWith("~/")) return join(homedir(), path.slice(2));
   return path;
-}
-
-// execFile, not exec: no shell. Any answer means claude is on the PATH the
-// agents' terminals start with.
-export async function claudeOnPath(): Promise<boolean> {
-  try {
-    await execFileAsync("claude", ["--version"], { timeout: 10_000 });
-    return true;
-  } catch {
-    return false;
-  }
 }

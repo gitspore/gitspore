@@ -14,7 +14,8 @@ import { RepoGitHubSource } from "../github/github-source";
 import { GitHubService } from "../github/github.service";
 import { OverviewAgentService } from "../overview/overview-agent.service";
 import { WorktreeService } from "../worktree/worktree.service";
-import { checkRepo, claudeOnPath, expandHome } from "./check-repo";
+import { ClaudeLocator } from "../terminal/claude-locator";
+import { checkRepo, expandHome } from "./check-repo";
 
 /**
  * The repo gitspore works in (#58): puts it into the state at startup,
@@ -33,6 +34,7 @@ export class RepoService implements OnModuleInit, OnApplicationBootstrap {
     private readonly worktrees: WorktreeService,
     private readonly memory: RepoMemory,
     private readonly overview: OverviewAgentService,
+    private readonly claude: ClaudeLocator,
   ) {}
 
   // Nest awaits this before the gateway listens, so the first snapshot a
@@ -58,7 +60,13 @@ export class RepoService implements OnModuleInit, OnApplicationBootstrap {
   check(path: string, baseBranch: string): Promise<RepoCheck[]> {
     return checkRepo(path, baseBranch, {
       connectGitHub: (top) => this.connectGitHub(top),
-      claudeInstalled: claudeOnPath,
+      // The same lookup the agents start with (claude.cmd on Windows,
+      // GITSPORE_CLAUDE_BIN), so the screen and a start never disagree.
+      claudeInstalled: () =>
+        this.claude.resolve().then(
+          () => true,
+          () => false,
+        ),
     });
   }
 

@@ -9,6 +9,7 @@ import type { GitHubCredentialsProvider } from "../github/credentials";
 import type { RepoMemory } from "@/config/repo-memory";
 import type { GitHubService } from "../github/github.service";
 import type { OverviewAgentService } from "../overview/overview-agent.service";
+import type { ClaudeLocator } from "../terminal/claude-locator";
 import { StateStore } from "../state/state.store";
 import type { WorktreeService } from "../worktree/worktree.service";
 import { RepoService } from "./repo.service";
@@ -38,6 +39,7 @@ describe("RepoService", () => {
     restart: jest.fn().mockResolvedValue(undefined),
   };
   const memory = { remember: jest.fn().mockResolvedValue(undefined) };
+  const claude = { resolve: jest.fn().mockResolvedValue("/bin/claude") };
   const overview = {
     stop: jest.fn().mockResolvedValue(undefined),
     start: jest.fn().mockResolvedValue(undefined),
@@ -56,6 +58,7 @@ describe("RepoService", () => {
       worktrees as unknown as WorktreeService,
       memory as unknown as RepoMemory,
       overview as unknown as OverviewAgentService,
+      claude as unknown as ClaudeLocator,
     );
 
   beforeEach(async () => {
@@ -113,6 +116,19 @@ describe("RepoService", () => {
       service().onApplicationBootstrap();
 
       expect(github.start).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("check", () => {
+    it("asks ClaudeLocator, found or not", async () => {
+      await initRepo(dir);
+
+      const found = await service().check(dir, "main");
+      claude.resolve.mockRejectedValueOnce(new Error("not found"));
+      const missing = await service().check(dir, "main");
+
+      expect(found.at(-1)).toMatchObject({ item: "claude", result: "ok" });
+      expect(missing.at(-1)).toMatchObject({ item: "claude", result: "fail" });
     });
   });
 
