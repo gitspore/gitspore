@@ -191,6 +191,23 @@ export function useNow(): number {
   return useSyncExternalStore(ticker.subscribe, ticker.get, () => 0);
 }
 
+/**
+ * Like useNow, but re-renders only when select(now) gives a new result, not
+ * on every tick. The result is compared with ===, so select must return a
+ * plain value (string, number, boolean, null); a new object or array each
+ * time would loop forever. Before the first tick now is 0.
+ *
+ *   const stage = useNowSelect((now) => wiltStage(agent, now));
+ */
+export function useNowSelect<T>(select: (now: number) => T): T {
+  const ticker = useContext(GreenhouseContext)?.ticker ?? placeholderTicker;
+  return useSyncExternalStore(
+    ticker.subscribe,
+    () => select(ticker.get()),
+    () => select(0),
+  );
+}
+
 /** The client, or null for the first moment, until the browser has made it. */
 export function useGreenhouseClient(): GreenhouseClient | null {
   return useContext(GreenhouseContext)?.client ?? null;
