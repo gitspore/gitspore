@@ -102,7 +102,6 @@ export class AgentService implements OnModuleInit {
       progress.worktree = true;
       await this.worktrees.ensureExcluded(`${TASK_DIR}/`);
       await this.worktrees.publish(branch);
-      await this.worktrees.publish(branch);
       progress.pushed = true;
 
       await mkdir(join(path, TASK_DIR), { recursive: true });

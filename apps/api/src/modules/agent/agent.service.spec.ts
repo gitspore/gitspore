@@ -157,6 +157,7 @@ describe("AgentService.dispatch", () => {
       startPoint: "origin/main",
     });
     expect(worktrees.ensureExcluded).toHaveBeenCalledWith(".gitspore/");
+    expect(worktrees.publish).toHaveBeenCalledTimes(1);
     expect(worktrees.publish).toHaveBeenCalledWith("spore/42-issue");
     expect(terminals.spawn).toHaveBeenCalledWith({
       agentId: agent.id,
