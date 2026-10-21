@@ -25,6 +25,9 @@ const LEAF_WID = 0.19;
 const PETAL_TURNS = [0, 1, 2, 3, 4].map((i) => (i * 2 * Math.PI) / 5);
 const PETAL_TILT = 0.35;
 
+// Bud and flower size on top of their own shapes, so they read from afar
+const TIP_SCALE = 1.8;
+
 // How fast a plant moves to a new look: after 0.2 s about two
 // thirds of the way, after 0.6 s about 95 %
 const SPEED = 5;
@@ -415,7 +418,7 @@ export function Plant({
         </group>
       ))}
 
-      <group ref={tipGroup}>
+      <group ref={tipGroup} scale={TIP_SCALE}>
         <group ref={budGroup}>
           <mesh position-y={0.08} scale={[1, 1.6, 1]} castShadow>
             <sphereGeometry args={[0.06, 12, 8]} />

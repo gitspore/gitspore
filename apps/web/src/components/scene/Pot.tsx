@@ -47,6 +47,10 @@ const POT_PROFILE = [
 const SOIL_Y = 0.97;
 const SOIL_R = 0.61;
 
+// How far the pointer may move between press and release, in pixels,
+// and still count as a click
+const DRAG_PX = 4;
+
 // What a plant shows: its state, growth and whole-plant scale. The test
 // keys set all three for every pot
 type PlantLook = { state: PlantState; growth: number; wholeScale: boolean };
@@ -84,7 +88,8 @@ function agentLook(status: AgentStatus, stage: WiltStage | null): PlantLook {
 //
 // - The whole group takes the clicks: a click on any part of an
 // occupied pot opens its agent's window; hovering shows a hand
-// and an outline
+// and an outline. A press that moved more than DRAG_PX before the
+// release was an orbit drag, not a click
 const Pot = memo(function Pot({
   slot,
   test,
@@ -114,7 +119,7 @@ const Pot = memo(function Pot({
       position={[x, 0, z]}
       onClick={(event) => {
         event.stopPropagation();
-        if (agent) openWindow(agent.id);
+        if (agent && event.delta <= DRAG_PX) openWindow(agent.id);
       }}
       onPointerOver={(event) => {
         event.stopPropagation();

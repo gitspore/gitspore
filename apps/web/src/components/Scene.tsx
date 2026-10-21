@@ -53,13 +53,13 @@ export function Scene({
   sceneArea: RefObject<HTMLDivElement | null>;
 }) {
   // The mode: next-themes puts "light" (day) or "dark" (night) on <html>.
-  // URL flags, read once: ?shadows=off for weak GPUs, ?orbit=1 to look
-  // around in development, ?testing=1 for the plant test keys (see Pots)
+  // URL flags, read once: ?shadows=off for weak GPUs, ?orbit=0 for a fixed
+  // camera (orbiting is on by default), ?testing=1 for the plant test keys (see Pots)
   const { resolvedTheme } = useTheme();
   const t = resolvedTheme === "light" ? tokens.day : tokens.night;
   const [flags] = useState(() => new URLSearchParams(window.location.search));
   const shadowsOn = flags.get("shadows") !== "off";
-  const orbitOn = flags.get("orbit") === "1";
+  const orbitOn = flags.get("orbit") !== "0";
   const testingOn = flags.get("testing") === "1";
 
   // The canvas is created once; a mode change only changes props.

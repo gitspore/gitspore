@@ -28,7 +28,8 @@ const SPEED = 9;
 
 // The fixed camera frames the table into "sceneArea":
 // the part of the page that panels and windows leave free.
-// ?orbit=1 adds OrbitControls with the prototype's limits
+// OrbitControls on by default (?orbit=0 turns them off): turn and zoom
+// within limits, no panning, so the table can't leave the picture
 export function CameraRig({
   sceneArea,
   orbit,
@@ -141,12 +142,12 @@ export function CameraRig({
           target={TARGET}
           enablePan={false}
           enableDamping
-          minDistance={8}
-          maxDistance={16}
-          minAzimuthAngle={-0.45}
-          maxAzimuthAngle={0.45}
-          minPolarAngle={0.55}
-          maxPolarAngle={1.15}
+          minDistance={7}
+          maxDistance={18}
+          minAzimuthAngle={-0.9}
+          maxAzimuthAngle={0.9}
+          minPolarAngle={0.35}
+          maxPolarAngle={1.3}
         />
       )}
     </>
