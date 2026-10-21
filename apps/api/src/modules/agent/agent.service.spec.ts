@@ -206,7 +206,7 @@ describe("AgentService.dispatch", () => {
   it("lets only one of two dispatches for the same slot through", async () => {
     const acks = await Promise.all([dispatch(42, 0), dispatch(43, 0)]);
 
-    const codes = acks.map((ack) => (ack.error ? ack.error.code : "ok"));
+    const codes = acks.map((ack) => ("error" in ack ? ack.error.code : "ok"));
     expect(codes.sort()).toEqual(["ok", "slot_unavailable"]);
     expect(store.snapshot().agents).toHaveLength(1);
   });

@@ -1,4 +1,4 @@
-import { AgentId, AgentStatus } from "@gitspore/shared";
+import type { AgentDispatchAck, AgentId, AgentStatus } from "@gitspore/shared";
 import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { StateStore } from "../state/state.store";
 import { GitHubService } from "../github/github.service";
@@ -53,7 +53,7 @@ export class AgentService implements OnModuleInit {
     });
   }
 
-  async dispatch(payload: unknown) {
+  async dispatch(payload: unknown): Promise<AgentDispatchAck> {
     let slotIndex: number;
     let issue;
 
