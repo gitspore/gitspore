@@ -11,8 +11,7 @@ import { GitHubSource, RepoGitHubSource } from "./github-source";
 import { GitHubService } from "./github.service";
 
 // The two abstract classes are the swap points: a GitHub login (device flow)
-// replaces the credentials provider, a setup screen for other repos the
-// source. GitHubService stays as it is.
+// replaces the credentials provider. GitHubService stays as it is.
 @Module({
   imports: [RepoConfigModule, StateModule],
   providers: [
@@ -22,10 +21,15 @@ import { GitHubService } from "./github.service";
     },
     {
       provide: GitHubSource,
+      // Reads the path on every connect: the repo can change (#58), and
+      // GitHubService.restart() connects again.
       useFactory: (
         config: RepoConfig,
         credentials: GitHubCredentialsProvider,
-      ) => new RepoGitHubSource(config.repoPath(), credentials),
+      ): GitHubSource => ({
+        connect: () =>
+          new RepoGitHubSource(config.repoPath(), credentials).connect(),
+      }),
       inject: [RepoConfig, GitHubCredentialsProvider],
     },
     GitHubService,

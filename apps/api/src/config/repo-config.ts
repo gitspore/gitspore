@@ -1,10 +1,11 @@
-// The repository gitspore works in. Services ask for the path
-//a later setup screen has to swap this provider.
+// The repository gitspore works in. Services ask for the path; the ones
+// that keep it (WorktreeService, GitHubService) restart when RepoService
+// switches repos (#58).
 
 export class RepoConfig {
   constructor(
-    private readonly repo: string,
-    private readonly base: string,
+    private repo: string,
+    private base: string,
   ) {}
 
   repoPath(): string {
@@ -13,5 +14,10 @@ export class RepoConfig {
 
   baseBranch(): string {
     return this.base;
+  }
+
+  set(repo: string, base: string): void {
+    this.repo = repo;
+    this.base = base;
   }
 }

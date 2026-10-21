@@ -13,16 +13,28 @@ export type Worktree = { branch: string; path: string };
 
 @Injectable()
 export class WorktreeService implements OnModuleInit {
-  private readonly git: SimpleGit;
-  private readonly worktreeRoot: string;
+  private git!: SimpleGit;
+  private worktreeRoot!: string;
   private readonly logger = new Logger(WorktreeService.name);
 
   constructor(private readonly config: RepoConfig) {
-    // Reads repoPath() once. When the setup-screen ticket lets the user
-    // switch repos, it has to create a new instance.
-    const repo = config.repoPath();
+    this.useRepo();
+  }
+
+  async onModuleInit(): Promise<void> {
+    await this.cleanUp();
+  }
+
+  /** The repo in RepoConfig changed (#58): work there from now on. */
+  async reconfigure(): Promise<void> {
+    this.useRepo();
+    await this.cleanUp();
+  }
+
+  // Reads repoPath() once per repo; reconfigure() reads it again.
+  private useRepo(): void {
+    const repo = this.config.repoPath();
     this.git = simpleGit({
-      // baseDir: config.repoPath(),
       baseDir: repo,
       maxConcurrentProcesses: 1,
       timeout: { block: 30_000 },
@@ -34,7 +46,7 @@ export class WorktreeService implements OnModuleInit {
     );
   }
 
-  async onModuleInit(): Promise<void> {
+  private async cleanUp(): Promise<void> {
     await this.run(["worktree", "prune"]);
     const worktrees = await this.list();
     this.logger.log(

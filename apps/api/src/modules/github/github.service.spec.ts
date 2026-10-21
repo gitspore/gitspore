@@ -77,7 +77,7 @@ function setup(connection?: GitHubConnection) {
   store.onPatch((patch) => patches.push(patch));
   service.onPullRequest((change) => changes.push(change));
 
-  return { api, store, service, errors, patches, changes };
+  return { api, source, store, service, errors, patches, changes };
 }
 
 // Lets the timer of the next poll fire and that poll finish.
@@ -478,6 +478,53 @@ describe("GitHubService: pull requests", () => {
 
     expect(store.snapshot().issues).toEqual([]);
     expect(api.pullRequestFor).toHaveBeenCalledWith("spore/42-a");
+    service.stop();
+  });
+});
+
+describe("GitHubService: restart", () => {
+  // The second repo's API, handed out by the source's next connect.
+  function secondRepo(source: GitHubSource) {
+    const api = fakeApi();
+    api.openIssues.mockResolvedValue({ changed: true, issues: [issue(2)] });
+    jest.mocked(source.connect).mockResolvedValueOnce({
+      api: api as unknown as GitHubApi,
+      repo: { owner: "owner", repo: "other" },
+    });
+    return api;
+  }
+
+  it("connects again and syncs the new repo", async () => {
+    const { source, store, service } = setup();
+    await service.start();
+    const other = secondRepo(source);
+
+    await service.restart();
+
+    expect(source.connect).toHaveBeenCalledTimes(2);
+    expect(store.snapshot().issues).toEqual([issue(2)]);
+    await nextPoll();
+    expect(other.openIssues).toHaveBeenCalledTimes(2);
+    service.stop();
+  });
+
+  it("drops a poll of the old repo that answers after the restart", async () => {
+    const { api, source, store, service } = setup();
+    let answerOld!: (value: { changed: true; issues: Issue[] }) => void;
+    api.openIssues.mockReturnValue(
+      new Promise((resolve) => (answerOld = resolve)),
+    );
+    void service.start();
+    await jest.advanceTimersByTimeAsync(0); // the old poll now waits
+    secondRepo(source);
+
+    await service.restart();
+    answerOld({ changed: true, issues: [issue(1)] });
+    await jest.advanceTimersByTimeAsync(0);
+
+    expect(store.snapshot().issues).toEqual([issue(2)]);
+    await nextPoll();
+    expect(api.openIssues).toHaveBeenCalledTimes(1);
     service.stop();
   });
 });

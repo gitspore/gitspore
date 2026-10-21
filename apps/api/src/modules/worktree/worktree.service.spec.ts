@@ -34,6 +34,25 @@ describe("WorktreeService", () => {
 
   afterEach(() => rm(parent, { recursive: true, force: true }));
 
+  describe("reconfigure", () => {
+    it("makes new worktrees next to the repo RepoConfig names now", async () => {
+      const config = new RepoConfig(repo, "main");
+      service = new WorktreeService(config);
+      const other = join(parent, "other-repo");
+      await mkdir(other);
+      await initRepo(other);
+
+      config.set(other, "main");
+      await service.reconfigure();
+      const result = await service.create({ issueNumber: 7, issueTitle: "X" });
+
+      expect(result.path).toBe(
+        join(parent, ".gitspore-worktrees", "other-repo", "7-x"),
+      );
+      expect(await service.list()).toEqual([result]);
+    });
+  });
+
   describe("create", () => {
     it("makes a worktree on a new spore branch next to the repo", async () => {
       const result = await service.create({
