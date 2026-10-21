@@ -8,6 +8,7 @@ import { initRepo } from "../../../test/git-repo";
 import type { GitHubCredentialsProvider } from "../github/credentials";
 import type { RepoMemory } from "@/config/repo-memory";
 import type { GitHubService } from "../github/github.service";
+import type { OverviewAgentService } from "../overview/overview-agent.service";
 import { StateStore } from "../state/state.store";
 import type { WorktreeService } from "../worktree/worktree.service";
 import { RepoService } from "./repo.service";
@@ -37,6 +38,10 @@ describe("RepoService", () => {
     restart: jest.fn().mockResolvedValue(undefined),
   };
   const memory = { remember: jest.fn().mockResolvedValue(undefined) };
+  const overview = {
+    stop: jest.fn().mockResolvedValue(undefined),
+    start: jest.fn().mockResolvedValue(undefined),
+  };
   const worktrees = { reconfigure: jest.fn().mockResolvedValue(undefined) };
   const credentials: GitHubCredentialsProvider = {
     getToken: jest.fn().mockResolvedValue("token"),
@@ -50,6 +55,7 @@ describe("RepoService", () => {
       github as unknown as GitHubService,
       worktrees as unknown as WorktreeService,
       memory as unknown as RepoMemory,
+      overview as unknown as OverviewAgentService,
     );
 
   beforeEach(async () => {
@@ -179,11 +185,8 @@ describe("RepoService", () => {
       });
     });
 
-    it.each([
-      ["a slot agent", agent("a1", 0)],
-      ["the overview agent", agent("overview", null)],
-    ])("refuses while %s runs, next to the path's problems", async (_, a) => {
-      store.apply([{ type: "agent:upsert", agent: a }]);
+    it("refuses while a slot agent runs, next to the path's problems", async () => {
+      store.apply([{ type: "agent:upsert", agent: agent("a1", 0) }]);
 
       const ack = await service().choose(dir, "main");
 
@@ -193,6 +196,24 @@ describe("RepoService", () => {
           expect.objectContaining({ code: "not_a_repo" }),
         ],
       });
+    });
+
+    it("restarts the overview agent around the switch instead of refusing", async () => {
+      await initRepo(dir);
+      store.apply([{ type: "agent:upsert", agent: agent("overview", null) }]);
+      // What the overview agent finds when it stops and starts again
+      const seen: string[] = [];
+      overview.stop.mockImplementation(async () => {
+        seen.push(`stop in ${config.isSet() ? config.repoPath() : "none"}`);
+      });
+      overview.start.mockImplementation(async () => {
+        seen.push(`start with repo ${store.snapshot().repo?.path}`);
+      });
+
+      expect(await service().choose(dir, "main")).toHaveProperty("repo");
+
+      const top = await realpath(dir);
+      expect(seen).toEqual(["stop in /old/repo", `start with repo ${top}`]);
     });
   });
 });

@@ -114,6 +114,14 @@ export class AgentTerminal {
     this.pty.write(data);
   }
 
+  /** Ends the shell; onExit follows once it is gone. */
+  kill(): void {
+    if (this.exited) {
+      return;
+    }
+    this.pty.kill();
+  }
+
   resize(cols: number, rows: number): void {
     this.cols = cols;
     this.rows = rows;

@@ -15,5 +15,7 @@ import { OverviewAgentService, START_OVERVIEW } from "./overview-agent.service";
       useFactory: () => process.env.GITSPORE_START_OVERVIEW === "1",
     },
   ],
+  // RepoService restarts it in another repo (#58).
+  exports: [OverviewAgentService],
 })
 export class OverviewModule {}

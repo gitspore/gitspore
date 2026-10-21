@@ -12,9 +12,10 @@ import { OverviewAgentService } from "./overview-agent.service";
 //
 //
 // Stands in for TerminalService:
-// records spawn() and lets a test end a shell.
+// records spawn() and stop() and lets a test end a shell.
 class FakeTerminals {
   readonly spawn = jest.fn();
+  readonly stop = jest.fn().mockResolvedValue(undefined);
   private exitListener?: (agentId: string, exitCode: number) => void;
 
   onExited(listener: (agentId: string, exitCode: number) => void) {
@@ -127,5 +128,29 @@ describe("OverviewAgentService", () => {
 
     expect(logError).toHaveBeenCalledWith(expect.stringContaining("no shell"));
     expect(store.snapshot().agents).toEqual([]);
+  });
+
+  describe("after a switch to another repo", () => {
+    it("stops through TerminalService and starts again where RepoConfig points", async () => {
+      const config = new RepoConfig(repo, "main");
+      const service = new OverviewAgentService(
+        terminals as unknown as TerminalService,
+        store,
+        config,
+        true,
+      );
+      const other = await mkdtemp(join(tmpdir(), "gitspore-overview-other-"));
+      await initRepo(other);
+
+      await service.stop();
+      config.set(other, "main");
+      await service.start();
+
+      expect(terminals.stop).toHaveBeenCalledWith("overview");
+      expect(terminals.spawn).toHaveBeenCalledWith(
+        expect.objectContaining({ cwd: other }),
+      );
+      await rm(other, { recursive: true, force: true });
+    });
   });
 });

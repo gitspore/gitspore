@@ -35,6 +35,24 @@ export class OverviewAgentService implements OnApplicationBootstrap {
   // Nest calls this once, after every module is set up.
   async onApplicationBootstrap(): Promise<void> {
     if (!this.enabled) return;
+
+    // TerminalService tells listeners about every agent's exit.
+    // No restart: agent leaves state.
+    this.terminals.onExited((agentId) => {
+      if (agentId === OVERVIEW_AGENT_ID) {
+        this.store.apply([{ type: "agent:remove", agentId }]);
+      }
+    });
+
+    await this.start();
+  }
+
+  /**
+   * Starts the overview agent in the repo RepoConfig names: at startup, and
+   * again after RepoService switched repos (#58).
+   */
+  async start(): Promise<void> {
+    if (!this.enabled) return;
     // Without a repo there is nothing to look at; the setup screen shows.
     if (!this.config.isSet()) {
       this.logger.log("No repository chosen yet; overview agent not started");
@@ -46,16 +64,21 @@ export class OverviewAgentService implements OnApplicationBootstrap {
     // everything else still works,
     // so we log and continue.
     try {
-      await this.start();
+      await this.spawnAgent();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Could not start the overview agent: ${message}`);
     }
   }
 
-  private async start(): Promise<void> {
+  /** Ends the overview agent, before a switch to another repo (#58). */
+  stop(): Promise<void> {
+    return this.terminals.stop(OVERVIEW_AGENT_ID);
+  }
+
+  private async spawnAgent(): Promise<void> {
     const repo = this.config.repoPath();
-    // The branch checked out in the repo root, read once at startup.
+    // The branch checked out in the repo root, read once per start.
     const branch = await simpleGit(repo).revparse(["--abbrev-ref", "HEAD"]);
 
     // Read-only (plan mode) while it runs in our own repo.
@@ -85,14 +108,6 @@ export class OverviewAgentService implements OnApplicationBootstrap {
         },
       },
     ]);
-
-    // TerminalService tells listeners about every agent's exit.
-    // No restart: agent leaves state.
-    this.terminals.onExited((agentId) => {
-      if (agentId === OVERVIEW_AGENT_ID) {
-        this.store.apply([{ type: "agent:remove", agentId }]);
-      }
-    });
 
     this.logger.log(`Overview agent started in ${repo} on ${branch}`);
   }

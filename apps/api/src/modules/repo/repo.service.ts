@@ -12,6 +12,7 @@ import { StateStore } from "../state/state.store";
 import { GitHubCredentialsProvider } from "../github/credentials";
 import { RepoGitHubSource } from "../github/github-source";
 import { GitHubService } from "../github/github.service";
+import { OverviewAgentService } from "../overview/overview-agent.service";
 import { WorktreeService } from "../worktree/worktree.service";
 import { checkRepo, claudeOnPath, expandHome } from "./check-repo";
 
@@ -31,6 +32,7 @@ export class RepoService implements OnModuleInit, OnApplicationBootstrap {
     private readonly github: GitHubService,
     private readonly worktrees: WorktreeService,
     private readonly memory: RepoMemory,
+    private readonly overview: OverviewAgentService,
   ) {}
 
   // Nest awaits this before the gateway listens, so the first snapshot a
@@ -68,18 +70,12 @@ export class RepoService implements OnModuleInit, OnApplicationBootstrap {
   async choose(path: string, baseBranch: string): Promise<RepoChooseAck> {
     const problems: RepoProblem[] = [];
 
+    // The overview agent doesn't count: it restarts in the new repo.
     const { agents } = this.store.snapshot();
     if (agents.some((agent) => agent.slotIndex !== null)) {
       problems.push({
         code: "agents_running",
         message: "Agents are still running. Stop them before switching.",
-      });
-    } else if (agents.length > 0) {
-      // TEMPORARY until the overview agent can restart in the new repo.
-      problems.push({
-        code: "agents_running",
-        message:
-          "The overview agent runs in this repo. Restart the daemon without GITSPORE_START_OVERVIEW to switch.",
       });
     }
 
@@ -102,6 +98,9 @@ export class RepoService implements OnModuleInit, OnApplicationBootstrap {
 
     if (problems.length > 0 || "problem" in root) return { problems };
 
+    // Ends before the state starts over, so its exit (agent:remove) belongs
+    // to the old repo.
+    await this.overview.stop();
     // Every service that keeps the path works in the new repo from here on.
     this.config.set(root.top, baseBranch);
     await this.worktrees.reconfigure();
@@ -114,6 +113,7 @@ export class RepoService implements OnModuleInit, OnApplicationBootstrap {
     this.store.setRepo(repo);
     // Not awaited: the new issues arrive as patches, problems as `error`.
     void this.github.restart();
+    await this.overview.start();
     await this.remember(repo.path, baseBranch);
     return { repo };
   }

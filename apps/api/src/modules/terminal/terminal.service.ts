@@ -39,6 +39,8 @@ export class TerminalService {
   private readonly terminals = new Map<AgentId, AgentTerminal>();
   private readonly sessions = new Map<SessionId, Session>();
   private readonly exitListeners: ExitListener[] = [];
+  // stop() calls that wait for their agent's shell to exit.
+  private readonly stopping = new Map<AgentId, (() => void)[]>();
 
   constructor(@Inject(SPAWN_PTY) private readonly spawnPty: SpawnPty) {}
 
@@ -101,6 +103,25 @@ export class TerminalService {
     }
   }
 
+  /**
+   * Ends an agent's terminal and resolves once its shell has exited, after
+   * the exit listeners. Spawning the same agent again before that would
+   * fail with already_running. Resolves at once without a terminal.
+   */
+  stop(agentId: AgentId): Promise<void> {
+    const terminal = this.terminals.get(agentId);
+    if (terminal === undefined) {
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      this.stopping.set(agentId, [
+        ...(this.stopping.get(agentId) ?? []),
+        resolve,
+      ]);
+      terminal.kill();
+    });
+  }
+
   onExited(listener: ExitListener): void {
     this.exitListeners.push(listener);
   }
@@ -139,5 +160,9 @@ export class TerminalService {
     for (const listener of this.exitListeners) {
       listener(agentId, exitCode);
     }
+    for (const resolve of this.stopping.get(agentId) ?? []) {
+      resolve();
+    }
+    this.stopping.delete(agentId);
   }
 }
