@@ -14,6 +14,7 @@ import { Server, Socket } from "socket.io";
 import type {
   ClientToServerEvents,
   RepoCheckAck,
+  RepoChooseAck,
   RepoChoosePayload,
   ServerToClientEvents,
 } from "@gitspore/shared";
@@ -52,6 +53,10 @@ export class StateGateway implements OnGatewayInit, OnGatewayConnection {
     });
 
     this.store.onPatch((patch) => server.emit("state:patch", patch));
+    // Another repo: the old state is gone, so every tab gets the new one.
+    this.store.onReset(() =>
+      server.emit("state:snapshot", this.store.snapshot()),
+    );
     this.github.onError((error) => server.emit("error", error));
   }
 
@@ -82,5 +87,15 @@ export class StateGateway implements OnGatewayInit, OnGatewayConnection {
     @Ack() ack: (response: RepoCheckAck) => void,
   ) {
     ack({ checks: await this.repo.check(path, baseBranch) });
+  }
+
+  // The ack tells the asking tab; the new state reaches every tab as a
+  // snapshot (onReset above).
+  @SubscribeMessage("repo:choose")
+  async handleRepoChoose(
+    @MessageBody() { path, baseBranch = "main" }: RepoChoosePayload,
+    @Ack() ack: (response: RepoChooseAck) => void,
+  ) {
+    ack(await this.repo.choose(path, baseBranch));
   }
 }

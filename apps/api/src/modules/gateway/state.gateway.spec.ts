@@ -6,6 +6,7 @@ import type { ServerError } from "@gitspore/shared";
 import { RepoConfig } from "@/config/repo-config";
 import { GitHubService } from "../github/github.service";
 import { RepoService } from "../repo/repo.service";
+import { StateStore } from "../state/state.store";
 import { GatewayModule } from "./gateway.module";
 import { SessionAuth } from "./session-auth.service";
 
@@ -29,7 +30,7 @@ describe("StateGateway", () => {
   };
 
   // Stands in for RepoService, for the same reason.
-  const repo = { check: jest.fn() };
+  const repo = { check: jest.fn(), choose: jest.fn() };
 
   const connect = (options: {
     token?: string;
@@ -176,6 +177,33 @@ describe("StateGateway", () => {
 
       expect(ack).toEqual({ checks });
       expect(repo.check).toHaveBeenCalledWith("/r", "main");
+    });
+
+    it("acks repo:choose to the asking tab and sends every tab the new state", async () => {
+      const asking = connect({ token: auth.token, origin: ORIGIN });
+      const other = connect({ token: auth.token, origin: ORIGIN });
+      await expect(outcome(asking)).resolves.toBe("snapshot");
+      await expect(outcome(other)).resolves.toBe("snapshot");
+      const chosen = { path: "/r", baseBranch: "dev", github: "off" } as const;
+      // Like the real one: the state starts over, then the ack
+      repo.choose.mockImplementation(() => {
+        app.get(StateStore).setRepo(chosen);
+        return Promise.resolve({ repo: chosen });
+      });
+      const snapshotOf = (socket: Socket) =>
+        new Promise((resolve) => socket.once("state:snapshot", resolve));
+      const snapshots = Promise.all([snapshotOf(asking), snapshotOf(other)]);
+
+      const ack = await asking.emitWithAck("repo:choose", {
+        path: "/r",
+        baseBranch: "dev",
+      });
+
+      expect(ack).toEqual({ repo: chosen });
+      expect(repo.choose).toHaveBeenCalledWith("/r", "dev");
+      for (const snapshot of await snapshots) {
+        expect(snapshot).toMatchObject({ repo: chosen });
+      }
     });
   });
 });

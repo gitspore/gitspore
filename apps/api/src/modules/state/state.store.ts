@@ -8,6 +8,7 @@ import {
 import { Injectable } from "@nestjs/common";
 
 type PatchListener = (patch: StatePatch) => void;
+type ResetListener = () => void;
 
 @Injectable()
 export class StateStore {
@@ -18,6 +19,7 @@ export class StateStore {
     issues: [],
   };
   private readonly listeners: PatchListener[] = [];
+  private readonly resetListeners: ResetListener[] = [];
 
   snapshot(): GreenhouseState {
     return structuredClone(this.state);
@@ -41,14 +43,25 @@ export class StateStore {
   }
 
   /**
-   * Sets the repo gitspore works in. Patches don't carry the repo, so
-   * clients see it in their next snapshot.
+   * Starts the state over for the repo gitspore works in: agents and issues
+   * belonged to the old one. Patches can't say that, so reset listeners
+   * hear about it and send a snapshot.
    */
   setRepo(repo: RepoInfo | null): void {
-    this.state = { ...this.state, version: this.state.version + 1, repo };
+    this.state = {
+      version: this.state.version + 1,
+      repo,
+      agents: [],
+      issues: [],
+    };
+    for (const listener of this.resetListeners) listener();
   }
 
   onPatch(listener: PatchListener): void {
     this.listeners.push(listener);
+  }
+
+  onReset(listener: ResetListener): void {
+    this.resetListeners.push(listener);
   }
 }
