@@ -27,10 +27,9 @@ class FakeTerminals {
   }
 }
 
-// Stands in for ClaudeLocator: a fixed path, and a record of invalidate().
+// Stands in for ClaudeLocator: a fixed path.
 class FakeLocator {
   readonly resolve = jest.fn(async () => "/bin/claude");
-  readonly invalidate = jest.fn();
 }
 
 describe("OverviewAgentService", () => {
@@ -62,16 +61,25 @@ describe("OverviewAgentService", () => {
       enabled,
     ).onApplicationBootstrap();
 
-  it("starts claude from the locator in the repo root, without a shell", async () => {
+  it("starts claude in a shell in the repo root, by file name", async () => {
     await start(true);
 
     expect(terminals.spawn).toHaveBeenCalledWith({
       agentId: "overview",
       cwd: repo,
-      mode: "exec",
-      command: "/bin/claude",
+      command: "claude",
       args: ["--permission-mode", "plan"],
     });
+  });
+
+  it("types the locator's file name, not its Windows path", async () => {
+    locator.resolve.mockResolvedValue("C:\\Program Files\\nodejs\\claude.cmd");
+
+    await start(true);
+
+    expect(terminals.spawn).toHaveBeenCalledWith(
+      expect.objectContaining({ command: "claude.cmd" }),
+    );
   });
 
   it("puts the overview agent into the state", async () => {
@@ -125,17 +133,6 @@ describe("OverviewAgentService", () => {
 
     expect(logError).toHaveBeenCalledWith(expect.stringContaining("no shell"));
     expect(store.snapshot().agents).toEqual([]);
-  });
-
-  it("makes the locator look again after a failed spawn", async () => {
-    jest.spyOn(Logger.prototype, "error").mockImplementation(() => {});
-    terminals.spawn.mockImplementation(() => {
-      throw new Error("File not found");
-    });
-
-    await start(true);
-
-    expect(locator.invalidate).toHaveBeenCalledTimes(1);
   });
 
   it("starts nothing and keeps running when Claude is not found", async () => {
