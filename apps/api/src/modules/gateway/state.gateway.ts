@@ -1,4 +1,6 @@
 import {
+  Ack,
+  MessageBody,
   OnGatewayConnection,
   OnGatewayInit,
   SubscribeMessage,
@@ -7,8 +9,14 @@ import {
 import { allowedOrigins, SessionAuth } from "./session-auth.service";
 import { StateStore } from "../state/state.store";
 import { GitHubService } from "../github/github.service";
+import { RepoService } from "../repo/repo.service";
 import { Server, Socket } from "socket.io";
-import { ClientToServerEvents, ServerToClientEvents } from "@gitspore/shared";
+import type {
+  ClientToServerEvents,
+  RepoCheckAck,
+  RepoChoosePayload,
+  ServerToClientEvents,
+} from "@gitspore/shared";
 
 type GreenhouseServer = Server<ClientToServerEvents, ServerToClientEvents>;
 export type GreenhouseSocket = Socket<
@@ -26,6 +34,7 @@ export class StateGateway implements OnGatewayInit, OnGatewayConnection {
     private readonly auth: SessionAuth,
     private readonly store: StateStore,
     private readonly github: GitHubService,
+    private readonly repo: RepoService,
   ) {}
 
   afterInit(server: GreenhouseServer) {
@@ -64,5 +73,14 @@ export class StateGateway implements OnGatewayInit, OnGatewayConnection {
   @SubscribeMessage("issues:refresh")
   handleIssuesRefresh() {
     void this.github.refresh();
+  }
+
+  // Answers only the asking tab; a check changes nothing.
+  @SubscribeMessage("repo:check")
+  async handleRepoCheck(
+    @MessageBody() { path, baseBranch = "main" }: RepoChoosePayload,
+    @Ack() ack: (response: RepoCheckAck) => void,
+  ) {
+    ack({ checks: await this.repo.check(path, baseBranch) });
   }
 }

@@ -2,6 +2,7 @@ import {
   applyPatch,
   GreenhouseState,
   PatchOp,
+  RepoInfo,
   StatePatch,
 } from "@gitspore/shared";
 import { Injectable } from "@nestjs/common";
@@ -37,6 +38,14 @@ export class StateStore {
     for (const listener of this.listeners) listener(patch);
 
     return patch;
+  }
+
+  /**
+   * Sets the repo gitspore works in. Patches don't carry the repo, so
+   * clients see it in their next snapshot.
+   */
+  setRepo(repo: RepoInfo | null): void {
+    this.state = { ...this.state, version: this.state.version + 1, repo };
   }
 
   onPatch(listener: PatchListener): void {

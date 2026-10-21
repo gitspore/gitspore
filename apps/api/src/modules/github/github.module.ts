@@ -30,6 +30,7 @@ import { GitHubService } from "./github.service";
     },
     GitHubService,
   ],
-  exports: [GitHubService],
+  // The setup screen asks for a token to check other repos (#58).
+  exports: [GitHubService, GitHubCredentialsProvider],
 })
 export class GitHubModule {}

@@ -5,6 +5,7 @@ import { io, type Socket } from "socket.io-client";
 import type { ServerError } from "@gitspore/shared";
 import { RepoConfig } from "@/config/repo-config";
 import { GitHubService } from "../github/github.service";
+import { RepoService } from "../repo/repo.service";
 import { GatewayModule } from "./gateway.module";
 import { SessionAuth } from "./session-auth.service";
 
@@ -26,6 +27,9 @@ describe("StateGateway", () => {
       githubError = listener;
     },
   };
+
+  // Stands in for RepoService, for the same reason.
+  const repo = { check: jest.fn() };
 
   const connect = (options: {
     token?: string;
@@ -58,6 +62,8 @@ describe("StateGateway", () => {
     })
       .overrideProvider(GitHubService)
       .useValue(github)
+      .overrideProvider(RepoService)
+      .useValue(repo)
       // The real one checks GITSPORE_REPO and the base branch at startup.
       .overrideProvider(RepoConfig)
       .useValue(new RepoConfig(".", "main"))
@@ -156,6 +162,20 @@ describe("StateGateway", () => {
       );
 
       expect(received).toEqual(problem);
+    });
+  });
+
+  describe("repo", () => {
+    it("answers repo:check with RepoService's checks, main by default", async () => {
+      const socket = connect({ token: auth.token, origin: ORIGIN });
+      await expect(outcome(socket)).resolves.toBe("snapshot");
+      const checks = [{ item: "claude", result: "ok", detail: "found" }];
+      repo.check.mockResolvedValue(checks);
+
+      const ack = await socket.emitWithAck("repo:check", { path: "/r" });
+
+      expect(ack).toEqual({ checks });
+      expect(repo.check).toHaveBeenCalledWith("/r", "main");
     });
   });
 });

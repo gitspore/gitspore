@@ -202,4 +202,17 @@ describe("StateStore", () => {
       expect(listener).not.toHaveBeenCalled();
     });
   });
+
+  describe("setRepo", () => {
+    it("sets the repo in a new version and sends no patch", () => {
+      const listener = jest.fn();
+      store.onPatch(listener);
+      const repo = { path: "/r", baseBranch: "main", github: "on" } as const;
+
+      store.setRepo(repo);
+
+      expect(store.snapshot()).toMatchObject({ version: 1, repo });
+      expect(listener).not.toHaveBeenCalled();
+    });
+  });
 });
