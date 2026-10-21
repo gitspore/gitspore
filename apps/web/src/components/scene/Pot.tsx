@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, memo, useMemo, useState } from "react";
 import * as THREE from "three";
+import { Outlines, useCursor } from "@react-three/drei";
 
 import {
   useGreenhouseStore,
@@ -58,8 +59,13 @@ function agentLook(status: AgentStatus, stage: WiltStage | null): PlantLook {
   return { state, growth: visual.growth, wholeScale: false };
 }
 
+// memo: a re-render above (AppShell)
+// skips pots whose props didn't change
+//
+// Pot contains:
 // pot at slot spot:
 // body, soil if agent plant,
+//
 // Each pot reads only its own agent from the store,
 // a change to one agent re-renders only that pot.
 // With ?testing=1 the test look wins,
@@ -75,7 +81,11 @@ function agentLook(status: AgentStatus, stage: WiltStage | null): PlantLook {
 // receives plant's shadow
 //
 // - The plant stands on the soil
-function Pot({
+//
+// - The whole group takes the clicks: a click on any part of an
+// occupied pot opens its agent's window; hovering shows a hand
+// and an outline
+const Pot = memo(function Pot({
   slot,
   test,
   colors,
@@ -95,14 +105,30 @@ function Pot({
   );
   const look = test ?? (agent ? agentLook(agent.status, stage) : null);
 
+  const openWindow = useGreenhouseStore((state) => state.openWindow);
+  const [hovered, setHovered] = useState(false);
+  useCursor(hovered && agent !== null);
+
   return (
-    <group position={[x, 0, z]}>
+    <group
+      position={[x, 0, z]}
+      onClick={(event) => {
+        event.stopPropagation();
+        if (agent) openWindow(agent.id);
+      }}
+      onPointerOver={(event) => {
+        event.stopPropagation();
+        setHovered(true);
+      }}
+      onPointerOut={() => setHovered(false)}
+    >
       <mesh geometry={bodyGeo} castShadow receiveShadow>
         <meshStandardMaterial
           color={colors.pot}
           roughness={0.9}
           shadowSide={THREE.FrontSide}
         />
+        {hovered && agent && <Outlines thickness={3} color={colors.heart} />}
       </mesh>
       <mesh
         geometry={soilGeo}
@@ -126,7 +152,7 @@ function Pot({
       )}
     </group>
   );
-}
+});
 
 // Test keys: the growth values "g" steps through, starting at the
 // table's own size (0.5), then bigger, then from small up again
