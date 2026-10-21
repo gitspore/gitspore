@@ -12,6 +12,7 @@ import { CameraRig } from "./scene/CameraRig";
 import { Pots } from "./scene/Pot";
 import { RoomLight } from "./scene/RoomLight";
 import { Table } from "./scene/Table";
+import { Book } from "./scene/Book";
 
 //
 //
@@ -131,6 +132,12 @@ export function Scene({
         art={t.color.art.plant}
         testKeys={testingOn}
       />
+      <Book
+        cover={t.color.plate}
+        pages={t.color.tag.paper}
+        outline={t.color.scene.heart}
+      />
+
       <Table wood={t.color.wood} floor={t.color.scene.floor} />
 
       <CameraRig sceneArea={sceneArea} orbit={orbitOn} />

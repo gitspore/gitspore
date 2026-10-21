@@ -1,6 +1,7 @@
 import { useEffect, memo, useMemo, useState } from "react";
 import * as THREE from "three";
-import { Outlines, useCursor } from "@react-three/drei";
+import { Outlines } from "@react-three/drei";
+import { useClickable } from "./useClickable";
 
 import {
   useGreenhouseStore,
@@ -46,10 +47,6 @@ const POT_PROFILE = [
 
 const SOIL_Y = 0.97;
 const SOIL_R = 0.61;
-
-// How far the pointer may move between press and release, in pixels,
-// and still count as a click
-const DRAG_PX = 4;
 
 // What a plant shows: its state, growth and whole-plant scale. The test
 // keys set all three for every pot
@@ -111,29 +108,19 @@ const Pot = memo(function Pot({
   const look = test ?? (agent ? agentLook(agent.status, stage) : null);
 
   const openWindow = useGreenhouseStore((state) => state.openWindow);
-  const [hovered, setHovered] = useState(false);
-  useCursor(hovered && agent !== null);
+  const { hovered, handlers } = useClickable(
+    agent ? () => openWindow(agent.id) : null,
+  );
 
   return (
-    <group
-      position={[x, 0, z]}
-      onClick={(event) => {
-        event.stopPropagation();
-        if (agent && event.delta <= DRAG_PX) openWindow(agent.id);
-      }}
-      onPointerOver={(event) => {
-        event.stopPropagation();
-        setHovered(true);
-      }}
-      onPointerOut={() => setHovered(false)}
-    >
+    <group position={[x, 0, z]} {...handlers}>
       <mesh geometry={bodyGeo} castShadow receiveShadow>
         <meshStandardMaterial
           color={colors.pot}
           roughness={0.9}
           shadowSide={THREE.FrontSide}
         />
-        {hovered && agent && <Outlines thickness={3} color={colors.heart} />}
+        {hovered && <Outlines thickness={3} color={colors.heart} />}
       </mesh>
       <mesh
         geometry={soilGeo}
