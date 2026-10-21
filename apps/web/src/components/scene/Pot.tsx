@@ -1,12 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import * as THREE from "three";
 
+import { useGreenhouseStore } from "@/lib/client/GreenhouseClientProvider";
+import { agentBySlot } from "@/lib/store/selectors";
+import { POT_SPOTS } from "./layout";
 import {
   Plant,
   PLANT_STATES,
   type PlantState,
+  type ArtColors,
   type SceneColors,
 } from "./Plant";
+
+import { STATUS_VISUALS } from "./statusVisuals";
+import type { AgentStatus } from "@gitspore/shared";
 
 //
 //
@@ -17,9 +24,7 @@ type Shapes = {
   soilGeo: THREE.BufferGeometry;
 };
 
-// pot: the profile (x = radius, y = height) that
-// LatheGeometry spins round, the soil disc at the pot's inner floor,
-// and the six spots on the table
+// pot: the profile (x = radius, y = height)
 const POT_PROFILE = [
   [0, 0],
   [0.47, 0],
@@ -37,41 +42,50 @@ const POT_PROFILE = [
 const SOIL_Y = 0.97;
 const SOIL_R = 0.61;
 
-const POS_POTS = [
-  [-2.15, -1.5],
-  [0, -1.5],
-  [2.15, -1.5],
-  [-2.15, 0.42],
-  [0, 0.42],
-  [2.15, 0.42],
-];
+// What a plant shows: its state, growth and whole-plant scale. The test
+// keys set all three for every pot
+type PlantLook = { state: PlantState; growth: number; wholeScale: boolean };
 
-// One pot at its spot: body, soil and the plant.
-// - Body: casts and receives shadows. shadowSide FrontSide draws its front
-//   faces into the shadow map; the default back faces, with the biases,
-//   left a lit sliver at every pot's foot
-// - Soil: a flat disc laid just above the pot's inner floor; it receives
-//   the plant's shadow
+// An agent's plant look, from its status
+function agentLook(status: AgentStatus): PlantLook {
+  const visual = STATUS_VISUALS[status];
+  return { state: visual.plant, growth: visual.growth, wholeScale: false };
+}
+
+// pot at slot spot:
+// body, soil if agent plant,
+// Each pot reads only its own agent from the store,
+// a change to one agent re-renders only that pot.
+// With ?testing=1 the test look wins,
+// and every pot shows a plant.
+//
+// - Body: casts and receives shadows.
+// shadowSide FrontSide draws its front
+// faces into the shadow map,
+// the default back faces, with the biases,
+// left a lit sliver at every pot's foot
+//
+// - Soil: flat disc laid just above the pot's inner floor
+// receives plant's shadow
+//
 // - The plant stands on the soil
 function Pot({
-  x,
-  z,
   slot,
-  state,
-  growth,
-  wholeScale,
+  test,
   colors,
+  art,
   bodyGeo,
   soilGeo,
 }: {
-  x: number;
-  z: number;
   slot: number;
-  state: PlantState;
-  growth: number;
-  wholeScale: boolean;
+  test: PlantLook | null;
   colors: SceneColors;
+  art: ArtColors;
 } & Shapes) {
+  const agent = useGreenhouseStore(agentBySlot(slot));
+  const [x, z] = POT_SPOTS[slot];
+  const look = test ?? (agent ? agentLook(agent.status) : null);
+
   return (
     <group position={[x, 0, z]}>
       <mesh geometry={bodyGeo} castShadow receiveShadow>
@@ -89,15 +103,18 @@ function Pot({
       >
         <meshStandardMaterial color={colors.soil} roughness={1} />
       </mesh>
-      <group position-y={SOIL_Y}>
-        <Plant
-          slot={slot}
-          state={state}
-          growth={growth}
-          colors={colors}
-          wholeScale={wholeScale}
-        />
-      </group>
+      {look && (
+        <group position-y={SOIL_Y}>
+          <Plant
+            slot={slot}
+            state={look.state}
+            growth={look.growth}
+            colors={colors}
+            art={art}
+            wholeScale={look.wholeScale}
+          />
+        </group>
+      )}
     </group>
   );
 }
@@ -113,9 +130,11 @@ const GROWTH_STEPS = [0.5, 0.75, 1, 0, 0.25];
 // on and off. Typing in a field or the terminal must not change the plants
 export function Pots({
   colors,
+  art,
   testKeys,
 }: {
   colors: SceneColors;
+  art: ArtColors;
   testKeys: boolean;
 }) {
   const bodyGeo = useMemo(() => new THREE.LatheGeometry(POT_PROFILE, 24), []);
@@ -147,23 +166,25 @@ export function Pots({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [testKeys]);
-  const state = PLANT_STATES[stateIndex];
-  const growth = GROWTH_STEPS[growthIndex];
+  const test = testKeys
+    ? {
+        state: PLANT_STATES[stateIndex],
+        growth: GROWTH_STEPS[growthIndex],
+        wholeScale,
+      }
+    : null;
 
   return (
     <>
-      {POS_POTS.map(([x, z], slot) => (
+      {POT_SPOTS.map((_, slot) => (
         <Pot
-          key={`${x},${z}`}
-          x={x}
-          z={z}
+          key={slot}
           slot={slot}
+          test={test}
           bodyGeo={bodyGeo}
           soilGeo={soilGeo}
-          state={state}
-          growth={growth}
-          wholeScale={wholeScale}
           colors={colors}
+          art={art}
         />
       ))}
     </>

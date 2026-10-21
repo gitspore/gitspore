@@ -10,6 +10,8 @@ import type { Mode, tokens } from "@/theme/tokens";
 
 // The scene colours of one mode; day and night have the same keys
 export type SceneColors = (typeof tokens)[Mode]["color"]["scene"];
+// The plant colours of one mode: bare stalk, bud, petals
+export type ArtColors = (typeof tokens)[Mode]["color"]["art"]["plant"];
 
 // The stem's radius, and the leaf shape's length and width;
 // each leaf scales the shape by its size
@@ -47,6 +49,18 @@ const SPROUT: Leaf[] = [
   { at: 0.3, turn: -Math.PI / 2, size: 0.75, from: 1 },
 ];
 
+// Done and merged: the sprout's leaves, the lower one always there,
+// the lowest one gone (size 0), so three leaves
+const FULL: Leaf[] = [
+  { at: 0.72, turn: 0, size: 1 },
+  { at: 0.8, turn: Math.PI, size: 1 },
+  { at: 0.45, turn: Math.PI / 2, size: 0.85 },
+  { at: 0.3, turn: -Math.PI / 2, size: 0 },
+];
+
+// Error: the sprout's places, every leaf hidden
+const BARE: Leaf[] = SPROUT.map((leaf) => ({ ...leaf, size: 0 }));
+
 // Waiting: four smaller leaves spread up the stem
 const SPREAD: Leaf[] = [0, 1, 2, 3].map((i) => ({
   at: 0.35 + i * 0.17,
@@ -59,40 +73,66 @@ export const PLANT_STATES = [
   "waiting1",
   "waiting2",
   "waiting3",
+  "error",
+  "done",
+  "merged",
 ] as const;
+
 export type PlantState = (typeof PLANT_STATES)[number];
 
 // The table: which look each state has; the colours come from the mode
-const LOOKS: Record<PlantState, (colors: SceneColors) => Look> = {
-  working: (colors) => ({
-    height: 0.95,
-    bend: 0,
-    stem: colors.stem,
-    leaf: colors.leaf,
-    leaves: SPROUT,
-  }),
-  waiting1: (colors) => ({
-    height: 0.72,
-    bend: 0.05,
-    stem: colors["stem-waiting"]["1"],
-    leaf: colors["leaf-waiting"]["1"],
-    leaves: SPREAD,
-  }),
-  waiting2: (colors) => ({
-    height: 0.72,
-    bend: 0.5,
-    stem: colors["stem-waiting"]["2"],
-    leaf: colors["leaf-waiting"]["2"],
-    leaves: SPREAD,
-  }),
-  waiting3: (colors) => ({
-    height: 0.72,
-    bend: 1,
-    stem: colors["stem-waiting"]["3"],
-    leaf: colors["leaf-waiting"]["3"],
-    leaves: SPREAD,
-  }),
-};
+const LOOKS: Record<PlantState, (colors: SceneColors, art: ArtColors) => Look> =
+  {
+    working: (colors) => ({
+      height: 0.95,
+      bend: 0,
+      stem: colors.stem,
+      leaf: colors.leaf,
+      leaves: SPROUT,
+    }),
+    waiting1: (colors) => ({
+      height: 0.72,
+      bend: 0.05,
+      stem: colors["stem-waiting"]["1"],
+      leaf: colors["leaf-waiting"]["1"],
+      leaves: SPREAD,
+    }),
+    waiting2: (colors) => ({
+      height: 0.72,
+      bend: 0.5,
+      stem: colors["stem-waiting"]["2"],
+      leaf: colors["leaf-waiting"]["2"],
+      leaves: SPREAD,
+    }),
+    waiting3: (colors) => ({
+      height: 0.72,
+      bend: 1,
+      stem: colors["stem-waiting"]["3"],
+      leaf: colors["leaf-waiting"]["3"],
+      leaves: SPREAD,
+    }),
+    error: (_, art) => ({
+      height: 0.8,
+      bend: 0.3,
+      stem: art.bare,
+      leaf: art.bare,
+      leaves: BARE,
+    }),
+    done: (colors) => ({
+      height: 0.95,
+      bend: 0,
+      stem: colors.stem,
+      leaf: colors.leaf,
+      leaves: FULL,
+    }),
+    merged: (colors) => ({
+      height: 0.95,
+      bend: 0,
+      stem: colors.stem,
+      leaf: colors.leaf,
+      leaves: FULL,
+    }),
+  };
 
 // Growth 0..1 on top of the table: 0.5 is the table as it is,
 // less is a younger, smaller plant, more is taller with bigger leaves.
@@ -174,19 +214,24 @@ export function Plant({
   growth,
   wholeScale,
   colors,
+  art,
 }: {
   slot: number;
   state: PlantState;
   growth: number;
   wholeScale: boolean;
   colors: SceneColors;
+  art: ArtColors;
 }) {
-  // The target look. Each slot leans its own way (dir). The state's entry
-  // in the table, filled with this mode's colours, then grown. On top, the
-  // whole plant scaled by growth, when it's on
+  // The target look.
+  // Each slot leans its own way (dir).
+  // The state's entry in the table,
+  // filled with this mode's colours,
+  // then grown.
+  // On top, the plant scaled by growth, on
   const dir = slot * 1.7 + 0.6;
   const makeLook = LOOKS[state];
-  const tableLook = makeLook(colors);
+  const tableLook = makeLook(colors, art);
   const look = grow(tableLook, growth);
   const scaleGoal = wholeScale ? 0.85 + 0.3 * growth : 1;
 

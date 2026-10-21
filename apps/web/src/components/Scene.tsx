@@ -126,7 +126,11 @@ export function Scene({
         intensity={t.scene.light.fill}
       />
 
-      <Pots colors={t.color.scene} testKeys={testingOn} />
+      <Pots
+        colors={t.color.scene}
+        art={t.color.art.plant}
+        testKeys={testingOn}
+      />
       <Table wood={t.color.wood} floor={t.color.scene.floor} />
 
       <CameraRig sceneArea={sceneArea} orbit={orbitOn} />
