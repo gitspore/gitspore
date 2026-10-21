@@ -1,12 +1,12 @@
 import { AgentId, AgentStatus } from "@gitspore/shared";
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { StateStore } from "../state/state.store";
 import { GitHubService } from "../github/github.service";
 import { WorktreeService } from "../worktree/worktree.service";
 import { TerminalService } from "../terminal/terminal.service";
 import { ClaudeLocator } from "../terminal/claude-locator";
 import { RepoConfig } from "@/config/repo-config";
-import { checkDispatch } from "./agent-request";
+import { checkDispatch, checkStop } from "./agent-request";
 import { randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
@@ -16,6 +16,7 @@ import { TerminalError } from "../terminal/terminal-error";
 import { AgentError, toServerError } from "./agent-error";
 
 const TASK_DIR = ".gitspore";
+const STOP_TIMEOUT_MS = 10_000;
 
 type Running = {
   worktreePath: string;
@@ -32,9 +33,10 @@ type Progress = {
 };
 
 @Injectable()
-export class AgentService {
+export class AgentService implements OnModuleInit {
   private readonly logger = new Logger(AgentService.name);
   private readonly running = new Map<AgentId, Running>();
+  private readonly exitWaiters = new Map<AgentId, () => void>();
 
   constructor(
     private readonly store: StateStore,
@@ -44,6 +46,12 @@ export class AgentService {
     private readonly locator: ClaudeLocator,
     private readonly config: RepoConfig,
   ) {}
+
+  onModuleInit(): void {
+    this.terminals.onExited((agentId, exitCode) => {
+      void this.handleExit(agentId, exitCode);
+    });
+  }
 
   async dispatch(payload: unknown) {
     let slotIndex: number;
@@ -121,6 +129,81 @@ export class AgentService {
     }
   }
 
+  /**
+   * `agent:stop`. Stops Claude Code and frees the slot, optionally removing
+   * the worktree (never the branch). Throws an AgentError; the gateway sends
+   * it as an `error` event.
+   */
+  async stop(payload: unknown): Promise<void> {
+    const { agentId, removeWorktree } = checkStop(payload);
+    const agent = this.store.snapshot().agents.find((a) => a.id === agentId);
+    if (!agent) {
+      throw new AgentError("agent_not_found", `No agent ${agentId}`, {
+        agentId,
+      });
+    }
+    if (agent.status === "starting") {
+      throw new AgentError(
+        "agent_starting",
+        `Agent ${agentId} is still starting`,
+        { agentId },
+      );
+    }
+    const entry = this.running.get(agentId);
+    if (!entry) {
+      throw new AgentError("agent_not_found", `No agent ${agentId}`, {
+        agentId,
+      });
+    }
+    if (entry.stopping) return;
+
+    entry.stopping = true;
+    if (entry.processRunning) await this.killAndWait(agentId);
+
+    if (removeWorktree) {
+      await this.removeWorktree(agentId, entry);
+    }
+    this.running.delete(agentId);
+    this.store.apply([{ type: "agent:remove", agentId }]);
+  }
+
+  private killAndWait(agentId: AgentId): Promise<void> {
+    return new Promise((resolve) => {
+      const done = () => {
+        clearTimeout(timer);
+        this.exitWaiters.delete(agentId);
+        resolve();
+      };
+      const timer = setTimeout(done, STOP_TIMEOUT_MS);
+      // Before kill(): the exit may come at once.
+      this.exitWaiters.set(agentId, done);
+      try {
+        this.terminals.kill(agentId);
+      } catch {
+        // The terminal is already gone: nothing to wait for.
+        done();
+      }
+    });
+  }
+
+  private async removeWorktree(agentId: AgentId, entry: Running) {
+    try {
+      if (!(await this.worktrees.isClean(entry.worktreePath))) {
+        throw new AgentError(
+          "worktree_dirty",
+          `${entry.worktreePath} has uncommitted changes, so it was not removed. ` +
+            "Stop the agent again without removing the worktree.",
+          { agentId },
+        );
+      }
+      await this.worktrees.remove({ path: entry.worktreePath });
+    } catch (error) {
+      entry.stopping = false;
+      this.setStatus(agentId, "error");
+      throw error;
+    }
+  }
+
   private spawnClaude(
     agentId: AgentId,
     cwd: string,
@@ -145,6 +228,38 @@ export class AgentService {
         "claude_not_found",
         `Claude Code did not start (${claude}): ${message}`,
       );
+    }
+  }
+
+  // Claude Code ended. Status from the exit code, and on a clean exit from
+  // whether it opened a pull request. GS-67 replaces this with the status
+  // the hooks report.
+  private async handleExit(agentId: AgentId, exitCode: number): Promise<void> {
+    const entry = this.running.get(agentId);
+    if (!entry) return;
+    entry.processRunning = false;
+
+    this.exitWaiters.get(agentId)?.();
+    if (entry.stopping) return;
+
+    if (exitCode !== 0) {
+      this.setStatus(agentId, "error");
+      return;
+    }
+    this.setStatus(agentId, await this.statusAfterCleanExit(entry.branch));
+  }
+
+  // Asks GitHub directly: a pull request Claude opened seconds ago is not in
+  // the last poll yet.
+  private async statusAfterCleanExit(branch: string): Promise<AgentStatus> {
+    try {
+      const pullRequest = await this.github.findPullRequest(branch);
+      // A merged one stays needs_input until merge handling (GS-48).
+      return pullRequest?.state === "open" ? "done" : "needs_input";
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`No pull request check for ${branch}: ${message}`);
+      return "needs_input";
     }
   }
 
