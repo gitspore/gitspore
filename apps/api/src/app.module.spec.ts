@@ -17,6 +17,7 @@ import { FakePty } from "../test/fake-pty";
 import { SessionAuth } from "./modules/gateway/session-auth.service";
 import { START_OVERVIEW } from "./modules/overview/overview-agent.service";
 import { SPAWN_PTY } from "./modules/terminal/terminal.service";
+import { LOCATOR_DEPS } from "./modules/terminal/claude-locator";
 
 //
 //
@@ -66,6 +67,13 @@ describe("AppModule", () => {
       .useValue(true)
       .overrideProvider(SPAWN_PTY)
       .useValue(() => new FakePty())
+      .overrideProvider(LOCATOR_DEPS)
+      .useValue({
+        env: { GITSPORE_CLAUDE_BIN: "/fake/claude" },
+        platform: process.platform,
+        exists: async () => true,
+        checkVersion: async () => true,
+      })
       .compile();
     app = moduleRef.createNestApplication();
     await app.listen(0, "127.0.0.1");

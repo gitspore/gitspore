@@ -43,9 +43,9 @@ type Handlers = {
  *   moment of connect(): an agent that waited 20 minutes before the anchor has
  *   waited 20 minutes when the UI connects.
  * - Commands are answered locally, see `handlers`: `agent:dispatch`,
- *   `terminal:open`, `terminal:input`, `terminal:close`, `state:request` and
- *   `issues:refresh`. Every other command (`agent:stop`, `terminal:resize`)
- *   does nothing.
+ *   `agent:stop`, `terminal:open`, `terminal:input`, `terminal:close`,
+ *   `state:request` and `issues:refresh`. Every other command
+ *   (`terminal:resize`) does nothing.
  * - Versions follow the contract: a patch is numbered after the one before.
  *   A command like `agent:dispatch` adds patches of its own, and the
  *   scenario's later patches are renumbered behind them, so nothing arrives
@@ -122,6 +122,21 @@ export class MockClient implements GreenhouseClient {
           },
         ]);
       }, WORKING_AFTER_MS);
+    },
+    // Removes the agent with an `agent:remove` patch. The worktree is not
+    // checked, so a stop is never refused. An unknown agent arrives as an
+    // `error` event, as with the real daemon. A later scenario patch for the
+    // same agent brings it back: the scenario does not know it was stopped.
+    "agent:stop": ({ agentId }) => {
+      if (!this.state.agents.some((a) => a.id === agentId)) {
+        this.deliver("error", {
+          code: "agent_not_found",
+          message: `No agent ${agentId}`,
+          context: { agentId },
+        });
+        return;
+      }
+      this.sendPatch([{ type: "agent:remove", agentId }]);
     },
     // Acks with a session id for a known agent (from the scenario or from a
     // dispatch), then prints GREETING. An unknown agent gets an error ack.

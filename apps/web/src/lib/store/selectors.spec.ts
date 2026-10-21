@@ -5,6 +5,7 @@ import { createGreenhouseStore } from "./greenhouseStore";
 import {
   agentBySlot,
   freeSlots,
+  issueTitle,
   needsInputCount,
   openIssuesWithoutAgent,
   selectAgents,
@@ -48,6 +49,15 @@ describe("selectors", () => {
       expect(freeSlots(state)).toEqual([0, 1, 2, 3, 4, 5]);
       expect(openIssuesWithoutAgent(state)).toEqual([]);
       expect(needsInputCount(state)).toBe(0);
+    });
+  });
+
+  describe("issueTitle", () => {
+    it("finds the title, or gives an empty one for an unknown issue", () => {
+      const state = storeWith({ issues: [issue(3)] });
+
+      expect(issueTitle(3)(state)).toBe("Issue 3");
+      expect(issueTitle(4)(state)).toBe("");
     });
   });
 

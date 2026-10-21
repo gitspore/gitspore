@@ -2,15 +2,16 @@
 
 Gives every agent a real terminal: a shell in a PTY (pseudo-terminal) that runs the agent's command in its worktree. Browser tabs attach to it, see its output and type into it. Closing a tab never stops the agent. The module only runs terminals and streams them. Starting Claude Code with the issue prompt is #16, the `terminal:*` Socket.io events are handled in `TerminalGateway` (`apps/api/src/modules/gateway/terminal.gateway.ts`), and the browser terminal is #11.
 
-| File                  | Holds                                                                                              |
-| --------------------- | -------------------------------------------------------------------------------------------------- |
-| `terminal.service.ts` | `TerminalService`: one terminal per agent, sessions per tab, ownership, limits, exit               |
-| `agent-terminal.ts`   | `AgentTerminal`: one agent's PTY, scrollback, batcher and attached tabs; `startInShell`            |
-| `ring-buffer.ts`      | `RingBuffer`: the last 256 KB of output, never cut inside a UTF-8 character                        |
-| `output-batcher.ts`   | `OutputBatcher`: collects output and sends it every 16 ms or at 16 KB                              |
-| `terminal-error.ts`   | `TerminalError` with a `code` (see [Errors](#errors))                                              |
-| `terminal.module.ts`  | Provides and exports `TerminalService`; injects node-pty's `spawn` as `SPAWN_PTY`                  |
-| `terminal.manual.ts`  | A manual test: your own terminal plays a browser tab (see [Trying it by hand](#trying-it-by-hand)) |
+| File                  | Holds                                                                                                    |
+| --------------------- | -------------------------------------------------------------------------------------------------------- |
+| `terminal.service.ts` | `TerminalService`: one terminal per agent, sessions per tab, ownership, limits, exit                     |
+| `agent-terminal.ts`   | `AgentTerminal`: one agent's PTY, scrollback, batcher and attached tabs; `startInShell`, `startDirectly` |
+| `claude-locator.ts`   | `ClaudeLocator`: finds Claude Code once at startup and caches the path                                   |
+| `ring-buffer.ts`      | `RingBuffer`: the last 256 KB of output, never cut inside a UTF-8 character                              |
+| `output-batcher.ts`   | `OutputBatcher`: collects output and sends it every 16 ms or at 16 KB                                    |
+| `terminal-error.ts`   | `TerminalError` with a `code` (see [Errors](#errors))                                                    |
+| `terminal.module.ts`  | Provides and exports `TerminalService`; injects node-pty's `spawn` as `SPAWN_PTY`                        |
+| `terminal.manual.ts`  | A manual test: your own terminal plays a browser tab (see [Trying it by hand](#trying-it-by-hand))       |
 
 ## Terminal and session
 
@@ -26,16 +27,17 @@ other browser tab            ─┼─ Socket.io ─ gateway                    
 ## API
 
 ```ts
-spawn({ agentId, cwd, command, args }): void
+spawn({ agentId, cwd, command, args, mode? }): void
 attach(agentId, { ownerId, onData, onExit }): { sessionId, scrollback }
 write(sessionId, ownerId, data): void
+kill(agentId): void
 resize(sessionId, ownerId, cols, rows): void
 detach(sessionId, ownerId): void
 detachOwner(ownerId): void
 onExited((agentId, exitCode) => void): void
 ```
 
-**`spawn`** starts the user's shell (`$SHELL`, `powershell.exe` on Windows) in `cwd` with `TERM=xterm-256color` and `COLORTERM=truecolor`, then types `command args…` and Enter into it. It refuses a second terminal for the same agent, and more than `MAX_SLOTS + 1` = 7 terminals (six slot agents plus the overview agent). Both checks run before the shell starts.
+**`spawn`** starts the user's shell (`$SHELL`, `powershell.exe` on Windows) in `cwd` with `TERM=xterm-256color` and `COLORTERM=truecolor`, then types `command args…` and Enter into it. With `mode: "exec"` it starts `command` directly with `args` as an array, without a shell (see [Shell or exec](#shell-or-exec)). It refuses a second terminal for the same agent, and more than `MAX_SLOTS + 1` = 7 terminals (six slot agents plus the overview agent). Both checks run before the shell starts.
 
 **`attach`** opens a session for a tab and returns its `sessionId` and the scrollback (the last 256 KB, `""` if there was no output yet). The gateway passes `socket.id` as `ownerId` and callbacks that emit `terminal:data` and `terminal:exit`. `attach` doesn't send the scrollback itself: the gateway acks `{ sessionId }` first and then emits the scrollback as the first `terminal:data`, so the tab knows its session id before any output arrives. `onData` carries only live output. After an attach the terminal grows by one column for 50 ms. Full-screen programs like Claude Code only redraw when their size changes, so the new tab sees a complete screen instead of half a scrollback.
 
@@ -43,7 +45,20 @@ onExited((agentId, exitCode) => void): void
 
 **`detachOwner`** detaches every session of one owner. A closed tab sends no `terminal:close`, so **the gateway must call it when a socket disconnects**. Otherwise the terminal keeps sending output to a socket that no longer exists.
 
-**`onExited`** is for #16: it hears when an agent's shell ended, with the exit code.
+**`kill`** ends an agent's process with `pty.kill()`. A kill on a process that has just exited is ignored. Process trees stay in #53.
+
+**`onExited`** is for #16: it hears when an agent's shell (or, in exec mode, its program) ended, with the exit code.
+
+## Shell or exec
+
+|              | Shell mode (default)                                        | Exec mode (`mode: "exec"`)                                     |
+| ------------ | ----------------------------------------------------------- | -------------------------------------------------------------- |
+| Used by      | the overview agent                                          | issue agents (#66)                                             |
+| After Claude | the user is back at the shell prompt; the terminal lives on | the terminal ends; the exit code is Claude's                   |
+| Arguments    | typed into the shell, each must match `SAFE_ARGUMENT`       | passed as an array, any argument (`.cmd`: see [Rules](#rules)) |
+
+- **The overview agent** runs in a shell so the user can run commands in the repo root and start `claude` again after it exits. It is checked through the locator and started by file name (`claude.exe`, `claude.cmd`), since `SAFE_ARGUMENT` refuses a Windows path; the file name also keeps PowerShell away from a blocked `claude.ps1`.
+- **Issue agents** run without a shell: until hooks report status (GS-67), the end of the process is the only sign that Claude is done, and the prompt arrives as one argument without shell quoting.
 
 ## Output
 
@@ -62,7 +77,7 @@ A PTY has one size, and the program in it draws its screen for that size. So **a
 
 ## When the shell exits
 
-The command is typed into a shell, so when Claude Code ends, the user is back at the shell prompt and the terminal lives on. Only when the shell itself ends (`exit`, Ctrl+D, a crash) does the terminal end:
+In shell mode the command is typed into a shell, so when Claude Code ends, the user is back at the shell prompt and the terminal lives on. Only when the shell itself ends (`exit`, Ctrl+D, a crash) does the terminal end. In exec mode the terminal ends with the program. Either way:
 
 1. Every attached tab gets the last output, then `onExit(exitCode)`.
 2. The service forgets the terminal and all its sessions. The slot is free, and `spawn` works again for that agent.
@@ -100,15 +115,16 @@ The last three are mistakes on the daemon's side (#16), not something a tab can 
 
 ## Rules
 
-- **No quoting.** `command` and `args` are typed into the shell as they are, joined by spaces. Every part must match `/^[\w./:=+-]+$/`: no spaces, quotes, `$`, `;`, backticks, `\` or `@` (PowerShell splatting), and not empty. Anything else is `unsafe_argument`. For #16: write the issue prompt to a file in the worktree and pass its relative path.
-- **Why a shell, not the command directly.** An interactive shell reads `.bashrc` (so `claude` installed through nvm is on the PATH), Ctrl+C stops the command but not the terminal, and `claude.cmd` works on Windows. All of this is in `startInShell()` in `agent-terminal.ts`. Starting the command directly later would only change that function.
+- **Shell mode: no quoting.** `command` and `args` are typed into the shell as they are, joined by spaces. Every part must match `/^[\w./:=+-]+$/`: no spaces, quotes, `$`, `;`, backticks, `\` or `@` (PowerShell splatting), and not empty. Anything else is `unsafe_argument`.
+- **Exec mode on Windows: `claude.cmd` goes through `cmd.exe /d /s /c`.** A `.cmd` can't be started directly. Any of `& | < > ^ % "` or a line break in the path or an argument is `unsafe_argument`. `claude.exe` and Unix take any argument. Issue text never goes on the command line; it is written to `.gitspore/task.md`.
+- **What a shell gives.** An interactive shell reads `.bashrc` (so `claude` installed through nvm is on the PATH), Ctrl+C stops the command but not the terminal, and `claude.cmd` works on Windows. Exec mode has none of this, so the locator resolves the full path first.
 - **After the shell exits, `write` and `resize` are ignored.** node-pty throws on a resize after exit, and inside the redraw timer that would crash the daemon. On Windows node-pty already refuses a resize before `onExit` fires, so `AgentTerminal` also ignores a resize that throws.
 - **Windows: the PTY is released after the shell exits.** ConPTY keeps its pipes open until `kill()` is called, so `AgentTerminal` calls it after every exit on Windows (`docs/decisions.md`, "Offen für GS-03"). Not on Unix, where `kill()` would signal a process id that may already belong to someone else.
 - **`TerminalService` gets node-pty's `spawn` through the token `SPAWN_PTY`.** `SpawnPty` is a function type, and Nest can't inject by type. Tests call `new TerminalService(fakeSpawn)` without Nest and never load the native module.
 
 ## Not handled here
 
-- Stopping an agent: `kill(agentId)` and killing the whole process tree (Claude Code starts its own child processes, such as MCP servers). Ending the daemon cleanly with all terminals. PowerShell's UTF-8 output. All in #53.
+- Killing an agent's whole process tree (Claude Code starts its own child processes, such as MCP servers). Ending the daemon cleanly with all terminals. PowerShell's UTF-8 output. All in #53.
 - Starting Claude Code with the issue prompt, and agent status: #16.
 - The `terminal:*` events: `TerminalGateway` in `apps/api/src/modules/gateway/terminal.gateway.ts`. It acks before it sends the scrollback, maps `TerminalError` codes as in [Errors](#errors) (and logs anything that isn't a `TerminalError`) and calls `detachOwner` on disconnect.
 - The browser terminal and fitting it to the window: #11.

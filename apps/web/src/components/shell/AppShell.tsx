@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import type { Agent } from "@gitspore/shared";
+import { OVERVIEW_AGENT_ID, type Agent } from "@gitspore/shared";
+
+import { useShallow } from "zustand/react/shallow";
 import { useGreenhouseStore } from "@/lib/client/GreenhouseClientProvider";
 import { mainGrid, shellGrid } from "@/lib/layout";
-import { mockAgents, mockContext, mockIssues, mockUsage } from "@/lib/mock";
+// Stays mock until the daemon sends usage (#42)
+import { mockContext, mockUsage } from "@/lib/mock";
+import { issueTitle, needsInputCount } from "@/lib/store/selectors";
 import { useSceneEnabled } from "@/lib/scene";
 import { Scene } from "../Scene";
 import { Button } from "../ui/button";
@@ -21,29 +24,26 @@ export function AppShell() {
   const layout = useGreenhouseStore((s) => s.layout);
   const setSidePanel = useGreenhouseStore((s) => s.setSidePanel);
   const setMode = useGreenhouseStore((s) => s.setMode);
-  const openWindow = useGreenhouseStore((s) => s.openWindow);
   const toggleMinimised = useGreenhouseStore((s) => s.toggleMinimised);
-
-  // Shared by the top bar and the side panel. Moves to the store with #8.
-  const [agents, setAgents] = useState<Agent[]>(mockAgents);
-  const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
+  const openWindow = useGreenhouseStore((s) => s.openWindow);
+  // Slot 0 toggles: a visible overview window is minimised, otherwise opened
+  const overviewVisible = layout.windows.some(
+    (w) => w.agentId === OVERVIEW_AGENT_ID && !w.minimised,
+  );
 
   // No scene with ?scene=off or without WebGL; the interface works the same (#18)
   const showScene = useSceneEnabled();
 
   // The agents of the visible windows; a window whose agent is gone is skipped
-  const visibleWindows = layout.windows
-    .filter((w) => !w.minimised)
-    .map((w) => agents.find((a) => a.id === w.agentId))
-    .filter((agent) => agent !== undefined);
-  const waitingCount = agents.filter((a) => a.status === "needs_input").length;
-
-  // Open: this agent's window alone, the others minimised.
-  // Beside: this window next to the ones already visible.
-  function openAgent(agent: Agent, beside: boolean) {
-    setSelectedSlot(agent.slotIndex);
-    openWindow(agent.id, { alone: !beside });
-  }
+  const visibleWindows = useGreenhouseStore(
+    useShallow((s) =>
+      s.layout.windows
+        .filter((w) => !w.minimised)
+        .map((w) => s.server?.agents.find((a) => a.id === w.agentId))
+        .filter((agent) => agent !== undefined),
+    ),
+  );
+  const waitingCount = useGreenhouseStore(needsInputCount);
 
   return (
     <>
@@ -58,14 +58,7 @@ export function AppShell() {
       >
         {/* Header */}
         <header className="pointer-events-auto rounded-xl bg-panel text-ink [grid-area:topbar]">
-          <TopBar
-            agents={agents}
-            issues={mockIssues}
-            selectedSlot={selectedSlot}
-            connection="online"
-            usage={mockUsage}
-            mockScenario="all-states"
-          >
+          <TopBar usage={mockUsage}>
             {/* Debug control, remove once the hotbar exists */}
             <Button
               onClick={() =>
@@ -102,14 +95,9 @@ export function AppShell() {
             // Side by side for now; tiling (1, 2, 2+1, 2×2) comes with WindowGrid
             <div className="pointer-events-auto flex gap-2 [grid-area:windows]">
               {visibleWindows.map((agent) => (
-                <Window
+                <AgentWindow
                   key={agent.id}
                   agent={agent}
-                  issueTitle={
-                    mockIssues.find((i) => i.number === agent.issueNumber)
-                      ?.title ?? ""
-                  }
-                  context={mockContext[agent.id]}
                   onMinimise={() => toggleMinimised(agent.id)}
                 />
               ))}
@@ -126,9 +114,20 @@ export function AppShell() {
               </div>
             ))}
             <div className="h-10 w-0.5 bg-line" />
-            <div className="hotbar-slot grid place-items-center rounded-xl bg-panel-2 font-mono">
+            {/* Slot 0 is the overview agent (ADR 0004, 0005) */}
+            <button
+              type="button"
+              aria-label="Open the overview agent"
+              onClick={() =>
+                overviewVisible
+                  ? toggleMinimised(OVERVIEW_AGENT_ID)
+                  : openWindow(OVERVIEW_AGENT_ID, { alone: true })
+              }
+
+              className="hotbar-slot grid place-items-center rounded-xl bg-panel-2 font-mono"
+            >
               0
-            </div>
+            </button>
           </div>
         </section>
 
@@ -139,10 +138,6 @@ export function AppShell() {
               tab={layout.sidePanel}
               onTabChange={setSidePanel}
               onClose={() => setSidePanel(null)}
-              agents={agents}
-              setAgents={setAgents}
-              selectedSlot={selectedSlot}
-              setSelectedSlot={setSelectedSlot}
             />
           </aside>
         )}
@@ -150,14 +145,29 @@ export function AppShell() {
         {/* Notifications */}
         <div className="absolute right-layout-edge bottom-[calc(var(--space-layout-edge)+12px)] flex w-panel-width justify-center">
           <div className="pointer-events-auto">
-            <NotificationStack
-              agents={agents}
-              onOpen={(agent) => openAgent(agent, false)}
-              onOpenBeside={(agent) => openAgent(agent, true)}
-            />
+            <NotificationStack />
           </div>
         </div>
       </div>
     </>
+  );
+}
+
+// A window with its issue title from the store
+function AgentWindow({
+  agent,
+  onMinimise,
+}: {
+  agent: Agent;
+  onMinimise: () => void;
+}) {
+  const title = useGreenhouseStore(issueTitle(agent.issueNumber));
+  return (
+    <Window
+      agent={agent}
+      issueTitle={title}
+      context={mockContext[agent.id]}
+      onMinimise={onMinimise}
+    />
   );
 }

@@ -1,7 +1,12 @@
 import type { AgentId, SessionId } from "@gitspore/shared";
 import { Inject, Injectable } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
-import { AgentTerminal, type SpawnPty, type Viewer } from "./agent-terminal";
+import {
+  AgentTerminal,
+  AgentTerminalOptions,
+  type SpawnPty,
+  type Viewer,
+} from "./agent-terminal";
 import { TerminalError } from "./terminal-error";
 import { MAX_SLOTS } from "@gitspore/shared";
 
@@ -21,6 +26,7 @@ export type SpawnRequest = {
   cwd: string;
   command: string;
   args: string[];
+  mode?: AgentTerminalOptions["mode"];
 };
 
 // ownerId is the socket that opens the session.
@@ -74,6 +80,10 @@ export class TerminalService {
 
   write(sessionId: SessionId, ownerId: string, data: string): void {
     this.terminalOfSession(sessionId, ownerId).write(data);
+  }
+
+  kill(agentId: AgentId): void {
+    this.terminalOfAgent(agentId).kill();
   }
 
   resize(

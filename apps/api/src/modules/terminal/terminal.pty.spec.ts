@@ -1,5 +1,9 @@
 import { spawn, type IPty } from "node-pty";
 import { TerminalService } from "./terminal.service";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { createFakeClaude } from "../../../test/fake-claude";
 
 // Same as pty.smoke.spec.ts: strips ANSI CSI/OSC sequences.
 // eslint-disable-next-line no-control-regex
@@ -226,4 +230,68 @@ describe("TerminalService with a real PTY", () => {
     await expect(browserTab.exited).resolves.toBe(0);
     expect(() => attachTab("agent-1")).toThrow("No terminal for agent-1");
   }, 30_000);
+  describe("exec mode with fake claude", () => {
+    let dir: string;
+    let fake: string;
+
+    beforeEach(() => {
+      dir = mkdtempSync(join(tmpdir(), "gitspore pty claude"));
+      fake = createFakeClaude(dir);
+    });
+
+    afterEach(() => {
+      for (const key of Object.keys(process.env)) {
+        if (key.startsWith("FAKE_CLAUDE_")) delete process.env[key];
+      }
+      rmSync(dir, { recursive: true, force: true });
+    });
+
+    function spawnFake(args: string[] = []) {
+      service.spawn({
+        agentId: "agent-1",
+        cwd: process.cwd(),
+        mode: "exec",
+        command: fake,
+        args,
+      });
+      return attachTab("agent-1");
+    }
+
+    it("reports the exit code of the program and forgets its terminal", async () => {
+      process.env.FAKE_CLAUDE_EXIT_CODE = "3";
+      process.env.FAKE_CLAUDE_OUTPUT = "hello-from-fake-claude";
+
+      const tab = spawnFake();
+
+      await tab.waitForOutput("hello-from-fake-claude");
+      await expect(tab.exited).resolves.toBe(3);
+      expect(() => attachTab("agent-1")).toThrow("No terminal for agent-1");
+    }, 30_000);
+
+    it("passes the prompt as one argument", async () => {
+      const argsFile = join(dir, "args.json");
+      process.env.FAKE_CLAUDE_ARGS_FILE = argsFile;
+      const args = [
+        "--session-id",
+        "abc",
+        "Read .gitspore/task.md and solve it. Don't merge.",
+      ];
+
+      const tab = spawnFake(args);
+      await tab.exited;
+
+      expect(JSON.parse(readFileSync(argsFile, "utf8"))).toEqual(args);
+    }, 30_000);
+
+    it("kills a program that is still running", async () => {
+      process.env.FAKE_CLAUDE_STAY = "1";
+      process.env.FAKE_CLAUDE_OUTPUT = "still-running";
+      const tab = spawnFake();
+      await tab.waitForOutput("still-running");
+
+      service.kill("agent-1");
+
+      await expect(tab.exited).resolves.toEqual(expect.any(Number));
+    }, 30_000);
+  });
 });

@@ -4,7 +4,9 @@ export type WorktreeErrorCode =
   | "outside_root"
   | "dirty"
   | "unmerged"
-  | "not_found";
+  | "not_found"
+  | "push_failed"
+  | "not_ours";
 
 export class WorktreeError extends Error {
   constructor(

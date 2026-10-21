@@ -168,6 +168,18 @@ describe("TerminalService", () => {
     expect(ptys).toHaveLength(2);
   });
 
+  it("kills an agent's process", () => {
+    spawn("agent-1");
+
+    service.kill("agent-1");
+
+    expect(ptys[0].kill).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses to kill an unknown agent", () => {
+    expect(errorCode(() => service.kill("agent-9"))).toBe("agent_not_found");
+  });
+
   it("tells exit listeners which agent's shell exited, and its code", () => {
     const listener = jest.fn();
     service.onExited(listener);

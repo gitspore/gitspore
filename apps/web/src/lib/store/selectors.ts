@@ -36,6 +36,16 @@ export function freeSlots(state: GreenhouseStoreState): number[] {
   );
 }
 
+/**
+ * The title of an issue, "" if it is not in the list (yet) or for no issue
+ * (null, the overview agent).
+ */
+export function issueTitle(issueNumber: number | null) {
+  return (state: GreenhouseStoreState): string =>
+    selectIssues(state).find((issue) => issue.number === issueNumber)?.title ??
+    "";
+}
+
 /** How many agents wait for the user. */
 export function needsInputCount(state: GreenhouseStoreState): number {
   return selectAgents(state).filter((agent) => agent.status === "needs_input")

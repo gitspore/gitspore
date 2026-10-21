@@ -1,23 +1,13 @@
-import { useEffect, useState } from "react";
+import { useNow } from "./client/GreenhouseClientProvider";
 
-// Seconds since `since`, counting up every second. null until the first tick,
-// so the server and the browser render the same markup.
+// Seconds since `since` on the client's clock (useNow), so the mock plays it
+// at speed and holds it while paused. null while inactive and before the
+// first tick, so the server and the browser render the same markup.
 export function useSecondsSince(since: string, active: boolean) {
-  const [seconds, setSeconds] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (!active) return;
-    const tick = () =>
-      setSeconds(Math.floor((Date.now() - Date.parse(since)) / 1000));
-    const first = setTimeout(tick, 0);
-    const timer = setInterval(tick, 1000);
-    return () => {
-      clearTimeout(first);
-      clearInterval(timer);
-    };
-  }, [since, active]);
-
-  return active ? seconds : null;
+  const now = useNow();
+  if (!active || now === 0) return null;
+  // A clock that is a little behind the daemon must not give negative times.
+  return Math.max(0, Math.floor((now - Date.parse(since)) / 1000));
 }
 
 // 72 -> "1:12"

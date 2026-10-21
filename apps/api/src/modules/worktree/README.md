@@ -1,12 +1,12 @@
 # Worktree module
 
-Gives every agent its own git worktree: a separate folder of the repo on its own `spore/…` branch, so up to six agents work in parallel without touching each other's files or the user's checkout. The module only creates, lists and removes worktrees. Starting Claude Code in one is the agent ticket (#16).
+Gives every agent its own git worktree: a separate folder of the repo on its own `spore/…` branch, so up to six agents work in parallel without touching each other's files or the user's checkout. The module creates, lists and removes worktrees, and puts their branches on origin. Starting Claude Code in one is the agent ticket (GS-66).
 
-| File                | Holds                                                              |
-| ------------------- | ------------------------------------------------------------------ |
-| `worktree.service`  | `WorktreeService`: `create`, `list`, `remove`, cleanup at startup  |
-| `worktree-error.ts` | `WorktreeError` with a `code` (see [Errors](#errors))              |
-| `worktree.module`   | Provides and exports `WorktreeService`; imports `RepoConfigModule` |
+| File                | Holds                                                                                                                                    |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `worktree.service`  | `WorktreeService`: `create`, `list`, `remove`, `fetch`, `publish`, `deleteRemoteBranch`, `isClean`, `ensureExcluded`, cleanup at startup |
+| `worktree-error.ts` | `WorktreeError` with a `code` (see [Errors](#errors))                                                                                    |
+| `worktree.module`   | Provides and exports `WorktreeService`; imports `RepoConfigModule`                                                                       |
 
 The branch name comes from `branchForIssue(issueNumber, title)` in `packages/shared/src/branch.ts`, next to `issueNumberFromBranch`, which reads the number back.
 
@@ -23,15 +23,31 @@ The branch name comes from `branchForIssue(issueNumber, title)` in `packages/sha
 - Branch: `BRANCH_PREFIX` + issue number + slug of the title (lowercase ASCII, words joined by `-`, at most 40 characters). A title with nothing usable gives `spore/42`.
 - Folder: the branch name without `BRANCH_PREFIX`, so the two can't disagree.
 - `my-repo` is the folder name of the checkout the daemon runs in. Started inside a linked worktree, the daemon gets its own subfolder.
-- New branches start at the local base branch (`GITSPORE_BASE_BRANCH`, default `main`), never at whatever the main folder has checked out. No fetch.
+- New branches start at `startPoint` when it is given (the dispatch passes `origin/<base>` after `fetch()`), otherwise at the local base branch (`GITSPORE_BASE_BRANCH`, default `main`). Never at whatever the main folder has checked out.
 
 ## API
 
 ```ts
-create({ issueNumber, issueTitle }): Promise<{ branch, path }>
+create({ issueNumber, issueTitle, startPoint? }): Promise<{ branch, path }>
 list(): Promise<{ branch, path }[]>
 remove({ path, force?, deleteBranch? }): Promise<void>
+
+fetch(): Promise<void>
+publish(branch): Promise<void>
+deleteRemoteBranch(branch): Promise<void>
+isClean(path): Promise<boolean>
+ensureExcluded(pattern): Promise<void>
 ```
+
+**`create()`** refuses with `branch_exists` when the branch exists locally. With `startPoint` it also asks origin (`ls-remote --heads origin refs/heads/<branch>`): `fetch()` only updates the base branch, so `origin/<branch>` may be missing or stale. A missing branch is empty output, not an error; an unreachable origin throws and never counts as "free". Without `startPoint`, `create()` does not talk to origin.
+
+**`fetch()`** runs `git fetch origin <base>`. It updates `origin/<base>` and leaves every local branch, the user's checkout and the local base branch alone. The daemon never pulls.
+
+**`publish(branch)`** runs `git push -u origin <branch>`. A failed push (no login, no rights, offline) is `push_failed`. **`deleteRemoteBranch(branch)`** runs `git push origin --delete <branch>`, for a dispatch that is rolled back. Both refuse any branch that does not start with `BRANCH_PREFIX` (`not_ours`), so a bug can never push or delete `main`.
+
+**`isClean(path)`** is true when `git status --porcelain --untracked-files=all` in the worktree is empty.
+
+**`ensureExcluded(pattern)`** adds `pattern` (the dispatch uses `.gitspore/`) to `<git-common-dir>/info/exclude` once. Worktrees read the main repo's file, so one line covers all of them, and nothing there shows up in `git status` or a commit. Two calls at the same moment can both add the line; a duplicate line is harmless.
 
 **`list()`** returns only our worktrees: directly inside `.gitspore-worktrees/<repo>/` **and** on a `spore/` branch. The main folder, worktrees elsewhere and detached ones are left out.
 
@@ -48,23 +64,27 @@ Then `git worktree remove` (`--force` with `force`) and, with `deleteBranch`, `g
 
 ## Errors
 
-All refusals are a `WorktreeError` with a `code`. The gateway maps them to the shared `git_failed`.
+All refusals are a `WorktreeError` with a `code`. The agent module maps `push_failed` to the shared `git_push_failed` and every other code to `git_failed`.
 
-| Code            | From     | Meaning                                                 |
-| --------------- | -------- | ------------------------------------------------------- |
-| `branch_exists` | `create` | The branch already exists                               |
-| `path_exists`   | `create` | The target folder already exists; it is left alone      |
-| `outside_root`  | `remove` | Not a folder directly inside our worktree folder        |
-| `not_found`     | `remove` | Not one of our registered worktrees                     |
-| `dirty`         | `remove` | Uncommitted changes, including untracked files          |
-| `unmerged`      | `remove` | `deleteBranch` on a branch with commits not in the base |
+| Code            | From                            | Meaning                                                 |
+| --------------- | ------------------------------- | ------------------------------------------------------- |
+| `branch_exists` | `create`                        | The branch already exists, locally or on origin         |
+| `path_exists`   | `create`                        | The target folder already exists; it is left alone      |
+| `outside_root`  | `remove`                        | Not a folder directly inside our worktree folder        |
+| `not_found`     | `remove`                        | Not one of our registered worktrees                     |
+| `dirty`         | `remove`                        | Uncommitted changes, including untracked files          |
+| `unmerged`      | `remove`                        | `deleteBranch` on a branch with commits not in the base |
+| `push_failed`   | `publish`                       | The push to origin failed; the message says why         |
+| `not_ours`      | `publish`, `deleteRemoteBranch` | The branch does not start with `BRANCH_PREFIX`          |
 
 Anything else (git missing, timeout) is simple-git's `GitError`.
 
 ## Rules
 
 - **No shell.** simple-git starts git with an argument array, so an issue title can't run commands.
-- **One git process at a time.** Every command that changes the repo goes through `run()`, a simple-git instance with `maxConcurrentProcesses: 1` and a 30 s timeout. That is the queue: parallel `create` calls never collide on git's lock files.
+- **One git process at a time.** Every command that changes the repo or talks to origin goes through `run()`, a simple-git instance with `maxConcurrentProcesses: 1`. That is the queue: parallel `create` calls never collide on git's lock files.
+- **One 60 s timeout for all commands.** It is a "no output for 60 s" limit, not a total time. `fetch`, `push` and `ls-remote` wait for the network, and simple-git sets the timeout per instance: a second instance for remote commands would have its own queue, so two git commands could run at once.
+- **Git never asks for a login.** `run()` passes `GIT_TERMINAL_PROMPT=0` and `GCM_INTERACTIVE=never` (Git Credential Manager on Windows), so a missing login is an error instead of a process that waits. simple-git 4 has an environment guard: it drops `GIT_*`, `EDITOR`, `PAGER`, `PREFIX`, `SSH_ASKPASS` and `VISUAL` from the environment, and throws if one of them is passed through `.env()` without `allowEnvironment`. `gitEnv()` therefore copies the environment without those names (VS Code sets `GIT_ASKPASS`) and allows only `GIT_TERMINAL_PROMPT`. Not covered: an SSH remote whose key has a passphrase, because `ssh` asks by itself.
 - **Read-only commands inside a worktree** (`status`) use a short-lived `simpleGit({ baseDir: path })`. simple-git 4 blocks `git -C`, because the target folder's config could make git run programs.
 - **Check first, never parse git's text.** Errors are detected with `show-ref --verify`, `access`, `status` and `rev-list` before the real command runs. Git's messages change with version and language.
 - **Compare paths with `resolve` and `dirname`, never `startsWith`.** `my-repo-2` starts with `my-repo`.
@@ -78,4 +98,4 @@ Anything else (git missing, timeout) is simple-git's `GitError`.
 
 ## Tests
 
-`worktree.service.spec.ts` runs against real temporary repos (`initRepo` from `apps/api/test/git-repo.ts`) next to a `.gitspore-worktrees` folder in `os.tmpdir()`, on Ubuntu, macOS and Windows in CI. The branch name rules are tested in `packages/shared/src/branch.spec.ts`. Run them with `npm run test:api`.
+`worktree.service.spec.ts` runs against real temporary repos (`initRepo` from `apps/api/test/git-repo.ts`) next to a `.gitspore-worktrees` folder in `os.tmpdir()`, on Ubuntu, macOS and Windows in CI. For the remote methods, `initOrigin` adds a bare repo in the same temp folder as `origin`, and `pushFromElsewhere` plays someone else who pushes to it. The login test points origin at a local HTTP server that answers 401 and runs without a credential helper, so the machine's Git Credential Manager cannot open a window. Under Jest git has no console to ask in, so that test passes even without `GIT_TERMINAL_PROMPT=0`; a dispatch without a login is checked by hand. The branch name rules are tested in `packages/shared/src/branch.spec.ts`. Run them with `npm run test:api`.

@@ -9,9 +9,9 @@
 
 /** Number of agent slots. Agents with a slot index use 0 to MAX_SLOTS - 1. */
 export const MAX_SLOTS = 6;
-
 /** Prefix of every branch the daemon creates for an agent. */
 export const BRANCH_PREFIX = "spore/";
+export const OVERVIEW_AGENT_ID = "overview";
 
 /** Any value that survives JSON.stringify / JSON.parse unchanged. */
 export type JsonValue =

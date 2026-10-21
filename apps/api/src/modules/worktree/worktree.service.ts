@@ -4,12 +4,33 @@ import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { basename, dirname, join, resolve } from "node:path";
 import { simpleGit, SimpleGit } from "simple-git";
 import { WorktreeError } from "./worktree-error";
-import { access } from "node:fs/promises";
+import { access, appendFile, mkdir, readFile } from "node:fs/promises";
 
 export type Worktree = { branch: string; path: string };
 
-//
-//
+// Commands that talk to origin wait for the network. simple-git sets the
+// timeout per instance, and a second instance would have its own queue, so
+// two git commands could run at once. One timeout for all commands instead.
+const GIT_TIMEOUT_MS = 60_000;
+
+// simple-git refuses these when they are passed through .env(), and drops
+// them from the ambient environment otherwise (simple-git 4, environment
+// guard). VS Code sets GIT_ASKPASS, many shells set EDITOR.
+const GUARDED_ENV = /^(GIT_|EDITOR$|PAGER$|PREFIX$|SSH_ASKPASS$|VISUAL$)/i;
+
+function gitEnv(): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    if (!GUARDED_ENV.test(key)) env[key] = value;
+  }
+  return {
+    ...env,
+    // A missing login fails at once instead of waiting for a password.
+    GIT_TERMINAL_PROMPT: "0",
+    // The same for Git Credential Manager on Windows; ignored elsewhere.
+    GCM_INTERACTIVE: "never",
+  };
+}
 
 @Injectable()
 export class WorktreeService implements OnModuleInit {
@@ -22,16 +43,26 @@ export class WorktreeService implements OnModuleInit {
     // switch repos, it has to create a new instance.
     const repo = config.repoPath();
     this.git = simpleGit({
-      // baseDir: config.repoPath(),
       baseDir: repo,
       maxConcurrentProcesses: 1,
-      timeout: { block: 30_000 },
-    });
+      timeout: { block: GIT_TIMEOUT_MS },
+      allowEnvironment: ["GIT_TERMINAL_PROMPT"],
+    }).env(gitEnv());
+
     this.worktreeRoot = join(
       dirname(repo),
       ".gitspore-worktrees",
       basename(repo),
     );
+  }
+
+  private assertOurs(branch: string): void {
+    if (!branch.startsWith(BRANCH_PREFIX)) {
+      throw new WorktreeError(
+        "not_ours",
+        `${branch} is not a ${BRANCH_PREFIX} branch.`,
+      );
+    }
   }
 
   async onModuleInit(): Promise<void> {
@@ -43,9 +74,45 @@ export class WorktreeService implements OnModuleInit {
     );
   }
 
+  async fetch(): Promise<void> {
+    await this.run(["fetch", "origin", this.config.baseBranch()]);
+  }
+
+  async isClean(path: string): Promise<boolean> {
+    return (await this.statusOf(path)) === "";
+  }
+
+  async ensureExcluded(pattern: string): Promise<void> {
+    const commonDir = (
+      await this.run([
+        "rev-parse",
+        "--path-format=absolute",
+        "--git-common-dir",
+      ])
+    ).trim();
+    const file = join(commonDir, "info", "exclude");
+    await mkdir(dirname(file), { recursive: true });
+
+    let current = "";
+    try {
+      current = await readFile(file, "utf8");
+    } catch (error) {
+      // No file yet is fine; anything else is a real problem.
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+
+    if (current.split(/\r?\n/).some((line) => line.trim() === pattern)) {
+      return;
+    }
+    // Without a newline at the end, the new line would stick to the last one.
+    const separator = current === "" || current.endsWith("\n") ? "" : "\n";
+    await appendFile(file, `${separator}${pattern}\n`);
+  }
+
   async create(issue: {
     issueNumber: number;
     issueTitle: string;
+    startPoint?: string;
   }): Promise<Worktree> {
     const branch = branchForIssue(issue.issueNumber, issue.issueTitle);
     const path = join(this.worktreeRoot, branch.slice(BRANCH_PREFIX.length));
@@ -54,6 +121,16 @@ export class WorktreeService implements OnModuleInit {
       throw new WorktreeError(
         "branch_exists",
         `Branch ${branch} already exists.`,
+      );
+    }
+
+    if (
+      issue.startPoint !== undefined &&
+      (await this.branchExistsOnOrigin(branch))
+    ) {
+      throw new WorktreeError(
+        "branch_exists",
+        `Branch ${branch} already exists on origin.`,
       );
     }
 
@@ -78,7 +155,7 @@ export class WorktreeService implements OnModuleInit {
         "-b",
         branch,
         path,
-        this.config.baseBranch(),
+        issue.startPoint ?? this.config.baseBranch(),
       ]);
     } catch (error) {
       // Another create() for the same issue can pass the checks at the same
@@ -182,6 +259,24 @@ export class WorktreeService implements OnModuleInit {
     }
   }
 
+  async publish(branch: string): Promise<void> {
+    this.assertOurs(branch);
+    try {
+      await this.run(["push", "-u", "origin", branch]);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new WorktreeError(
+        "push_failed",
+        `Could not push ${branch} to origin: ${message}`,
+      );
+    }
+  }
+
+  async deleteRemoteBranch(branch: string): Promise<void> {
+    this.assertOurs(branch);
+    await this.run(["push", "origin", "--delete", branch]);
+  }
+
   // error check helpers
   private async branchExists(branch: string): Promise<boolean> {
     try {
@@ -190,6 +285,16 @@ export class WorktreeService implements OnModuleInit {
     } catch {
       return false;
     }
+  }
+
+  private async branchExistsOnOrigin(branch: string): Promise<boolean> {
+    const output = await this.run([
+      "ls-remote",
+      "--heads",
+      "origin",
+      `refs/heads/${branch}`,
+    ]);
+    return output.trim() !== "";
   }
 
   private async pathExists(path: string): Promise<boolean> {

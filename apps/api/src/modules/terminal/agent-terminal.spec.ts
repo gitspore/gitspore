@@ -279,4 +279,169 @@ describe("AgentTerminal", () => {
 
     expect(pty.kill).not.toHaveBeenCalled();
   });
+
+  describe("exec mode", () => {
+    const EXEC: AgentTerminalOptions = { ...OPTIONS, mode: "exec" };
+    // A space in the path is the normal case for npm's global folder.
+    const CMD = "C:\\Users\\a b\\AppData\\Roaming\\npm\\claude.cmd";
+
+    it("starts the program itself, without a shell", () => {
+      const pty = new FakePty();
+      const spawnPty = jest.fn(() => pty);
+
+      new AgentTerminal(spawnPty, { ...EXEC, args: ["--session-id", "abc"] });
+
+      expect(spawnPty).toHaveBeenCalledWith(
+        "claude",
+        ["--session-id", "abc"],
+        expect.objectContaining({
+          name: "xterm-256color",
+          cwd: "/repo/spore-42",
+          env: expect.objectContaining({
+            TERM: "xterm-256color",
+            COLORTERM: "truecolor",
+          }),
+        }),
+      );
+      expect(pty.write).not.toHaveBeenCalled();
+    });
+
+    it("passes arguments unchanged that the shell mode refuses", () => {
+      const spawnPty = jest.fn(() => new FakePty());
+      const args = ['Don\'t merge $HOME; `id` "x"', "two words", ""];
+
+      new AgentTerminal(spawnPty, { ...EXEC, args });
+
+      expect(spawnPty).toHaveBeenCalledWith("claude", args, expect.anything());
+    });
+
+    it("starts claude.exe directly on Windows, with an argument array", () => {
+      const spawnPty = jest.fn(() => new FakePty());
+      const exe = "C:\\Users\\a b\\.local\\bin\\claude.exe";
+      const args = ["--session-id", "abc", "two words"];
+
+      new AgentTerminal(spawnPty, {
+        ...EXEC,
+        platform: "win32",
+        command: exe,
+        args,
+      });
+
+      expect(spawnPty).toHaveBeenCalledWith(exe, args, expect.anything());
+    });
+
+    it.each([CMD, CMD.toUpperCase()])(
+      "starts %s through cmd.exe, as one command line in an outer pair of quotes",
+      (command) => {
+        const spawnPty = jest.fn(() => new FakePty());
+
+        new AgentTerminal(spawnPty, {
+          ...EXEC,
+          platform: "win32",
+          command,
+          args: ["--session-id", "abc", "Read the task. Don't merge."],
+        });
+
+        expect(spawnPty).toHaveBeenCalledWith(
+          "cmd.exe",
+          `/d /s /c ""${command}" "--session-id" "abc" "Read the task. Don't merge.""`,
+          expect.anything(),
+        );
+      },
+    );
+
+    it.each(["&", "|", "<", ">", "^", "%", '"'])(
+      "refuses %p in an argument of claude.cmd before starting anything",
+      (char) => {
+        const spawnPty = jest.fn(() => new FakePty());
+
+        expect(
+          () =>
+            new AgentTerminal(spawnPty, {
+              ...EXEC,
+              platform: "win32",
+              command: CMD,
+              args: [`a${char}b`],
+            }),
+        ).toThrow(TerminalError);
+        expect(spawnPty).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each(["win32", "linux"] as const)(
+      "does not refuse those characters when no cmd.exe is involved (%s)",
+      (platform) => {
+        const spawnPty = jest.fn(() => new FakePty());
+        const args = ['a & b | c < d > e ^ f % g "h"'];
+
+        expect(
+          () =>
+            new AgentTerminal(spawnPty, {
+              ...EXEC,
+              platform,
+              command: "claude",
+              args,
+            }),
+        ).not.toThrow();
+        expect(spawnPty).toHaveBeenCalledWith(
+          "claude",
+          args,
+          expect.anything(),
+        );
+      },
+    );
+
+    it("tells its owner the exit code of the program itself", () => {
+      const pty = new FakePty();
+      const onExit = jest.fn();
+      new AgentTerminal(() => pty, EXEC, onExit);
+
+      pty.exit(7);
+
+      expect(onExit).toHaveBeenCalledWith(7);
+    });
+
+    it("releases the PTY after the program exits on Windows", () => {
+      const pty = new FakePty();
+      new AgentTerminal(() => pty, { ...EXEC, platform: "win32" });
+
+      pty.exit(0);
+
+      expect(pty.kill).toHaveBeenCalledTimes(1);
+    });
+  });
+});
+
+describe("kill", () => {
+  it("kills the PTY", () => {
+    const pty = new FakePty();
+    const terminal = new AgentTerminal(() => pty, OPTIONS);
+
+    terminal.kill();
+
+    expect(pty.kill).toHaveBeenCalledTimes(1);
+  });
+
+  it("does nothing once the PTY has exited", () => {
+    const pty = new FakePty();
+    const terminal = new AgentTerminal(() => pty, {
+      ...OPTIONS,
+      platform: "linux",
+    });
+    pty.exit(0);
+
+    terminal.kill();
+
+    expect(pty.kill).not.toHaveBeenCalled();
+  });
+
+  it("ignores a kill the PTY refuses because the process just exited", () => {
+    const pty = new FakePty();
+    const terminal = new AgentTerminal(() => pty, OPTIONS);
+    pty.kill.mockImplementation(() => {
+      throw new Error("Process already exited");
+    });
+
+    expect(() => terminal.kill()).not.toThrow();
+  });
 });
