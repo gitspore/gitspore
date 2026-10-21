@@ -112,7 +112,10 @@ describe("Agent dispatch and stop, end to end", () => {
     for (const level of ["log", "warn", "error"] as const) {
       jest.spyOn(Logger.prototype, level).mockImplementation(() => {});
     }
-  });
+    // A hook has jest's 5 s default otherwise. On a slow Windows runner the
+    // ten git calls above can outlast it, and afterEach then deletes the
+    // folder while this hook still runs.
+  }, TEST_TIMEOUT_MS);
 
   afterEach(async () => {
     // Stops what still runs, so no PTY outlives the test.
@@ -129,7 +132,7 @@ describe("Agent dispatch and stop, end to end", () => {
     // Windows releases the files of a killed process a moment later.
     await rm(parent, { recursive: true, force: true, maxRetries: 10 });
     await rm(claudeDir, { recursive: true, force: true, maxRetries: 10 });
-  });
+  }, TEST_TIMEOUT_MS);
 
   const dispatch = (issueNumber = 42, slotIndex = 0) =>
     service.dispatch({ issueNumber, slotIndex });
