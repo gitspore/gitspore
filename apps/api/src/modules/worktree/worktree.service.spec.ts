@@ -1,7 +1,11 @@
 import { BRANCH_PREFIX } from "@gitspore/shared";
 import { RepoConfig } from "@/config/repo-config";
 import { WorktreeService } from "./worktree.service";
-import { initRepo } from "../../../test/git-repo";
+import {
+  initOrigin,
+  initRepo,
+  pushFromElsewhere,
+} from "../../../test/git-repo";
 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -15,6 +19,8 @@ import {
 } from "node:fs/promises";
 import { simpleGit } from "simple-git";
 import { existsSync } from "node:fs";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 
 //
 //
@@ -425,6 +431,56 @@ describe("WorktreeService", () => {
     });
   });
 
+  describe("isClean", () => {
+    it("is true for a new worktree and false after a new file", async () => {
+      const { path } = await service.create({
+        issueNumber: 42,
+        issueTitle: "Fix bug",
+      });
+      expect(await service.isClean(path)).toBe(true);
+
+      await writeFile(join(path, "new.txt"), "x");
+
+      expect(await service.isClean(path)).toBe(false);
+    });
+  });
+
+  describe("ensureExcluded", () => {
+    const excludeFile = () => join(repo, ".git", "info", "exclude");
+    const linesWith = async (pattern: string) =>
+      (await readFile(excludeFile(), "utf8"))
+        .split(/\r?\n/)
+        .filter((line) => line.trim() === pattern).length;
+
+    it("adds the pattern once, however often it is called", async () => {
+      await service.ensureExcluded(".gitspore/");
+      await service.ensureExcluded(".gitspore/");
+
+      expect(await linesWith(".gitspore/")).toBe(1);
+    });
+
+    it("starts a new line when the file does not end with one", async () => {
+      await writeFile(excludeFile(), "*.log");
+
+      await service.ensureExcluded(".gitspore/");
+
+      expect(await readFile(excludeFile(), "utf8")).toBe("*.log\n.gitspore/\n");
+    });
+
+    it("keeps .gitspore/ out of git status in every worktree", async () => {
+      const { path } = await service.create({
+        issueNumber: 42,
+        issueTitle: "Fix bug",
+      });
+      await service.ensureExcluded(".gitspore/");
+
+      await mkdir(join(path, ".gitspore"));
+      await writeFile(join(path, ".gitspore", "task.md"), "# Task");
+
+      expect(await service.isClean(path)).toBe(true);
+    });
+  });
+
   describe("startup", () => {
     it("cleans up a worktree whose folder was deleted while the daemon was down", async () => {
       const { path } = await service.create({
@@ -436,6 +492,203 @@ describe("WorktreeService", () => {
       await service.onModuleInit();
 
       expect(await service.list()).toEqual([]);
+    });
+  });
+
+  describe("with an origin", () => {
+    let origin: string;
+
+    beforeEach(async () => {
+      origin = await initOrigin(repo, join(parent, "origin.git"));
+    });
+    // A server that wants a login: publish must fail fast with push_failed.
+    // The test runs without a credential helper, so the machine's (Git
+    // Credential Manager on Windows) cannot open a window, and on CI nobody
+    // would answer it. Under Jest git has no console to ask in, so this test
+    // also passes without GIT_TERMINAL_PROMPT=0; it does not prove that the
+    // variable works. A dispatch without a login is checked by hand.
+
+    it("fails at once instead of asking for a login", async () => {
+      const server = createServer((_request, response) => {
+        response.writeHead(401, {
+          "WWW-Authenticate": 'Basic realm="gitspore"',
+        });
+        response.end();
+      });
+      await new Promise<void>((resolve) =>
+        server.listen(0, "127.0.0.1", resolve),
+      );
+      const { port } = server.address() as AddressInfo;
+
+      try {
+        // Without startPoint: create does not talk to origin.
+        const { branch } = await service.create({
+          issueNumber: 42,
+          issueTitle: "Fix bug",
+        });
+        await simpleGit(repo).remote([
+          "set-url",
+          "origin",
+          `http://127.0.0.1:${port}/repo.git`,
+        ]);
+
+        await simpleGit({
+          baseDir: repo,
+          unsafe: { allowUnsafeCredentialHelper: true },
+        }).raw(["config", "credential.helper", ""]);
+
+        const started = Date.now();
+
+        await expect(service.publish(branch)).rejects.toMatchObject({
+          code: "push_failed",
+        });
+        expect(Date.now() - started).toBeLessThan(10_000);
+      } finally {
+        server.closeAllConnections();
+        server.close();
+      }
+    }, 30_000);
+
+    describe("fetch", () => {
+      it("brings origin/main up to date and leaves the local main alone", async () => {
+        const localMain = await simpleGit(repo).revparse(["main"]);
+        const theirs = await pushFromElsewhere(
+          origin,
+          join(parent, "elsewhere"),
+        );
+
+        await service.fetch();
+
+        const git = simpleGit(repo);
+        expect(await git.revparse(["origin/main"])).toBe(theirs);
+        expect(await git.revparse(["main"])).toBe(localMain);
+      });
+    });
+
+    describe("create from origin", () => {
+      it("starts the branch at origin/main, not at the local main", async () => {
+        const theirs = await pushFromElsewhere(
+          origin,
+          join(parent, "elsewhere"),
+        );
+        await service.fetch();
+
+        const { path } = await service.create({
+          issueNumber: 42,
+          issueTitle: "Fix bug",
+          startPoint: "origin/main",
+        });
+
+        expect(await simpleGit(path).revparse(["HEAD"])).toBe(theirs);
+      });
+
+      it("refuses a branch that exists only on origin, and creates nothing", async () => {
+        const branch = `${BRANCH_PREFIX}42-fix-bug`;
+        await simpleGit(repo).raw([
+          "push",
+          "origin",
+          `main:refs/heads/${branch}`,
+        ]);
+
+        await expect(
+          service.create({
+            issueNumber: 42,
+            issueTitle: "Fix bug",
+            startPoint: "origin/main",
+          }),
+        ).rejects.toMatchObject({ code: "branch_exists" });
+
+        const path = join(
+          parent,
+          ".gitspore-worktrees",
+          "my-repo",
+          "42-fix-bug",
+        );
+        expect(existsSync(path)).toBe(false);
+        expect((await simpleGit(repo).branchLocal()).all).not.toContain(branch);
+      });
+    });
+
+    describe("publish", () => {
+      it("pushes the branch to origin and sets its upstream", async () => {
+        const { branch } = await service.create({
+          issueNumber: 42,
+          issueTitle: "Fix bug",
+          startPoint: "origin/main",
+        });
+
+        await service.publish(branch);
+
+        const onOrigin = await simpleGit(repo).raw([
+          "ls-remote",
+          "--heads",
+          "origin",
+          `refs/heads/${branch}`,
+        ]);
+        expect(onOrigin.trim()).not.toBe("");
+        const upstream = await simpleGit(repo).revparse([
+          "--abbrev-ref",
+          `${branch}@{upstream}`,
+        ]);
+        expect(upstream).toBe(`origin/${branch}`);
+      });
+
+      it("gives push_failed when origin is not there", async () => {
+        const { branch } = await service.create({
+          issueNumber: 42,
+          issueTitle: "Fix bug",
+        });
+        await simpleGit(repo).remote([
+          "set-url",
+          "origin",
+          join(parent, "missing.git"),
+        ]);
+
+        await expect(service.publish(branch)).rejects.toMatchObject({
+          code: "push_failed",
+        });
+      });
+
+      it("refuses a branch that is not ours", async () => {
+        await expect(service.publish("main")).rejects.toMatchObject({
+          code: "not_ours",
+        });
+      });
+    });
+
+    describe("deleteRemoteBranch", () => {
+      it("deletes the branch on origin", async () => {
+        const { branch } = await service.create({
+          issueNumber: 42,
+          issueTitle: "Fix bug",
+          startPoint: "origin/main",
+        });
+        await service.publish(branch);
+
+        await service.deleteRemoteBranch(branch);
+
+        const onOrigin = await simpleGit(repo).raw([
+          "ls-remote",
+          "--heads",
+          "origin",
+          `refs/heads/${branch}`,
+        ]);
+        expect(onOrigin.trim()).toBe("");
+      });
+
+      it("refuses main and leaves it on origin", async () => {
+        await expect(service.deleteRemoteBranch("main")).rejects.toMatchObject({
+          code: "not_ours",
+        });
+
+        const onOrigin = await simpleGit(repo).raw([
+          "ls-remote",
+          "--heads",
+          "origin",
+          "refs/heads/main",
+        ]);
+        expect(onOrigin.trim()).not.toBe("");
+      });
     });
   });
 });

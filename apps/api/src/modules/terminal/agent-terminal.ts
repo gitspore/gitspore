@@ -13,7 +13,7 @@ export type Viewer = {
 
 export type SpawnPty = (
   file: string,
-  args: string[],
+  args: string[] | string,
   options: IPtyForkOptions,
 ) => Pty;
 
@@ -23,6 +23,7 @@ export type AgentTerminalOptions = {
   args: string[];
   // Only tests set this, to run the Windows branch on any OS.
   platform?: NodeJS.Platform;
+  mode?: "shell" | "exec";
 };
 
 const TERMINAL_NAME = "xterm-256color";
@@ -46,6 +47,15 @@ function toCommandLine(command: string, args: string[]): string {
   return parts.join(" ");
 }
 
+function ptyOptions(cwd: string): IPtyForkOptions {
+  return {
+    name: TERMINAL_NAME,
+    cols: DEFAULT_COLS,
+    rows: DEFAULT_ROWS,
+    cwd,
+    env: { ...process.env, TERM: TERMINAL_NAME, COLORTERM: "truecolor" },
+  };
+}
 // The only shell-specific code: start the user's shell, then type the command
 // into it, so the shell stays usable after the command exits. To start the
 // command directly instead, spawn options.command with options.args here.
@@ -59,18 +69,49 @@ function startInShell(spawnPty: SpawnPty, options: AgentTerminalOptions): Pty {
   // -NoExit keeps the shell afterwards.
   const shellArgs =
     platform === "win32" ? ["-NoExit", "-Command", commandLine] : [];
-  const pty = spawnPty(getDefaultShell(platform), shellArgs, {
-    name: TERMINAL_NAME,
-    cols: DEFAULT_COLS,
-    rows: DEFAULT_ROWS,
-    cwd: options.cwd,
-    env: { ...process.env, TERM: TERMINAL_NAME, COLORTERM: "truecolor" },
-  });
+
+  const pty = spawnPty(
+    getDefaultShell(platform),
+    shellArgs,
+    ptyOptions(options.cwd),
+  );
 
   if (platform !== "win32") {
     pty.write(`${commandLine}\r`);
   }
   return pty;
+}
+
+// Characters cmd.exe reads as syntax even inside quotes, or that end the
+// quoted command line early. Measured on Windows: with none of them in the
+// arguments, the prompt arrives as one argument.
+const CMD_UNSAFE = /[&|<>^%"\r\n]/;
+
+function toExecCommand(
+  command: string,
+  args: string[],
+  platform: NodeJS.Platform,
+): { file: string; args: string[] | string } {
+  const needsCmd = platform === "win32" && /\.(cmd|bat)$/i.test(command);
+  if (!needsCmd) {
+    return { file: command, args };
+  }
+  const unsafe = args.find((a) => CMD_UNSAFE.test(a));
+  if (unsafe !== undefined) {
+    throw new TerminalError(
+      "unsafe_argument",
+      `Refusing to type ${JSON.stringify(unsafe)} into the shell`,
+    );
+  }
+
+  const quoted = [command, ...args].map((part) => `"${part}"`).join(" ");
+  return { file: "cmd.exe", args: `/d /s /c "${quoted}"` };
+}
+
+function startDirectly(spawnPty: SpawnPty, options: AgentTerminalOptions): Pty {
+  const platform = options.platform ?? process.platform;
+  const { file, args } = toExecCommand(options.command, options.args, platform);
+  return spawnPty(file, args, ptyOptions(options.cwd));
 }
 
 export class AgentTerminal {
@@ -91,7 +132,11 @@ export class AgentTerminal {
     private readonly onExit?: (exitCode: number) => void,
   ) {
     this.platform = options.platform ?? process.platform;
-    this.pty = startInShell(spawnPty, options);
+    this.pty =
+      options.mode === "exec"
+        ? startDirectly(spawnPty, options)
+        : startInShell(spawnPty, options);
+
     this.pty.onData((chunk) => this.batcher.push(chunk));
     this.pty.onExit(({ exitCode }) => this.handleExit(exitCode));
   }
@@ -114,18 +159,21 @@ export class AgentTerminal {
     this.pty.write(data);
   }
 
-  /** Ends the shell; onExit follows once it is gone. */
-  kill(): void {
-    if (this.exited) {
-      return;
-    }
-    this.pty.kill();
-  }
-
   resize(cols: number, rows: number): void {
     this.cols = cols;
     this.rows = rows;
     this.resizePty(cols, rows);
+  }
+
+  kill(): void {
+    if (this.exited) {
+      return;
+    }
+    try {
+      this.pty.kill();
+    } catch {
+      // The process has just exited on its own; onExit follows.
+    }
   }
 
   private broadcast(chunk: string): void {

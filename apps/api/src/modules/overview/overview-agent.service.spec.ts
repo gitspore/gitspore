@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { initRepo } from "../../../test/git-repo";
 import { StateStore } from "../state/state.store";
+import type { ClaudeLocator } from "../terminal/claude-locator";
 import type { TerminalService } from "../terminal/terminal.service";
 import { OverviewAgentService } from "./overview-agent.service";
 
@@ -27,15 +28,22 @@ class FakeTerminals {
   }
 }
 
+// Stands in for ClaudeLocator: a fixed path.
+class FakeLocator {
+  readonly resolve = jest.fn(async () => "/bin/claude");
+}
+
 describe("OverviewAgentService", () => {
   let repo: string;
   let terminals: FakeTerminals;
+  let locator: FakeLocator;
   let store: StateStore;
 
   beforeEach(async () => {
     repo = await mkdtemp(join(tmpdir(), "gitspore-overview-"));
     await initRepo(repo);
     terminals = new FakeTerminals();
+    locator = new FakeLocator();
     store = new StateStore();
   });
 
@@ -48,6 +56,7 @@ describe("OverviewAgentService", () => {
   const start = (enabled: boolean) =>
     new OverviewAgentService(
       terminals as unknown as TerminalService,
+      locator as unknown as ClaudeLocator,
       store,
       new RepoConfig(repo, "main"),
       enabled,
@@ -58,6 +67,7 @@ describe("OverviewAgentService", () => {
 
     await new OverviewAgentService(
       terminals as unknown as TerminalService,
+      locator as unknown as ClaudeLocator,
       store,
       new RepoConfig(null, "main"),
       true,
@@ -67,7 +77,7 @@ describe("OverviewAgentService", () => {
     expect(store.snapshot().agents).toEqual([]);
   });
 
-  it("starts claude in the repo root when the flag is set", async () => {
+  it("starts claude in a shell in the repo root, by file name", async () => {
     await start(true);
 
     expect(terminals.spawn).toHaveBeenCalledWith({
@@ -76,6 +86,16 @@ describe("OverviewAgentService", () => {
       command: "claude",
       args: ["--permission-mode", "plan"],
     });
+  });
+
+  it("types the locator's file name, not its Windows path", async () => {
+    locator.resolve.mockResolvedValue("C:\\Program Files\\nodejs\\claude.cmd");
+
+    await start(true);
+
+    expect(terminals.spawn).toHaveBeenCalledWith(
+      expect.objectContaining({ command: "claude.cmd" }),
+    );
   });
 
   it("puts the overview agent into the state", async () => {
@@ -100,6 +120,7 @@ describe("OverviewAgentService", () => {
   it("starts nothing without the flag", async () => {
     await start(false);
 
+    expect(locator.resolve).not.toHaveBeenCalled();
     expect(terminals.spawn).not.toHaveBeenCalled();
     expect(store.snapshot().agents).toEqual([]);
   });
@@ -130,11 +151,27 @@ describe("OverviewAgentService", () => {
     expect(store.snapshot().agents).toEqual([]);
   });
 
+  it("starts nothing and keeps running when Claude is not found", async () => {
+    const logError = jest
+      .spyOn(Logger.prototype, "error")
+      .mockImplementation(() => {});
+    locator.resolve.mockRejectedValue(new Error("Claude Code was not found"));
+
+    await expect(start(true)).resolves.toBeUndefined();
+
+    expect(terminals.spawn).not.toHaveBeenCalled();
+    expect(store.snapshot().agents).toEqual([]);
+    expect(logError).toHaveBeenCalledWith(
+      expect.stringContaining("Claude Code was not found"),
+    );
+  });
+
   describe("after a switch to another repo", () => {
     it("stops through TerminalService and starts again where RepoConfig points", async () => {
       const config = new RepoConfig(repo, "main");
       const service = new OverviewAgentService(
         terminals as unknown as TerminalService,
+        locator as unknown as ClaudeLocator,
         store,
         config,
         true,
