@@ -17,9 +17,9 @@ type Shapes = {
   soilGeo: THREE.BufferGeometry;
 };
 
-// The prototype's pot: the profile (x = radius, y = height) that
+// pot: the profile (x = radius, y = height) that
 // LatheGeometry spins round, the soil disc at the pot's inner floor,
-// and the six spots on the table (the prototype's POS)
+// and the six spots on the table
 const POT_PROFILE = [
   [0, 0],
   [0.47, 0],
@@ -52,7 +52,7 @@ const POS_POTS = [
 //   left a lit sliver at every pot's foot
 // - Soil: a flat disc laid just above the pot's inner floor; it receives
 //   the plant's shadow
-// - The plant stands on the soil, like the prototype's plantHolder
+// - The plant stands on the soil
 function Pot({
   x,
   z,

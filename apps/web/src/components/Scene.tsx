@@ -2,12 +2,13 @@
 // Three.js needs the browser (WebGL, window), so anything using
 // React Three Fiber must be a Client Component.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { StatsGl, OrbitControls } from "@react-three/drei";
+import { StatsGl } from "@react-three/drei";
 import { useTheme } from "next-themes";
 import { tokens } from "@/theme/tokens";
 
+import { CameraRig } from "./scene/CameraRig";
 import { Pots } from "./scene/Pot";
 import { RoomLight } from "./scene/RoomLight";
 import { Table } from "./scene/Table";
@@ -46,7 +47,11 @@ function DrawCalls() {
   return null;
 }
 
-export function Scene() {
+export function Scene({
+  sceneArea,
+}: {
+  sceneArea: RefObject<HTMLDivElement | null>;
+}) {
   // The mode: next-themes puts "light" (day) or "dark" (night) on <html>.
   // URL flags, read once: ?shadows=off for weak GPUs, ?orbit=1 to look
   // around in development, ?testing=1 for the plant test keys (see Pots)
@@ -66,7 +71,6 @@ export function Scene() {
     <Canvas
       dpr={[1, 2]}
       shadows={shadowsOn ? "percentage" : false}
-      camera={{ position: [0, 8.2, 10.6], fov: 32 }}
       gl={{ toneMappingExposure: t.scene.exposure }}
       onCreated={({ gl }) => {
         if (DEV) {
@@ -125,7 +129,7 @@ export function Scene() {
       <Pots colors={t.color.scene} testKeys={testingOn} />
       <Table wood={t.color.wood} floor={t.color.scene.floor} />
 
-      {orbitOn && <OrbitControls />}
+      <CameraRig sceneArea={sceneArea} orbit={orbitOn} />
 
       {/* Dev meters. StatsGl adds its own panel to <body>; the class
           places it. No trackGPU: its timer queries pile up on the HD 530
