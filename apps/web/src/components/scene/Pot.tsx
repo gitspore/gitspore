@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import * as THREE from "three";
 
-import { useGreenhouseStore } from "@/lib/client/GreenhouseClientProvider";
+import {
+  useGreenhouseStore,
+  useNowSelect,
+} from "@/lib/client/GreenhouseClientProvider";
+import { wiltStage, type WiltStage } from "@/lib/store/wilting";
+
 import { agentBySlot } from "@/lib/store/selectors";
 import { POT_SPOTS } from "./layout";
 import {
@@ -12,13 +17,12 @@ import {
   type SceneColors,
 } from "./Plant";
 
-import { STATUS_VISUALS } from "./statusVisuals";
+import { STATUS_VISUALS, WILT_PLANTS } from "./statusVisuals";
 import type { AgentStatus } from "@gitspore/shared";
 
 //
 //
 //
-
 type Shapes = {
   bodyGeo: THREE.BufferGeometry;
   soilGeo: THREE.BufferGeometry;
@@ -46,10 +50,12 @@ const SOIL_R = 0.61;
 // keys set all three for every pot
 type PlantLook = { state: PlantState; growth: number; wholeScale: boolean };
 
-// An agent's plant look, from its status
-function agentLook(status: AgentStatus): PlantLook {
+// An agent's plant look, from its status; a waiting agent's from how
+// long it has waited
+function agentLook(status: AgentStatus, stage: WiltStage | null): PlantLook {
   const visual = STATUS_VISUALS[status];
-  return { state: visual.plant, growth: visual.growth, wholeScale: false };
+  const state = stage ? WILT_PLANTS[stage] : visual.plant;
+  return { state, growth: visual.growth, wholeScale: false };
 }
 
 // pot at slot spot:
@@ -84,7 +90,10 @@ function Pot({
 } & Shapes) {
   const agent = useGreenhouseStore(agentBySlot(slot));
   const [x, z] = POT_SPOTS[slot];
-  const look = test ?? (agent ? agentLook(agent.status) : null);
+  const stage = useNowSelect((now) =>
+    agent && now !== 0 ? wiltStage(agent, now) : null,
+  );
+  const look = test ?? (agent ? agentLook(agent.status, stage) : null);
 
   return (
     <group position={[x, 0, z]}>

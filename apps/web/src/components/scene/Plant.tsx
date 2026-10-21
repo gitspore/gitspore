@@ -13,11 +13,17 @@ export type SceneColors = (typeof tokens)[Mode]["color"]["scene"];
 // The plant colours of one mode: bare stalk, bud, petals
 export type ArtColors = (typeof tokens)[Mode]["color"]["art"]["plant"];
 
-// The stem's radius, and the leaf shape's length and width;
-// each leaf scales the shape by its size
+// stem's radius, leaf shape's length and width;
+// each leaf scales the shape by its size.
+// flower:
+// five petals evenly around the heart, each turned this far
+// around the tip, and slightly raised:
+// (PETAL_TILT) like an opening cup
 const STEM_R = 0.028;
 const LEAF_LEN = 0.42;
 const LEAF_WID = 0.19;
+const PETAL_TURNS = [0, 1, 2, 3, 4].map((i) => (i * 2 * Math.PI) / 5);
+const PETAL_TILT = 0.35;
 
 // How fast a plant moves to a new look: after 0.2 s about two
 // thirds of the way, after 0.6 s about 95 %
@@ -32,12 +38,17 @@ type Leaf = { at: number; turn: number; size: number; from?: number };
 
 // Everything that makes a state look the way it does. bend: 0 = upright,
 // 1 = drooping right over. leaves: always four, so states blend leaf by leaf
+// bud, bloom:
+// size of bud or flower (0 or missing = none)
+
 type Look = {
   height: number;
   bend: number;
   stem: string;
   leaf: string;
   leaves: Leaf[];
+  bud?: number;
+  bloom?: number;
 };
 
 // Working: two leaves near the top, opposite each other, and two more
@@ -123,6 +134,7 @@ const LOOKS: Record<PlantState, (colors: SceneColors, art: ArtColors) => Look> =
       bend: 0,
       stem: colors.stem,
       leaf: colors.leaf,
+      bud: 1,
       leaves: FULL,
     }),
     merged: (colors) => ({
@@ -130,6 +142,7 @@ const LOOKS: Record<PlantState, (colors: SceneColors, art: ArtColors) => Look> =
       bend: 0,
       stem: colors.stem,
       leaf: colors.leaf,
+      bloom: 1,
       leaves: FULL,
     }),
   };
@@ -206,6 +219,13 @@ function leafGeo(len: number, wid: number) {
   return geo;
 }
 
+// Scale a part to its size; hidden once it's nearly gone, like the leaves
+function showSized(group: THREE.Group | null, size: number) {
+  if (!group) return;
+  group.scale.setScalar(size);
+  group.visible = size > 0.01;
+}
+
 // One plant: a stem tube and four leaves. The props give the target look;
 // useFrame eases the meshes toward it, so a change never remounts anything
 export function Plant({
@@ -249,8 +269,10 @@ export function Plant({
   // - now: where the plant is right now, on its way from start to look.
   //   Copies, because useFrame changes them and the table must stay as it is
   // - the leaf groups (place, turn, size) and leaf meshes (tilt)
-  // - the stem mesh, which gets a new tube while it bends
+  // - stem mesh, which gets a new tube while it bends
   // - the group around the whole plant, for the extra scale
+  // - the tip group, which follows the stem's tip, with bud and bloom in it
+
   const stemMat = useRef<THREE.MeshStandardMaterial>(null);
   const leafMats = useRef<(THREE.MeshStandardMaterial | null)[]>([]);
   const now = useRef({
@@ -259,11 +281,16 @@ export function Plant({
     bend: start.bend,
     curve: startCurve,
     leaves: start.leaves.map((leaf) => ({ ...leaf })),
+    bud: start.bud ?? 0,
+    bloom: start.bloom ?? 0,
   });
   const leafGroups = useRef<(THREE.Group | null)[]>([]);
   const leafMeshes = useRef<(THREE.Mesh | null)[]>([]);
   const stemMesh = useRef<THREE.Mesh>(null);
   const plantRoot = useRef<THREE.Group>(null);
+  const tipGroup = useRef<THREE.Group>(null);
+  const budGroup = useRef<THREE.Group>(null);
+  const bloomGroup = useRef<THREE.Group>(null);
 
   // When the plant goes away, free the tube useFrame made last
   useEffect(() => {
@@ -273,14 +300,19 @@ export function Plant({
 
   // One leaf shape per plant, used by all its leaves
   const leafShape = useMemo(() => leafGeo(LEAF_LEN, LEAF_WID), []);
+  const petalShape = useMemo(() => new THREE.SphereGeometry(0.07, 12, 8), []);
 
   // Every frame: move colours, bend and leaves a step toward the current
   // look. step is the share of the remaining way to go in this frame.
-  // - The stem is rebuilt only while bend, height or scale still have a
-  //   visible way to go (scale too, because the rim's place in plant space
-  //   shifts when the plant scales); the old tube's GPU memory is freed
-  // - elev: how far the leaves point up from flat, less when the stem droops
-  // - A leaf shrinking to 0 never quite gets there, so it's hidden below 0.01
+  // - The stem is rebuilt only while bend,
+  // the old tube's GPU memory is freed
+  // - elev: how far the leaves point up from flat,
+  // less when the stem droops
+  // - A leaf shrinking to 0 never quite gets there,
+  // so it's hidden below 0.01
+  // - Bud and bloom ride on stem's tip.
+  //  they grow in and out like leaves
+
   useFrame((_, delta) => {
     const step = 1 - Math.exp(-SPEED * delta);
 
@@ -325,12 +357,28 @@ export function Plant({
       const mesh = leafMeshes.current[i];
       if (mesh) mesh.rotation.x = Math.PI / 2 - elev;
     });
+
+    cur.bud += ((look.bud ?? 0) - cur.bud) * step;
+    cur.bloom += ((look.bloom ?? 0) - cur.bloom) * step;
+    const tip = tipGroup.current;
+    if (tip) cur.curve.getPointAt(1, tip.position);
+    showSized(budGroup.current, cur.bud);
+    showSized(bloomGroup.current, cur.bloom);
   });
 
-  // The stem and the leaves. Each leaf's group turns it around the stem (y),
-  // its mesh tilts it up (x); useFrame sets both, and place and size.
-  // Stem and leaves cast shadows but don't receive them: the double-sided
+  // The stem and the leaves.
+  // Each leaf's group turns it around the stem (y),
+  // its mesh tilts it up (x); useFrame sets both,
+  // and place and size.
+  // Stem and leaves cast shadows
+  // but don't receive them: the double-sided
   // leaves would risk shadow acne
+  // The tip:
+  // useFrame keeps it on the stem's end
+  // and sizes bud and bloom.
+  // Bud: a sphere stretched up, sitting on the tip.
+  // Bloom: a heart with five flattened petals
+  // pushed out and tilted up
   return (
     <group ref={plantRoot}>
       <mesh ref={stemMesh} castShadow>
@@ -366,6 +414,34 @@ export function Plant({
           </mesh>
         </group>
       ))}
+
+      <group ref={tipGroup}>
+        <group ref={budGroup}>
+          <mesh position-y={0.08} scale={[1, 1.6, 1]} castShadow>
+            <sphereGeometry args={[0.06, 12, 8]} />
+            <meshStandardMaterial color={art.bud} roughness={0.6} />
+          </mesh>
+        </group>
+        <group ref={bloomGroup}>
+          <mesh castShadow>
+            <sphereGeometry args={[0.045, 12, 8]} />
+            <meshStandardMaterial color={art.heart} roughness={0.6} />
+          </mesh>
+          {PETAL_TURNS.map((turn) => (
+            <group key={turn} rotation-y={turn}>
+              <mesh
+                geometry={petalShape}
+                position-x={0.08}
+                rotation-z={PETAL_TILT}
+                scale={[1, 0.3, 0.55]}
+                castShadow
+              >
+                <meshStandardMaterial color={art.petal} roughness={0.6} />
+              </mesh>
+            </group>
+          ))}
+        </group>
+      </group>
     </group>
   );
 }

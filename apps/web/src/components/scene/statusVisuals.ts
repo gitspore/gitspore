@@ -1,4 +1,5 @@
 import type { AgentStatus } from "@gitspore/shared";
+import type { WiltStage } from "@/lib/store/wilting";
 
 import type { PlantState } from "./Plant";
 
@@ -12,7 +13,6 @@ import type { PlantState } from "./Plant";
 export type StatusVisual = { plant: PlantState; growth: number };
 
 // Every status
-// Needs input: a fixed wilt stage until wilting stages come
 export const STATUS_VISUALS: Record<AgentStatus, StatusVisual> = {
   starting: { plant: "working", growth: 0 },
   working: { plant: "working", growth: 0.5 },
@@ -20,4 +20,13 @@ export const STATUS_VISUALS: Record<AgentStatus, StatusVisual> = {
   error: { plant: "error", growth: 0.5 },
   done: { plant: "done", growth: 0.5 },
   merged: { plant: "merged", growth: 0.5 },
+};
+
+// waiting plant's look by waited time
+// (lib/store/wilting.ts):
+// first upright, after 15 s drooping, after 60 s yellow
+export const WILT_PLANTS: Record<WiltStage, PlantState> = {
+  pulse: "waiting1",
+  droop: "waiting2",
+  yellow: "waiting3",
 };
