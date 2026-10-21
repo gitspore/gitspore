@@ -5,16 +5,20 @@
 import { useEffect, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { StatsGl, OrbitControls } from "@react-three/drei";
+import { useTheme } from "next-themes";
 import { tokens } from "@/theme/tokens";
 
-import { Pots } from "./spike/Pot";
-import { useTheme } from "next-themes";
-import { RoomLight } from "./spike/RoomLight";
-import { Table } from "./spike/Table";
+import { Pots } from "./scene/Pot";
+import { RoomLight } from "./scene/RoomLight";
+import { Table } from "./scene/Table";
 
 //
 //
-// Spike meter: draw calls, triangles and GPU geometries of the last frame,
+// Development only: the meters. Next writes NODE_ENV into the code when
+// it builds, so the production build never mounts them
+const DEV = process.env.NODE_ENV === "development";
+
+// Dev meter: draw calls, triangles and GPU geometries of the last frame,
 // in a small panel of our own. The panel goes into <body> like StatsGl's,
 // above the interface. useFrame runs before this frame is drawn, so
 // gl.info still holds the last frame. reset() clears the counters but not
@@ -44,12 +48,14 @@ function DrawCalls() {
 
 export function Scene() {
   // The mode: next-themes puts "light" (day) or "dark" (night) on <html>.
-  // Spike flags, read once: ?shadows=off and ?orbit=off for the measurements
+  // URL flags, read once: ?shadows=off for weak GPUs, ?orbit=1 to look
+  // around in development, ?testing=1 for the plant test keys (see Pots)
   const { resolvedTheme } = useTheme();
   const t = resolvedTheme === "light" ? tokens.day : tokens.night;
   const [flags] = useState(() => new URLSearchParams(window.location.search));
   const shadowsOn = flags.get("shadows") !== "off";
-  const orbitOn = flags.get("orbit") !== "off";
+  const orbitOn = flags.get("orbit") === "1";
+  const testingOn = flags.get("testing") === "1";
 
   // The canvas is created once; a mode change only changes props.
   // - shadows: "percentage" is PCFShadowMap; three 0.186 dropped the soft one
@@ -63,7 +69,9 @@ export function Scene() {
       camera={{ position: [0, 8.2, 10.6], fov: 32 }}
       gl={{ toneMappingExposure: t.scene.exposure }}
       onCreated={({ gl }) => {
-        gl.info.autoReset = false;
+        if (DEV) {
+          gl.info.autoReset = false;
+        }
       }}
     >
       {/* Sky colour behind everything; distant things fade into the fog
@@ -114,19 +122,18 @@ export function Scene() {
         intensity={t.scene.light.fill}
       />
 
-      <Pots colors={t.color.scene} />
+      <Pots colors={t.color.scene} testKeys={testingOn} />
       <Table wood={t.color.wood} floor={t.color.scene.floor} />
 
       {orbitOn && <OrbitControls />}
 
-      {/* Spike meters. StatsGl adds its own panel to <body>; the class
+      {/* Dev meters. StatsGl adds its own panel to <body>; the class
           places it. No trackGPU: its timer queries pile up on the HD 530
           and cost 18 ms CPU */}
-      <StatsGl
-        // trackGPU
-        className="fixed bottom-3 left-3 z-50 origin-bottom-left scale-200"
-      />
-      <DrawCalls />
+      {DEV && (
+        <StatsGl className="fixed bottom-3 left-3 z-50 origin-bottom-left scale-200" />
+      )}
+      {DEV && <DrawCalls />}
     </Canvas>
   );
 }

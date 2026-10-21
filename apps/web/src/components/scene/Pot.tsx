@@ -102,16 +102,22 @@ function Pot({
   );
 }
 
-// Spike only: the growth values "g" steps through, starting at the
+// Test keys: the growth values "g" steps through, starting at the
 // table's own size (0.5), then bigger, then from small up again
 const GROWTH_STEPS = [0.5, 0.75, 1, 0, 0.25];
 
 // All six pots. The two shapes are built once while the scene is mounted
 // and shared by all six.
-// Spike keys: "p" moves all six plants to the next state, "g" to the next
-// growth step, "s" switches the whole-plant scale on and off. Typing in a
-// field or the terminal must not change the plants
-export function Pots({ colors }: { colors: SceneColors }) {
+// Test keys, only with ?testing=1: "p" moves all six plants to the next
+// state, "g" to the next growth step, "s" switches the whole-plant scale
+// on and off. Typing in a field or the terminal must not change the plants
+export function Pots({
+  colors,
+  testKeys,
+}: {
+  colors: SceneColors;
+  testKeys: boolean;
+}) {
   const bodyGeo = useMemo(() => new THREE.LatheGeometry(POT_PROFILE, 24), []);
   const soilGeo = useMemo(() => new THREE.CircleGeometry(SOIL_R, 24), []);
 
@@ -120,6 +126,9 @@ export function Pots({ colors }: { colors: SceneColors }) {
   const [wholeScale, setWholeScale] = useState(false);
 
   useEffect(() => {
+    if (!testKeys) {
+      return;
+    }
     const onKey = (e: KeyboardEvent) => {
       const el = e.target;
       if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
@@ -137,7 +146,7 @@ export function Pots({ colors }: { colors: SceneColors }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [testKeys]);
   const state = PLANT_STATES[stateIndex];
   const growth = GROWTH_STEPS[growthIndex];
 

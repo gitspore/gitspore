@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import * as THREE from "three";
 
 import type { Mode, tokens } from "@/theme/tokens";
-import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 
 //
 //
@@ -22,10 +21,8 @@ const LEG_SPOTS = [
   [3.6, 3.05],
 ];
 
-// One plank's size and edge. PLANK_EDGE picks the chamfered shape below
-// or a RoundedBoxGeometry. CHAMFER is the cut on every edge, SOFTEN the
+// One plank's size and edge. CHAMFER is the cut on every edge, SOFTEN the
 // small rounding where the chamfer meets the top and sides
-const PLANK_EDGE: "rounded" | "chamfer" = "chamfer";
 const PLANK_LENGTH = 7.8;
 const PLANK_THICKNESS = 0.3;
 const PLANK_DEPTH = 0.64;
@@ -88,23 +85,11 @@ function chamferedPlank() {
 }
 
 // One plank shape for all nine planks and one box for all four legs, like
-// the shared pot shape. The rounded variant: 1 segment, radius 0.03.
-// Planks cast and receive shadows, legs only cast, the floor receives.
-// The floor is a large plane laid flat, where the legs end
+// the shared pot shape. Planks cast and receive shadows, legs only cast,
+// the floor receives. The floor is a large plane laid flat, where the
+// legs end
 export function Table({ wood, floor }: { wood: WoodColors; floor: string }) {
-  const plankGeo = useMemo(
-    () =>
-      PLANK_EDGE === "chamfer"
-        ? chamferedPlank()
-        : new RoundedBoxGeometry(
-            PLANK_LENGTH,
-            PLANK_THICKNESS,
-            PLANK_DEPTH,
-            1,
-            0.03,
-          ),
-    [],
-  );
+  const plankGeo = useMemo(() => chamferedPlank(), []);
 
   const legGeo = useMemo(() => new THREE.BoxGeometry(0.2, 1.9, 0.2), []);
 
