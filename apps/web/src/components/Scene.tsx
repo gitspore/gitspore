@@ -55,8 +55,7 @@ export function Scene() {
   // - shadows: "percentage" is PCFShadowMap; three 0.186 dropped the soft one
   // - gl: R3F sets the exposure again on the same renderer, no remount
   // - onCreated: bloom draws in several passes, so DrawCalls resets the
-  //   counter once per frame. The log is a spike check: it should appear
-  //   once, however often the mode is toggled
+  //   counter once per frame
   return (
     <Canvas
       dpr={[1, 2]}
@@ -65,7 +64,6 @@ export function Scene() {
       gl={{ toneMappingExposure: t.scene.exposure }}
       onCreated={({ gl }) => {
         gl.info.autoReset = false;
-        console.log("Canvas created");
       }}
     >
       {/* Sky colour behind everything; distant things fade into the fog
