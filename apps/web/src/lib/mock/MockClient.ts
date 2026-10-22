@@ -147,6 +147,7 @@ export class MockClient implements GreenhouseClient {
       this.sendPatch([{ type: "agent:remove", agentId }]);
     },
 
+    // The texts are the daemon's (apps/api/src/modules/repo/repo-problems.ts).
     // There is no disk here: words in the path say what the check finds:
     // "missing", "not-git", "no-branch", "no-github", "no-claude". Every
     // other path is a git repo with the branch, GitHub and Claude Code.
@@ -163,7 +164,7 @@ export class MockClient implements GreenhouseClient {
         checks.push({
           item: "git",
           result: "fail",
-          detail: "Not a git repository. Run git init there.",
+          detail: `${path} is not a git repository. Run git init there, or choose another folder.`,
         });
       } else {
         checks.push(
@@ -172,7 +173,7 @@ export class MockClient implements GreenhouseClient {
             ? {
                 item: "base_branch",
                 result: "fail",
-                detail: `No branch ${baseBranch}. Choose another one.`,
+                detail: `Branch "${baseBranch}" does not exist. Choose another base branch.`,
               }
             : {
                 item: "base_branch",
@@ -197,7 +198,8 @@ export class MockClient implements GreenhouseClient {
           ? {
               item: "claude",
               result: "fail",
-              detail: "Not found. Install Claude Code, then check again.",
+              detail:
+                "Claude Code was not found. Install it, then check again.",
             }
           : { item: "claude", result: "ok", detail: "found" },
       );
@@ -224,13 +226,13 @@ export class MockClient implements GreenhouseClient {
       } else if (path.includes("no-branch")) {
         problems.push({
           code: "no_base_branch",
-          message: `Branch "${baseBranch}" does not exist. Choose the base branch.`,
+          message: `Branch "${baseBranch}" does not exist. Choose another base branch.`,
         });
       }
       if (path.includes("no-claude")) {
         problems.push({
           code: "no_claude",
-          message: "Claude Code was not found. Install it, then try again.",
+          message: "Claude Code was not found. Install it, then check again.",
         });
       }
       if (this.state.agents.some((a) => a.slotIndex !== null)) {

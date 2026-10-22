@@ -16,6 +16,7 @@ import { OverviewAgentService } from "../overview/overview-agent.service";
 import { WorktreeService } from "../worktree/worktree.service";
 import { ClaudeLocator } from "../terminal/claude-locator";
 import { checkRepo, expandHome } from "./check-repo";
+import { branchProblem, NO_CLAUDE, rootProblem } from "./repo-problems";
 
 /**
  * The repo gitspore works in (#58): puts it into the state at startup,
@@ -117,28 +118,13 @@ export class RepoService implements OnModuleInit, OnApplicationBootstrap {
 
     const root = await findRepoRoot(expandHome(path));
     if ("problem" in root) {
-      problems.push(
-        root.problem === "not_found"
-          ? { code: "not_found", message: `${path} does not exist.` }
-          : {
-              code: "not_a_repo",
-              message: `${path} is not a git repository. Run git init there, or choose another folder.`,
-            },
-      );
+      problems.push(rootProblem(path, root.problem));
     } else if (!(await branchExists(root.top, baseBranch))) {
-      problems.push({
-        code: "no_base_branch",
-        message: `Branch "${baseBranch}" does not exist. Choose the base branch.`,
-      });
+      problems.push(branchProblem(baseBranch));
     }
 
     // Without it the switch would work, but no agent could start there.
-    if (!(await this.claudeFound())) {
-      problems.push({
-        code: "no_claude",
-        message: "Claude Code was not found. Install it, then try again.",
-      });
-    }
+    if (!(await this.claudeFound())) problems.push(NO_CLAUDE);
 
     if (problems.length > 0 || "problem" in root) return { problems };
 

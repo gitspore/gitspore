@@ -132,7 +132,7 @@ const acks: {
       },
       {
         code: "no_claude",
-        message: "Claude Code was not found. Install it, then try again.",
+        message: "Claude Code was not found. Install it, then check again.",
       },
     ],
   },

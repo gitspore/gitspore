@@ -59,7 +59,7 @@ describe("checkRepo", () => {
       () => join(tmpdir(), `gitspore-missing-${randomUUID()}`),
       "does not exist",
     ],
-    ["is not a git repo", () => dir, "Run git init"],
+    ["is not a git repo", () => dir, "is not a git repository"],
   ])(
     "leaves out the branch and GitHub for a path that %s",
     async (_, path, detail) => {
@@ -87,7 +87,7 @@ describe("checkRepo", () => {
     expect(checks[1]).toEqual({
       item: "base_branch",
       result: "fail",
-      detail: "No branch main. Choose another one.",
+      detail: 'Branch "main" does not exist. Choose another base branch.',
     });
   });
 

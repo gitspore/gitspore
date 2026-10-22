@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import { basename, join } from "node:path";
 import { branchExists, findRepoRoot } from "@/config/find-repo";
 import type { GitHubConnection } from "../github/github-source";
+import { branchProblem, NO_CLAUDE, rootProblem } from "./repo-problems";
 
 // GitHub and Claude Code come in as parameters, so tests run neither gh nor
 // claude.
@@ -28,10 +29,7 @@ export async function checkRepo(
     checks.push({
       item: "git",
       result: "fail",
-      detail:
-        root.problem === "not_found"
-          ? `${path} does not exist.`
-          : "Not a git repository. Run git init there.",
+      detail: rootProblem(path, root.problem).message,
     });
   } else {
     checks.push({ item: "git", result: "ok", detail: basename(root.top) });
@@ -42,7 +40,7 @@ export async function checkRepo(
         : {
             item: "base_branch",
             result: "fail",
-            detail: `No branch ${baseBranch}. Choose another one.`,
+            detail: branchProblem(baseBranch).message,
           },
     );
 
@@ -62,11 +60,7 @@ export async function checkRepo(
   checks.push(
     (await deps.claudeInstalled())
       ? { item: "claude", result: "ok", detail: "found" }
-      : {
-          item: "claude",
-          result: "fail",
-          detail: "Not found. Install Claude Code, then check again.",
-        },
+      : { item: "claude", result: "fail", detail: NO_CLAUDE.message },
   );
   return checks;
 }
