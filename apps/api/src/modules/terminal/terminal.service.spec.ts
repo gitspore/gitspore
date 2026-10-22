@@ -199,8 +199,9 @@ describe("TerminalService", () => {
       service.onExited(exited);
       let stopped = false;
 
-      const stopping = service.stop("overview").then(() => {
+      const stopping = service.stop("overview").then((result) => {
         stopped = true;
+        return result;
       });
       await Promise.resolve();
 
@@ -208,14 +209,27 @@ describe("TerminalService", () => {
       expect(stopped).toBe(false);
 
       ptys[0].exit(0);
-      await stopping;
+      await expect(stopping).resolves.toBe(true);
       expect(exited).toHaveBeenCalledWith("overview", 0);
       // The id is free again
       expect(() => spawn("overview")).not.toThrow();
     });
 
     it("resolves at once for an agent without a terminal", async () => {
-      await expect(service.stop("nobody")).resolves.toBeUndefined();
+      await expect(service.stop("nobody")).resolves.toBe(true);
+    });
+
+    it("gives up with false when the shell doesn't exit in time", async () => {
+      spawn("overview");
+
+      const stopping = service.stop("overview", 10);
+      jest.advanceTimersByTime(10);
+      await expect(stopping).resolves.toBe(false);
+
+      // Still known until it exits; the late exit frees the id
+      expect(() => spawn("overview")).toThrow();
+      ptys[0].exit(0);
+      expect(() => spawn("overview")).not.toThrow();
     });
   });
 });

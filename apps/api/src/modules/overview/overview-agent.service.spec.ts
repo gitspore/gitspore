@@ -16,7 +16,7 @@ import { OverviewAgentService } from "./overview-agent.service";
 // records spawn() and stop() and lets a test end a shell.
 class FakeTerminals {
   readonly spawn = jest.fn();
-  readonly stop = jest.fn().mockResolvedValue(undefined);
+  readonly stop = jest.fn().mockResolvedValue(true);
   private exitListener?: (agentId: string, exitCode: number) => void;
 
   onExited(listener: (agentId: string, exitCode: number) => void) {

@@ -75,9 +75,17 @@ export class OverviewAgentService implements OnApplicationBootstrap {
     }
   }
 
-  /** Ends the overview agent, before a switch to another repo (#58). */
-  stop(): Promise<void> {
-    return this.terminals.stop(OVERVIEW_AGENT_ID);
+  /**
+   * Ends the overview agent, before a switch to another repo (#58). Never
+   * waits forever, or the switch would stay "switching" and refuse every
+   * dispatch. A shell that doesn't exit is left behind; start() in the new
+   * repo then fails with already_running and logs it.
+   */
+  async stop(): Promise<void> {
+    const exited = await this.terminals.stop(OVERVIEW_AGENT_ID);
+    if (!exited) {
+      this.logger.warn("The overview agent's shell did not exit; going on");
+    }
   }
 
   private async spawnAgent(): Promise<void> {
