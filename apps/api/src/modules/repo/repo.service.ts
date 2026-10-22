@@ -1,4 +1,9 @@
-import type { RepoCheck, RepoChooseAck, RepoProblem } from "@gitspore/shared";
+import type {
+  RepoCheck,
+  RepoChooseAck,
+  RepoInfo,
+  RepoProblem,
+} from "@gitspore/shared";
 import {
   Injectable,
   Logger,
@@ -41,17 +46,16 @@ export class RepoService implements OnModuleInit, OnApplicationBootstrap {
     private readonly claude: ClaudeLocator,
   ) {}
 
-  // Nest awaits this before the gateway listens, so the first snapshot a
-  // client gets already has the repo. Without one the state keeps
-  // repo: null and the setup screen shows. GitHub is asked here only for
-  // "on" or "off"; the sync starts in onApplicationBootstrap.
-  async onModuleInit(): Promise<void> {
+  // Runs before the gateway listens, so the first snapshot a client gets
+  // already has the repo. Without one the state keeps repo: null and the
+  // setup screen shows. GitHub isn't asked here: "off" until GitHubService
+  // connects and sends repo:github, so the start never waits for gh.
+  onModuleInit(): void {
     if (!this.config.isSet()) return;
-    const path = this.config.repoPath();
     this.store.setRepo({
-      path,
+      path: this.config.repoPath(),
       baseBranch: this.config.baseBranch(),
-      github: await this.githubStatus(path),
+      github: "off",
     });
   }
 
@@ -128,9 +132,6 @@ export class RepoService implements OnModuleInit, OnApplicationBootstrap {
 
     if (problems.length > 0 || "problem" in root) return { problems };
 
-    // Asked before anything changes; it can't leave a half switch behind.
-    const github = await this.githubStatus(root.top);
-
     // Ends before the state starts over, so its exit (agent:remove) belongs
     // to the old repo.
     await this.overview.stop();
@@ -145,7 +146,8 @@ export class RepoService implements OnModuleInit, OnApplicationBootstrap {
     } catch (error) {
       return this.undoSwitch(before, path, error);
     }
-    const repo = { path: root.top, baseBranch, github };
+    // "off" until github.restart() below has connected (repo:github).
+    const repo: RepoInfo = { path: root.top, baseBranch, github: "off" };
     // The state starts over; every tab gets a snapshot (StateGateway).
     this.store.setRepo(repo);
     // Not awaited: the new issues arrive as patches, problems as `error`.
@@ -200,10 +202,6 @@ export class RepoService implements OnModuleInit, OnApplicationBootstrap {
       () => true,
       () => false,
     );
-  }
-
-  private async githubStatus(top: string): Promise<"on" | "off"> {
-    return "api" in (await this.connectGitHub(top)) ? "on" : "off";
   }
 
   private connectGitHub(top: string) {

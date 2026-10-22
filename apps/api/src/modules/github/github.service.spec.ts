@@ -482,6 +482,43 @@ describe("GitHubService: pull requests", () => {
   });
 });
 
+describe("GitHubService: the repo's GitHub status", () => {
+  const repo = { path: "/r", baseBranch: "main", github: "off" } as const;
+
+  it("turns it on once connected, with one repo:github patch", async () => {
+    const { store, service, patches } = setup();
+    store.setRepo(repo);
+
+    await service.start();
+
+    expect(store.snapshot().repo?.github).toBe("on");
+    expect(patches[0].ops).toEqual([{ type: "repo:github", github: "on" }]);
+    service.stop();
+  });
+
+  it("sends nothing when sync stays off", async () => {
+    const { store, service, patches } = setup({ disabled: "No token." });
+    store.setRepo(repo);
+
+    await service.start();
+
+    expect(store.snapshot().repo?.github).toBe("off");
+    expect(patches).toEqual([]);
+  });
+
+  it("turns it off when GitHub rejects the token later", async () => {
+    const { api, store, service } = setup();
+    store.setRepo(repo);
+    api.openIssues.mockRejectedValue(
+      new GitHubError("github_auth_failed", "401"),
+    );
+
+    await service.start();
+
+    expect(store.snapshot().repo?.github).toBe("off");
+  });
+});
+
 describe("GitHubService: restart", () => {
   // The second repo's API, handed out by the source's next connect.
   function secondRepo(source: GitHubSource) {

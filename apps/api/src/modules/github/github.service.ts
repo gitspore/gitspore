@@ -84,6 +84,7 @@ export class GitHubService implements OnModuleDestroy {
     const generation = this.generation;
     const connection = await this.source.connect();
     if (this.stopped || generation !== this.generation) return;
+    this.setRepoGitHub("disabled" in connection ? "off" : "on");
 
     if ("disabled" in connection) {
       this.report("github_sync_disabled", connection.disabled);
@@ -258,6 +259,7 @@ export class GitHubService implements OnModuleDestroy {
     switch (error.code) {
       case "github_auth_failed":
         this.api = null;
+        this.setRepoGitHub("off");
         this.report(
           error.code,
           "GitHub rejected the token. Sync is off until the daemon restarts with a valid token.",
@@ -281,6 +283,15 @@ export class GitHubService implements OnModuleDestroy {
         // the state, the next poll tries again.
         this.report(error.code, error.message);
         return POLL_INTERVAL_MS;
+    }
+  }
+
+  // The state's repo shows whether sync is on (#58). Only a change becomes a
+  // patch.
+  private setRepoGitHub(github: "on" | "off"): void {
+    const { repo } = this.store.snapshot();
+    if (repo && repo.github !== github) {
+      this.store.apply([{ type: "repo:github", github }]);
     }
   }
 

@@ -71,33 +71,23 @@ describe("RepoService", () => {
   afterEach(() => rm(dir, { recursive: true, force: true }));
 
   describe("onModuleInit", () => {
-    it("puts the repo it started with into the state, GitHub on", async () => {
-      const git = await initRepo(dir);
-      await git.addRemote("origin", "git@github.com:gitspore/shop.git");
+    it("puts the repo into the state at once, without asking GitHub", async () => {
       config = new RepoConfig(dir, "main");
 
-      await service().onModuleInit();
+      service().onModuleInit();
 
       expect(store.snapshot().repo).toEqual({
         path: dir,
         baseBranch: "main",
-        github: "on",
+        github: "off",
       });
-    });
-
-    it("marks GitHub off for a repo without a remote", async () => {
-      await initRepo(dir);
-      config = new RepoConfig(dir, "main");
-
-      await service().onModuleInit();
-
-      expect(store.snapshot().repo).toMatchObject({ github: "off" });
+      expect(credentials.getToken).not.toHaveBeenCalled();
     });
 
     it("leaves the repo null without one, for the setup screen", async () => {
       config = new RepoConfig(null, "main");
 
-      await service().onModuleInit();
+      service().onModuleInit();
 
       expect(store.snapshot().repo).toBeNull();
     });
