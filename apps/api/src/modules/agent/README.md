@@ -160,6 +160,6 @@ A spawn that throws although the locator found Claude is `claude_not_found`, and
 - `agent-request.spec.ts`, `agent-error.spec.ts`, `task-file.spec.ts`, `hook-status.spec.ts`, `hook-files.spec.ts`, `pull-request-reaction.spec.ts`: the pure functions.
 - `hook-script.spec.ts`: the real script against a stand-in daemon, including a daemon that is down or never answers.
 - `agent.gateway.spec.ts`: the events reach the service and the answers come back.
-- `agent.e2e.spec.ts`: the acceptance criteria of GS-66 and GS-67 with real git (a bare repo in a temp folder as origin), real PTYs, the real hook endpoint and `apps/api/test/fake-claude.mjs` through `GITSPORE_CLAUDE_BIN`. `FAKE_CLAUDE_HOOKS` makes the fake fire hook events through the written `settings.json`. Only GitHub is a stand-in. About a minute on Windows.
+- `agent.e2e.spec.ts`: the acceptance criteria of GS-66, GS-67 and GS-48 with real git (a bare repo in a temp folder as origin), real PTYs, the real hook endpoint and `apps/api/test/fake-claude.mjs` through `GITSPORE_CLAUDE_BIN`. `FAKE_CLAUDE_HOOKS` makes the fake fire hook events through the written `settings.json`. Only GitHub is a stand-in; the tests fire its pull request events themselves, including a squash merge (a commit only on the branch) and a worktree with uncommitted changes. About a minute on Windows.
 
 Run them with `npm run test:api`, or one file with `npm run test -w apps/api -- agent.e2e`.
