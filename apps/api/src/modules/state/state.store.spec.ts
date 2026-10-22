@@ -18,6 +18,8 @@ const agent = (id: string, slotIndex: number | null = 0): Agent => ({
   status: "working",
   statusSince: "2026-10-08T10:00:00.000Z",
   startedAt: "2026-10-08T10:00:00.000Z",
+  pullRequest: null,
+  statusReason: null,
 });
 
 describe("StateStore", () => {

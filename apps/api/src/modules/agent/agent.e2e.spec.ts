@@ -5,7 +5,12 @@
 // agent.service.spec.ts; these check that the parts work together on every
 // OS in CI.
 import { RepoConfig } from "@/config/repo-config";
-import type { AgentId, AgentStatus, Issue } from "@gitspore/shared";
+import type {
+  AgentId,
+  AgentStatus,
+  Issue,
+  PullRequest,
+} from "@gitspore/shared";
 import { Logger, type INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { existsSync } from "node:fs";
@@ -27,7 +32,6 @@ import { spawn } from "node-pty";
 import { simpleGit } from "simple-git";
 import { createFakeClaude } from "../../../test/fake-claude";
 import { initOrigin, initRepo } from "../../../test/git-repo";
-import type { PullRequest } from "../github/github-api";
 import { GitHubError } from "../github/github-error";
 import type { GitHubService } from "../github/github.service";
 import { StateStore } from "../state/state.store";
@@ -549,8 +553,8 @@ describe("Agent dispatch and stop, end to end", () => {
       const agent = await dispatchOk();
       await waitForStatus(agent.id, "error");
 
-      // Not the watchdog's error: that one comes with a message.
-      expect(agentOf(agent.id).statusMessage).toBeUndefined();
+      // Not the watchdog's error: that one comes with a reason.
+      expect(agentOf(agent.id).statusReason).toBeNull();
     },
     TEST_TIMEOUT_MS,
   );
@@ -563,7 +567,10 @@ describe("Agent dispatch and stop, end to end", () => {
       const agent = await dispatchOk();
       await waitForStatus(agent.id, "error");
 
-      expect(agentOf(agent.id).statusMessage).toMatch(/trust the folder/);
+      expect(agentOf(agent.id).statusReason).toEqual({
+        code: "no_status",
+        message: expect.stringMatching(/trust the folder/),
+      });
     },
     TEST_TIMEOUT_MS,
   );

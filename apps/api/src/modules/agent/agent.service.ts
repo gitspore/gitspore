@@ -1,4 +1,9 @@
-import type { AgentDispatchAck, AgentId, AgentStatus } from "@gitspore/shared";
+import type {
+  AgentDispatchAck,
+  AgentId,
+  AgentStatus,
+  StatusReason,
+} from "@gitspore/shared";
 import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { StateStore } from "../state/state.store";
 import { GitHubService } from "../github/github.service";
@@ -22,11 +27,14 @@ import { RepoService } from "../repo/repo.service";
 const TASK_DIR = ".gitspore";
 const STOP_TIMEOUT_MS = 10_000;
 const WATCHDOG_MS = 60_000;
-const WATCHDOG_MESSAGE =
-  "Claude Code has sent no status since it started. It probably waits for " +
-  "you to trust the folder: open the agent's terminal and confirm. Opening " +
-  "the repo once in Claude Code and trusting it saves the question for " +
-  "every future agent. The status updates as soon as Claude Code reports.";
+const WATCHDOG_REASON: StatusReason = {
+  code: "no_status",
+  message:
+    "Claude Code has sent no status since it started. It probably waits for " +
+    "you to trust the folder: open the agent's terminal and confirm. Opening " +
+    "the repo once in Claude Code and trusting it saves the question for " +
+    "every future agent. The status updates as soon as Claude Code reports.",
+};
 
 // nest build copies it next to the compiled service (nest-cli.json assets).
 const HOOK_SCRIPT = join(__dirname, "hook-script.mjs");
@@ -119,6 +127,8 @@ export class AgentService implements OnModuleInit {
           status: "starting",
           statusSince: now,
           startedAt: now,
+          pullRequest: null,
+          statusReason: null,
         },
       },
     ]);
@@ -254,7 +264,7 @@ export class AgentService implements OnModuleInit {
     entry.watchdog = setTimeout(() => {
       entry.watchdog = undefined;
       if (this.running.get(agentId) !== entry || entry.stopping) return;
-      this.setStatus(agentId, "error", WATCHDOG_MESSAGE);
+      this.setStatus(agentId, "error", WATCHDOG_REASON);
     }, this.watchdogMs);
     entry.watchdog.unref();
   }
@@ -409,7 +419,7 @@ export class AgentService implements OnModuleInit {
   private setStatus(
     agentId: AgentId,
     status: AgentStatus,
-    message?: string,
+    reason: StatusReason | null = null,
   ): void {
     const agent = this.store.snapshot().agents.find((a) => a.id === agentId);
 
@@ -421,7 +431,7 @@ export class AgentService implements OnModuleInit {
           ...agent,
           status,
           statusSince: new Date().toISOString(),
-          statusMessage: message,
+          statusReason: reason,
         },
       },
     ]);

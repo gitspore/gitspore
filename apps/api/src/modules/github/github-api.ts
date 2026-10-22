@@ -1,4 +1,4 @@
-import type { Issue } from "@gitspore/shared";
+import type { Issue, PullRequest } from "@gitspore/shared";
 import { Octokit } from "@octokit/rest";
 import { GitHubError } from "./github-error";
 import { GitHubRepo } from "./parse-remote";
@@ -26,15 +26,6 @@ const PER_PAGE = 100;
 // answers 304 Not Modified (no body, doesn't count against the rate limit) as
 // long as the answer is the same.
 type CachedAnswer = { etag: string; data: unknown };
-
-/** The pull request of an agent's branch, as far as GS-48 needs it. */
-export type PullRequest = {
-  number: number;
-  /** The pull request's page on github.com. */
-  url: string;
-  /** `merged` is a closed pull request whose branch was merged. */
-  state: "open" | "closed" | "merged";
-};
 
 /** An issue with its text, for starting an agent on it. */
 export type IssueDetails = Issue & { body: string };
