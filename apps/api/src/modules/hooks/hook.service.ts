@@ -1,6 +1,7 @@
 import { AgentId } from "@gitspore/shared";
 import { Injectable } from "@nestjs/common";
 import { randomBytes, timingSafeEqual } from "node:crypto";
+import { daemonPort } from "@/config/daemon-port";
 
 type Listener = (agentId: AgentId, payload: unknown) => void;
 
@@ -17,6 +18,10 @@ export class HookService {
 
   revoke(agentId: AgentId): void {
     this.secrets.delete(agentId);
+  }
+
+  url(): string {
+    return `http://127.0.0.1:${daemonPort()}`;
   }
 
   isValid(agentId: AgentId, candidate: unknown): boolean {
