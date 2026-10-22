@@ -10,6 +10,8 @@ export const agent: Agent = {
   status: "working",
   statusSince: "2026-10-09T09:00:00.000Z",
   startedAt: "2026-10-09T09:00:00.000Z",
+  pullRequest: null,
+  statusReason: null,
 };
 
 export const ANCHOR = "2026-10-09T09:30:00.000Z";

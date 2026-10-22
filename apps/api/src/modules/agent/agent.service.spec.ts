@@ -1,5 +1,10 @@
 import { RepoConfig } from "@/config/repo-config";
-import type { AgentStatus, Issue, StatePatch } from "@gitspore/shared";
+import type {
+  AgentStatus,
+  Issue,
+  PullRequest,
+  StatePatch,
+} from "@gitspore/shared";
 import { Logger } from "@nestjs/common";
 import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -15,7 +20,6 @@ import type { WorktreeService } from "../worktree/worktree.service";
 import { AgentService } from "./agent.service";
 import type { RepoService } from "../repo/repo.service";
 import { PROMPT, taskFile } from "./task-file";
-import type { PullRequest } from "../github/github-api";
 import type { HookService } from "../hooks/hook.service";
 
 // No repo switch is running.
@@ -564,6 +568,8 @@ describe("AgentService.dispatch", () => {
             status: "working",
             statusSince: "2026-10-21T10:00:00.000Z",
             startedAt: "2026-10-21T10:00:00.000Z",
+            pullRequest: null,
+            statusReason: null,
           },
         },
       ]);
@@ -594,7 +600,7 @@ describe("AgentService.dispatch", () => {
       await sleep(60);
 
       expect(agentOf()?.status).toBe("error");
-      expect(agentOf()?.statusMessage).toMatch(/trust the folder/);
+      expect(agentOf()?.statusReason?.code).toBe("no_status");
     });
 
     it("is satisfied by the first hook, even SessionStart", async () => {
@@ -611,7 +617,7 @@ describe("AgentService.dispatch", () => {
       await settle();
 
       expect(agentOf()?.status).toBe("working");
-      expect(agentOf()?.statusMessage).toBeUndefined();
+      expect(agentOf()?.statusReason).toBeNull();
     });
 
     it("is cleared when Claude Code exits", async () => {

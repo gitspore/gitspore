@@ -71,7 +71,7 @@ Claude Code runs `hook-script.mjs` for each event, with the daemon's own Node (`
 
 ### Watchdog
 
-If not a single hook arrives within 60 s of the spawn, the agent becomes `error` with a `statusMessage`: Claude most likely waits for the trust question in its terminal. It is not killed: once the question is answered, the hooks arrive and the status moves on by itself. Worktrees seem to inherit the trust of their main repo, so trusting the repo once in Claude Code saves the question for all agents. The first readable hook, the exit and stop clear the watchdog.
+If not a single hook arrives within 60 s of the spawn, the agent becomes `error` with the `statusReason` `no_status`: Claude most likely waits for the trust question in its terminal. It is not killed: once the question is answered, the hooks arrive and the status moves on by itself. Worktrees seem to inherit the trust of their main repo, so trusting the repo once in Claude Code saves the question for all agents. The first readable hook, the exit and stop clear the watchdog.
 
 ## When Claude exits
 
@@ -122,7 +122,7 @@ A spawn that throws although the locator found Claude is `claude_not_found`, and
 ## Not handled here
 
 - Merge detection and `merged`: GS-48. A merged PR keeps the pot at `done` until the next hook.
-- Showing `statusMessage` in the web app.
+- Showing `statusReason` in the web app.
 - `agent:restart` (`claude --resume <session id>`) and "continue or discard" for an issue whose branch already exists: a follow-up. Until then such a dispatch fails with `git_failed` (`branch_exists`).
 - Skipping the trust dialog, a configurable permission mode, resuming agents after a daemon restart.
 - Process trees and a clean shutdown of the daemon: GS-53. `kill` ends Claude, not programs Claude started.

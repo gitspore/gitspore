@@ -113,6 +113,8 @@ describe("OverviewAgentService", () => {
       status: "working",
       statusSince: agent.startedAt,
       startedAt: expect.any(String),
+      pullRequest: null,
+      statusReason: null,
     });
     expect(new Date(agent.startedAt).toISOString()).toBe(agent.startedAt);
   });
