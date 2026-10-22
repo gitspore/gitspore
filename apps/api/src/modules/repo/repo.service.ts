@@ -63,13 +63,7 @@ export class RepoService implements OnModuleInit, OnApplicationBootstrap {
   check(path: string, baseBranch: string): Promise<RepoCheck[]> {
     return checkRepo(path, baseBranch, {
       connectGitHub: (top) => this.connectGitHub(top),
-      // The same lookup the agents start with (claude.cmd on Windows,
-      // GITSPORE_CLAUDE_BIN), so the screen and a start never disagree.
-      claudeInstalled: () =>
-        this.claude.resolve().then(
-          () => true,
-          () => false,
-        ),
+      claudeInstalled: () => this.claudeFound(),
     });
   }
 
@@ -138,6 +132,14 @@ export class RepoService implements OnModuleInit, OnApplicationBootstrap {
       });
     }
 
+    // Without it the switch would work, but no agent could start there.
+    if (!(await this.claudeFound())) {
+      problems.push({
+        code: "no_claude",
+        message: "Claude Code was not found. Install it, then try again.",
+      });
+    }
+
     if (problems.length > 0 || "problem" in root) return { problems };
 
     // Asked before anything changes; it can't leave a half switch behind.
@@ -203,6 +205,15 @@ export class RepoService implements OnModuleInit, OnApplicationBootstrap {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.warn(`Could not remember ${path}: ${message}`);
     }
+  }
+
+  // The same lookup the agents start with (claude.cmd on Windows,
+  // GITSPORE_CLAUDE_BIN), so the screen, a switch and a start never disagree.
+  private claudeFound(): Promise<boolean> {
+    return this.claude.resolve().then(
+      () => true,
+      () => false,
+    );
   }
 
   private async githubStatus(top: string): Promise<"on" | "off"> {

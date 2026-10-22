@@ -297,5 +297,19 @@ describe("RepoService", () => {
       expect(config.isSet()).toBe(false);
       logError.mockRestore();
     });
+
+    it("refuses without Claude Code, next to the path's problems", async () => {
+      claude.resolve.mockRejectedValueOnce(new Error("not found"));
+
+      const ack = await service().choose(dir, "main");
+
+      expect(ack).toEqual({
+        problems: [
+          expect.objectContaining({ code: "not_a_repo" }),
+          expect.objectContaining({ code: "no_claude" }),
+        ],
+      });
+      expect(config.repoPath()).toBe("/old/repo");
+    });
   });
 });
