@@ -62,7 +62,11 @@
         "status": "done",
         "statusSince": "2026-10-09T09:25:00.000Z",
         "startedAt": "2026-10-09T09:00:00.000Z",
-        "pullRequest": null,
+        "pullRequest": {
+          "number": 205,
+          "url": "https://github.com/gitspore/gitspore/pull/205",
+          "state": "open"
+        },
         "statusReason": null
       },
       {
@@ -74,7 +78,11 @@
         "status": "merged",
         "statusSince": "2026-10-09T09:28:00.000Z",
         "startedAt": "2026-10-09T09:00:00.000Z",
-        "pullRequest": null,
+        "pullRequest": {
+          "number": 206,
+          "url": "https://github.com/gitspore/gitspore/pull/206",
+          "state": "merged"
+        },
         "statusReason": null
       }
     ],

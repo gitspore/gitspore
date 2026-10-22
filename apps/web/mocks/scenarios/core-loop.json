@@ -158,7 +158,11 @@
               "status": "done",
               "statusSince": "2026-10-09T09:31:30.000Z",
               "startedAt": "2026-10-09T09:30:01.000Z",
-              "pullRequest": null,
+              "pullRequest": {
+                "number": 311,
+                "url": "https://github.com/gitspore/gitspore/pull/311",
+                "state": "open"
+              },
               "statusReason": null
             }
           }
@@ -182,7 +186,11 @@
               "status": "merged",
               "statusSince": "2026-10-09T09:31:35.000Z",
               "startedAt": "2026-10-09T09:30:01.000Z",
-              "pullRequest": null,
+              "pullRequest": {
+                "number": 311,
+                "url": "https://github.com/gitspore/gitspore/pull/311",
+                "state": "merged"
+              },
               "statusReason": null
             }
           }
@@ -190,7 +198,7 @@
       }
     },
     {
-      "at": 97000,
+      "at": 100000,
       "event": "state:patch",
       "payload": {
         "version": 8,

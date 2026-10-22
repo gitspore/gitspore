@@ -82,7 +82,7 @@ describe("resolveClientMode", () => {
     it("names the available scenarios for an unknown one", () => {
       expect(() => resolve("?mock=nope")).toThrow(ClientModeError);
       expect(() => resolve("?mock=nope")).toThrow(
-        'Unknown mock scenario "nope". Available: empty, all-states, core-loop, stress, no-repo.',
+        'Unknown mock scenario "nope". Available: empty, all-states, core-loop, pr-closed, stress, no-repo.',
       );
     });
 
