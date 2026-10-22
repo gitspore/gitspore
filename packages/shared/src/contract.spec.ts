@@ -80,6 +80,7 @@ const ops: { [T in PatchOp["type"]]: Extract<PatchOp, { type: T }> } = {
     },
   },
   "issue:remove": { type: "issue:remove", issueNumber: 43 },
+  "repo:github": { type: "repo:github", github: "off" },
 };
 
 // One sample payload per event, so the event log can hold every one of them.
@@ -188,11 +189,20 @@ describe("applyPatch", () => {
       status: "applied",
       state: {
         version: 8,
-        repo: snapshot.repo,
+        repo: { ...snapshot.repo!, github: "off" },
         agents: [snapshot.agents[1]],
         issues: [snapshot.issues[0], ops["issue:upsert"].issue],
       },
     });
+  });
+
+  it("changes nothing with repo:github while no repo is chosen", () => {
+    const result = applyPatch(
+      { ...snapshot, repo: null },
+      { version: 8, ops: [ops["repo:github"]] },
+    );
+
+    expect(result).toMatchObject({ status: "applied", state: { repo: null } });
   });
 
   it("replaces an upserted entity in place", () => {

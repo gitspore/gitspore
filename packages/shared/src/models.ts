@@ -80,7 +80,11 @@ export type RepoInfo = {
   /** Absolute path of the repo root on the user's machine. */
   path: string;
   baseBranch: string;
-  /** "off": no GitHub remote or no token. Agents still work, issues don't sync. */
+  /**
+   * "off": no GitHub remote or no token. Agents still work, issues don't sync.
+   * Starts "off" for a new repo; a `repo:github` patch follows once GitHub
+   * answered.
+   */
   github: "on" | "off";
 };
 

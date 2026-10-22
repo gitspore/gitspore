@@ -57,6 +57,7 @@ const patchOpSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("agent:remove"), agentId: z.string() }),
   z.object({ type: z.literal("issue:upsert"), issue: issueSchema }),
   z.object({ type: z.literal("issue:remove"), issueNumber: z.number() }),
+  z.object({ type: z.literal("repo:github"), github: z.enum(["on", "off"]) }),
 ]) satisfies z.ZodType<PatchOp>;
 
 const statePatchSchema = z.object({

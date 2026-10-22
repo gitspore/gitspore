@@ -64,7 +64,9 @@ export type PatchOp =
   | { type: "agent:upsert"; agent: Agent }
   | { type: "agent:remove"; agentId: AgentId }
   | { type: "issue:upsert"; issue: Issue }
-  | { type: "issue:remove"; issueNumber: number };
+  | { type: "issue:remove"; issueNumber: number }
+  /** GitHub sync for the current repo turned on or off. Nothing without a repo. */
+  | { type: "repo:github"; github: RepoInfo["github"] };
 
 /**
  * Changes from version `version - 1` to `version`. Versions increase by
