@@ -120,6 +120,8 @@ describe("expandHome", () => {
   it.each([
     ["~", homedir()],
     ["~/code/shop", join(homedir(), "code", "shop")],
+    ["~\\code\\shop", join(homedir(), "code\\shop")],
+    ["~user/shop", "~user/shop"],
     ["/srv/shop", "/srv/shop"],
     ["code/~/shop", "code/~/shop"],
   ])("%s → %s", (path, expanded) => {

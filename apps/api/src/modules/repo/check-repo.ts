@@ -71,9 +71,12 @@ export async function checkRepo(
   return checks;
 }
 
-/** A pasted path may start with ~, which only a shell expands. */
+/**
+ * A pasted path may start with ~, which only a shell expands. Both
+ * separators: on Windows it is ~\code\repo.
+ */
 export function expandHome(path: string): string {
   if (path === "~") return homedir();
-  if (path.startsWith("~/")) return join(homedir(), path.slice(2));
+  if (/^~[\\/]/.test(path)) return join(homedir(), path.slice(2));
   return path;
 }
