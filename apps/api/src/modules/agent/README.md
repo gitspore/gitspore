@@ -81,13 +81,24 @@ The GitHub poll reports every new pull request on an agent branch and every new 
 | Pull request | Status                                       |
 | ------------ | -------------------------------------------- |
 | open         | `done`; a `working` agent stays `working`    |
-| merged       | `merged`                                     |
+| merged       | `merged`, then cleaned up (see below)        |
 | closed       | `error` with `pr_closed`; nothing is deleted |
 
 - A merged agent stays as it is: later PR changes, hooks and Claude's exit don't move it back.
 - After `pr_closed` the hooks go on as usual, e.g. when Claude opens a new pull request. A reopened one makes the agent `done` again.
 - The `Stop` hook and the exit ask GitHub themselves and put the pull request they find on the agent; a merged one there is left to the poll. Without an answer from GitHub the agent keeps the pull request it has.
 - Hooks, the exit and the poll share the counter that lets the newest change win.
+
+### After a merge
+
+1. The agent is `merged` (one patch, with the pull request), and the watchdog is cleared.
+2. Nothing happens for 5 s (`bloomMs`), so the bloom can be seen. A stop in that time wins: the cleanup doesn't run.
+3. Claude is killed if it still runs, and its secret revoked. Hooks, the exit and a stop no longer change the agent.
+4. A worktree with uncommitted changes is kept: the agent stays `merged` with `cleanup_blocked`, until the user stops it. The check runs after the kill, so Claude can't write anything in between.
+5. Otherwise `remove({ force, deleteBranch })` deletes the worktree and the local branch; `force`, because a squash merge leaves the branch unmerged in local git. The branch on origin is left to GitHub ("Automatically delete head branches").
+6. `agent:remove`: the slot is free.
+
+A failing removal also gives `cleanup_blocked`, with the reason in its message.
 
 ## When Claude exits
 
@@ -138,7 +149,6 @@ A spawn that throws although the locator found Claude is `claude_not_found`, and
 
 ## Not handled here
 
-- Cleaning up after `merged` (worktree, branch, slot): GS-48, step 4.
 - Showing `statusReason` in the web app.
 - `agent:restart` (`claude --resume <session id>`) and "continue or discard" for an issue whose branch already exists: a follow-up. Until then such a dispatch fails with `git_failed` (`branch_exists`).
 - Skipping the trust dialog, a configurable permission mode, resuming agents after a daemon restart.

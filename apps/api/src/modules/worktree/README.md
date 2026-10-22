@@ -94,7 +94,7 @@ Anything else (git missing, timeout) is simple-git's `GitError`.
 ## Not handled here
 
 - Checking the issue number (`-1`, `NaN`), the agent limit, and planting the same issue twice: the gateway (#16). Two `create` calls for the same issue at the same moment can both pass the checks; the second fails with a raw `GitError`.
-- Merge detection and branch cleanup after a merge: GS-22. A branch squash-merged on GitHub still counts as unmerged locally, so that cleanup needs `force`.
+- Merge detection and branch cleanup after a merge: GS-48, in the agent module. A branch squash-merged on GitHub still counts as unmerged locally, so that cleanup needs `force`.
 
 ## Tests
 
