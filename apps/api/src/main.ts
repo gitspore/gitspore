@@ -3,6 +3,7 @@ import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { PRODUCT_NAME } from "@gitspore/shared";
 import { AppModule } from "./app.module";
+import { daemonPort } from "./config/daemon-port";
 import {
   allowedOrigins,
   SessionAuth,
@@ -16,7 +17,7 @@ async function bootstrap() {
   app.enableCors({ origin: allowedOrigins() });
 
   // Next dev already owns 3000.
-  const port = Number(process.env.PORT ?? 3001);
+  const port = daemonPort();
   await app.listen(port, "127.0.0.1");
 
   Logger.log(

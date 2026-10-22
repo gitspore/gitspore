@@ -7,6 +7,8 @@ import { RepoConfig } from "@/config/repo-config";
 import type { AgentId, AgentStatus, Issue } from "@gitspore/shared";
 import { Logger } from "@nestjs/common";
 import { existsSync } from "node:fs";
+import { HookService } from "../hooks/hook.service";
+
 import {
   mkdir,
   mkdtemp,
@@ -106,6 +108,7 @@ describe("Agent dispatch and stop, end to end", () => {
       terminals,
       new ClaudeLocator(systemDeps()),
       new RepoConfig(repo, "main"),
+      new HookService(),
     );
     service.onModuleInit();
 
@@ -200,7 +203,7 @@ describe("Agent dispatch and stop, end to end", () => {
       const ack = await dispatch();
 
       expect(ack).toEqual({ agentId: expect.any(String) });
-      expect(statuses).toEqual(["starting", "working"]);
+      expect(statuses).toEqual(["starting"]);
       const agent = agentOf((ack as { agentId: AgentId }).agentId);
       expect(existsSync(agent.worktreePath)).toBe(true);
       expect(await onOrigin(agent.branch)).toBe(true);
@@ -214,7 +217,13 @@ describe("Agent dispatch and stop, end to end", () => {
       // The prompt arrives as one argument, after the session id.
       await waitForFile(argsFile);
       const args = JSON.parse(await readFile(argsFile, "utf8"));
-      expect(args).toEqual(["--session-id", expect.any(String), PROMPT]);
+      expect(args).toEqual([
+        "--settings",
+        ".gitspore/settings.json",
+        "--session-id",
+        expect.any(String),
+        PROMPT,
+      ]);
 
       // .gitspore/ never shows up in git status.
       const status = await simpleGit(agent.worktreePath).raw([
@@ -312,7 +321,7 @@ describe("Agent dispatch and stop, end to end", () => {
 
       spawnPty.mockRestore();
       const agent = await dispatchOk();
-      expect(agent.status).toBe("working");
+      expect(agent.status).toBe("starting");
     },
     TEST_TIMEOUT_MS,
   );
@@ -517,7 +526,7 @@ describe("Agent dispatch and stop, end to end", () => {
       });
 
       expect(store.snapshot().agents.map((a) => a.status)).toEqual(
-        Array(6).fill("working"),
+        Array(6).fill("starting"),
       );
       expect(exited.size).toBe(0);
 
