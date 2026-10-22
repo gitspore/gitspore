@@ -1,16 +1,20 @@
 import { RepoConfig } from "@/config/repo-config";
-import type {
-  AgentStatus,
-  Issue,
-  PullRequest,
-  StatePatch,
+import {
+  issueNumberFromBranch,
+  type AgentStatus,
+  type Issue,
+  type PullRequest,
+  type StatePatch,
 } from "@gitspore/shared";
 import { Logger } from "@nestjs/common";
 import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { GitHubError } from "../github/github-error";
-import type { GitHubService } from "../github/github.service";
+import type {
+  GitHubService,
+  PullRequestChange,
+} from "../github/github.service";
 import { StateStore } from "../state/state.store";
 import type { ClaudeLocator } from "../terminal/claude-locator";
 import { TerminalError } from "../terminal/terminal-error";
@@ -85,6 +89,20 @@ class FakeGitHub {
   readonly findPullRequest = jest.fn<Promise<PullRequest | null>, [string]>(
     async () => null,
   );
+  private pullRequestListener?: (change: PullRequestChange) => void;
+  readonly onPullRequest = jest.fn(
+    (listener: (change: PullRequestChange) => void) => {
+      this.pullRequestListener = listener;
+    },
+  );
+
+  pullRequestChanged(branch: string, pullRequest: PullRequest) {
+    this.pullRequestListener?.({
+      branch,
+      issueNumber: issueNumberFromBranch(branch) ?? 0,
+      pullRequest,
+    });
+  }
 }
 
 class FakeHooks {
@@ -382,8 +400,8 @@ describe("AgentService.dispatch", () => {
       statuses = [];
     });
 
-    const statusOf = () =>
-      store.snapshot().agents.find((a) => a.id === agentId)?.status;
+    const agentOf = () => store.snapshot().agents.find((a) => a.id === agentId);
+    const statusOf = () => agentOf()?.status;
 
     it("is error after a non-zero exit code", async () => {
       terminals.exit(agentId, 1);
@@ -405,6 +423,7 @@ describe("AgentService.dispatch", () => {
 
       expect(statusOf()).toBe("done");
       expect(github.findPullRequest).toHaveBeenCalledWith("spore/42-issue");
+      expect(agentOf()?.pullRequest?.number).toBe(7);
     });
 
     it("is needs_input after a clean exit without a pull request", async () => {
@@ -427,7 +446,12 @@ describe("AgentService.dispatch", () => {
       expect(statusOf()).toBe("needs_input");
     });
 
-    it("is needs_input when GitHub cannot be asked", async () => {
+    it("is needs_input when GitHub cannot be asked, and keeps the pull request it has", async () => {
+      github.pullRequestChanged("spore/42-issue", {
+        number: 7,
+        url: "https://github.com/owner/repo/pull/7",
+        state: "open",
+      });
       github.findPullRequest.mockRejectedValue(
         new GitHubError("github_unreachable", "Offline"),
       );
@@ -436,6 +460,7 @@ describe("AgentService.dispatch", () => {
       await settle();
 
       expect(statusOf()).toBe("needs_input");
+      expect(agentOf()?.pullRequest?.number).toBe(7);
       expect(Logger.prototype.warn).toHaveBeenCalled();
     });
 
@@ -755,6 +780,116 @@ describe("AgentService.dispatch", () => {
       await settle();
 
       expect(hooks.revoke).toHaveBeenCalledWith(agentId);
+    });
+  });
+
+  describe("when the pull request changes", () => {
+    let agentId: string;
+    const branch = "spore/42-issue";
+    const pr = (state: PullRequest["state"]): PullRequest => ({
+      number: 7,
+      url: "https://github.com/owner/repo/pull/7",
+      state,
+    });
+
+    beforeEach(async () => {
+      service.onModuleInit();
+      const ack = await dispatch();
+      if ("error" in ack) throw new Error("dispatch failed");
+      agentId = ack.agentId;
+      statuses = [];
+    });
+
+    const agentOf = () => store.snapshot().agents.find((a) => a.id === agentId);
+    const send = async (payload: unknown) => {
+      hooks.send(agentId, payload);
+      await settle();
+    };
+
+    it("puts an open pull request on the agent and makes it done, in one patch", () => {
+      github.pullRequestChanged(branch, pr("open"));
+
+      expect(agentOf()).toMatchObject({
+        status: "done",
+        pullRequest: pr("open"),
+      });
+      expect(statuses).toEqual(["done"]);
+    });
+
+    it("keeps a working agent working, but shows the pull request", async () => {
+      await send({ hook_event_name: "UserPromptSubmit" });
+
+      github.pullRequestChanged(branch, pr("open"));
+
+      expect(agentOf()).toMatchObject({
+        status: "working",
+        pullRequest: pr("open"),
+      });
+    });
+
+    it("makes the agent merged", () => {
+      github.pullRequestChanged(branch, pr("merged"));
+
+      expect(agentOf()).toMatchObject({
+        status: "merged",
+        pullRequest: pr("merged"),
+      });
+    });
+
+    it("is error with pr_closed when closed without merging, and done when reopened", () => {
+      github.pullRequestChanged(branch, pr("closed"));
+      expect(agentOf()?.status).toBe("error");
+      expect(agentOf()?.statusReason?.code).toBe("pr_closed");
+
+      github.pullRequestChanged(branch, pr("open"));
+      expect(agentOf()?.status).toBe("done");
+      expect(agentOf()?.statusReason).toBeNull();
+    });
+
+    it("adds pr_closed to an agent that is already error", async () => {
+      await send({ hook_event_name: "StopFailure" });
+
+      github.pullRequestChanged(branch, pr("closed"));
+
+      expect(agentOf()?.statusReason?.code).toBe("pr_closed");
+    });
+
+    it("lets hooks move the agent on after pr_closed", async () => {
+      github.pullRequestChanged(branch, pr("closed"));
+
+      await send({ hook_event_name: "UserPromptSubmit" });
+
+      expect(agentOf()?.status).toBe("working");
+      expect(agentOf()?.statusReason).toBeNull();
+    });
+
+    it("ignores hooks and the exit once merged", async () => {
+      github.pullRequestChanged(branch, pr("merged"));
+
+      await send({ hook_event_name: "Stop" });
+      terminals.exit(agentId, 1);
+      await settle();
+
+      expect(agentOf()?.status).toBe("merged");
+      expect(github.findPullRequest).not.toHaveBeenCalled();
+    });
+
+    it("wins over a pull request check still under way", async () => {
+      const answer = deferred<PullRequest | null>();
+      github.findPullRequest.mockReturnValue(answer.promise);
+
+      await send({ hook_event_name: "Stop" });
+      github.pullRequestChanged(branch, pr("merged"));
+      answer.resolve(pr("open"));
+      await settle();
+
+      expect(agentOf()?.status).toBe("merged");
+    });
+
+    it("ignores branches without an agent", () => {
+      github.pullRequestChanged("spore/99-other", pr("open"));
+
+      expect(statuses).toEqual([]);
     });
   });
 });

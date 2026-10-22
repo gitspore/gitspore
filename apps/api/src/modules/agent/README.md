@@ -74,18 +74,34 @@ Claude Code runs `hook-script.mjs` for each event, with the daemon's own Node (`
 
 If not a single hook arrives within 60 s of the spawn, the agent becomes `error` with the `statusReason` `no_status`: Claude most likely waits for the trust question in its terminal. It is not killed: once the question is answered, the hooks arrive and the status moves on by itself. Worktrees seem to inherit the trust of their main repo, so trusting the repo once in Claude Code saves the question for all agents. The first readable hook, the exit and stop clear the watchdog.
 
+## When the pull request changes
+
+The GitHub poll reports every new pull request on an agent branch and every new state (`GitHubService.onPullRequest`). The pull request goes on the agent, and `reactToPullRequest` decides the status, in one patch:
+
+| Pull request | Status                                       |
+| ------------ | -------------------------------------------- |
+| open         | `done`; a `working` agent stays `working`    |
+| merged       | `merged`                                     |
+| closed       | `error` with `pr_closed`; nothing is deleted |
+
+- A merged agent stays as it is: later PR changes, hooks and Claude's exit don't move it back.
+- After `pr_closed` the hooks go on as usual, e.g. when Claude opens a new pull request. A reopened one makes the agent `done` again.
+- The `Stop` hook and the exit ask GitHub themselves and put the pull request they find on the agent; a merged one there is left to the poll. Without an answer from GitHub the agent keeps the pull request it has.
+- Hooks, the exit and the poll share the counter that lets the newest change win.
+
 ## When Claude exits
 
 Hooks can't report an exit, so the exit code and the pull request decide:
 
-| Claude ends …                             | Status                                    |
-| ----------------------------------------- | ----------------------------------------- |
-| with exit code ≠ 0                        | `error`                                   |
-| with 0, and the branch has an **open** PR | `done`                                    |
-| with 0, and no PR                         | `needs_input`                             |
-| with 0, and GitHub can't be asked         | `needs_input`                             |
-| with 0, and the PR is already merged      | `needs_input` (merge handling is GS-48)   |
-| because of `agent:stop`                   | unchanged; `stop` takes care of the agent |
+| Claude ends …                             | Status                                         |
+| ----------------------------------------- | ---------------------------------------------- |
+| with exit code ≠ 0                        | `error`                                        |
+| with 0, and the branch has an **open** PR | `done`                                         |
+| with 0, and no PR                         | `needs_input`                                  |
+| with 0, and GitHub can't be asked         | `needs_input`                                  |
+| with 0, and the PR is already merged      | `needs_input`; the poll then makes it `merged` |
+| after the agent is `merged`               | unchanged                                      |
+| because of `agent:stop`                   | unchanged; `stop` takes care of the agent      |
 
 The PR is asked from GitHub directly (`GitHubService.findPullRequest`), not from the last poll: Claude may have opened it seconds ago. The exit revokes the agent's secret. The overview agent's exit is not handled here.
 
@@ -122,7 +138,7 @@ A spawn that throws although the locator found Claude is `claude_not_found`, and
 
 ## Not handled here
 
-- Merge detection and `merged`: GS-48. A merged PR keeps the pot at `done` until the next hook.
+- Cleaning up after `merged` (worktree, branch, slot): GS-48, step 4.
 - Showing `statusReason` in the web app.
 - `agent:restart` (`claude --resume <session id>`) and "continue or discard" for an issue whose branch already exists: a follow-up. Until then such a dispatch fails with `git_failed` (`branch_exists`).
 - Skipping the trust dialog, a configurable permission mode, resuming agents after a daemon restart.
