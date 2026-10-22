@@ -1,3 +1,4 @@
+import { Logger } from "@nestjs/common";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import type { AddressInfo } from "node:net";
@@ -204,6 +205,46 @@ describe("StateGateway", () => {
       for (const snapshot of await snapshots) {
         expect(snapshot).toMatchObject({ repo: chosen });
       }
+    });
+
+    it.each([
+      ["repo:check", { checks: [expect.objectContaining({ result: "fail" })] }],
+      [
+        "repo:choose",
+        { problems: [expect.objectContaining({ code: "invalid_payload" })] },
+      ],
+    ] as const)("answers %s without a path", async (event, answer) => {
+      const socket = connect({ token: auth.token, origin: ORIGIN });
+      await expect(outcome(socket)).resolves.toBe("snapshot");
+      repo.check.mockClear();
+      repo.choose.mockClear();
+
+      const ack = await socket.emitWithAck(event, {} as never);
+
+      expect(ack).toEqual(answer);
+      expect(repo.check).not.toHaveBeenCalled();
+      expect(repo.choose).not.toHaveBeenCalled();
+    });
+
+    it("still answers when RepoService throws", async () => {
+      const socket = connect({ token: auth.token, origin: ORIGIN });
+      await expect(outcome(socket)).resolves.toBe("snapshot");
+      const logError = jest
+        .spyOn(Logger.prototype, "error")
+        .mockImplementation(() => {});
+      repo.check.mockRejectedValueOnce(new Error("boom"));
+      repo.choose.mockRejectedValueOnce(new Error("boom"));
+
+      const check = await socket.emitWithAck("repo:check", { path: "/r" });
+      const choose = await socket.emitWithAck("repo:choose", { path: "/r" });
+
+      expect(check).toEqual({
+        checks: [expect.objectContaining({ result: "fail" })],
+      });
+      expect(choose).toEqual({
+        problems: [expect.objectContaining({ code: "switch_failed" })],
+      });
+      logError.mockRestore();
     });
   });
 });

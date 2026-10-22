@@ -1,3 +1,4 @@
+import { Logger } from "@nestjs/common";
 import {
   Ack,
   MessageBody,
@@ -9,13 +10,13 @@ import {
 import { allowedOrigins, SessionAuth } from "./session-auth.service";
 import { StateStore } from "../state/state.store";
 import { GitHubService } from "../github/github.service";
+import { parseRepoPayload } from "../repo/repo-payload";
 import { RepoService } from "../repo/repo.service";
 import { Server, Socket } from "socket.io";
 import type {
   ClientToServerEvents,
   RepoCheckAck,
   RepoChooseAck,
-  RepoChoosePayload,
   ServerToClientEvents,
 } from "@gitspore/shared";
 
@@ -25,12 +26,18 @@ export type GreenhouseSocket = Socket<
   ServerToClientEvents
 >;
 
+// What the setup screen shows when a repo request can't be answered.
+const INVALID = "The request had no path or an invalid branch name.";
+const FAILED = "Something went wrong in gitspore; see the daemon log.";
+
 function sendSnapshot(client: GreenhouseSocket, store: StateStore) {
   client.emit("state:snapshot", store.snapshot());
 }
 
 @WebSocketGateway({ cors: { origin: allowedOrigins() } })
 export class StateGateway implements OnGatewayInit, OnGatewayConnection {
+  private readonly logger = new Logger(StateGateway.name);
+
   constructor(
     private readonly auth: SessionAuth,
     private readonly store: StateStore,
@@ -80,22 +87,43 @@ export class StateGateway implements OnGatewayInit, OnGatewayConnection {
     void this.github.refresh();
   }
 
-  // Answers only the asking tab; a check changes nothing.
+  // Answers only the asking tab; a check changes nothing. Always answers,
+  // or the setup screen would wait forever.
   @SubscribeMessage("repo:check")
   async handleRepoCheck(
-    @MessageBody() { path, baseBranch = "main" }: RepoChoosePayload,
+    @MessageBody() payload: unknown,
     @Ack() ack: (response: RepoCheckAck) => void,
   ) {
-    ack({ checks: await this.repo.check(path, baseBranch) });
+    const request = parseRepoPayload(payload);
+    if (!request) {
+      ack({ checks: [{ item: "git", result: "fail", detail: INVALID }] });
+      return;
+    }
+    try {
+      ack({ checks: await this.repo.check(request.path, request.baseBranch) });
+    } catch (error) {
+      this.logger.error(error);
+      ack({ checks: [{ item: "git", result: "fail", detail: FAILED }] });
+    }
   }
 
   // The ack tells the asking tab; the new state reaches every tab as a
-  // snapshot (onReset above).
+  // snapshot (onReset above). Always answers, like repo:check.
   @SubscribeMessage("repo:choose")
   async handleRepoChoose(
-    @MessageBody() { path, baseBranch = "main" }: RepoChoosePayload,
+    @MessageBody() payload: unknown,
     @Ack() ack: (response: RepoChooseAck) => void,
   ) {
-    ack(await this.repo.choose(path, baseBranch));
+    const request = parseRepoPayload(payload);
+    if (!request) {
+      ack({ problems: [{ code: "invalid_payload", message: INVALID }] });
+      return;
+    }
+    try {
+      ack(await this.repo.choose(request.path, request.baseBranch));
+    } catch (error) {
+      this.logger.error(error);
+      ack({ problems: [{ code: "switch_failed", message: FAILED }] });
+    }
   }
 }
