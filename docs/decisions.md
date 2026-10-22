@@ -3,6 +3,68 @@
 Kurz festgehalten, damit später nachvollziehbar ist, _warum_ etwas so
 eingerichtet ist. Neue Einträge oben anfügen.
 
+## GS-66 – Agent-Dispatch (2026-10-19)
+
+### Der Branch geht sofort online, Claude macht die Git-Arbeit
+
+Teamentscheidung vom 2026-10-13. Der Daemon holt `origin/<base>` (`git fetch`),
+legt den Worktree von dort aus an und pusht den neuen Branch sofort. Danach
+übernimmt Claude: Er committet und pusht laufend und öffnet eine einzige PR,
+sobald das Issue gelöst ist. Die PR-Beschreibung enthält `Closes #<n>`.
+
+Der Daemon pullt nie. Der Checkout des Nutzers und sein lokales `main` bleiben
+unberührt, und es gibt keinen Merge-Konflikt, den der Daemon lösen müsste. Der
+Branch ist von Anfang an auf GitHub sichtbar, auch wenn der Agent noch nichts
+committet hat. Dafür muss der Nutzer bei GitHub angemeldet sein; ohne Login
+scheitert der Dispatch mit `git_push_failed`.
+
+### Kein Datenbank-Eintrag für Agents
+
+Agents leben im `StateStore` (im Speicher), neben dem Overview-Agent (GS-54,
+`slotIndex: null`). Git und die laufenden Prozesse sind die Quelle der
+Wahrheit. Nach einem Neustart des Daemons werden Agents nicht wiederhergestellt;
+das ist ein Folge-Ticket.
+
+### Claude startet ohne Shell
+
+Der Terminal-Dienst bekommt einen Exec-Modus: Er startet ein Programm direkt mit
+einem Argument-Array. Das PTY-Ende ist dann das Ende von Claude mit dem echten
+Exit-Code, und der Prompt geht als ein Argument ohne Shell-Quoting durch.
+`SAFE_ARGUMENT` gilt nur noch im Shell-Modus. Unter Windows startet
+`claude.exe` direkt, `claude.cmd` (npm-Installation) über `cmd.exe /d /s /c`.
+Der Prompt enthält deshalb keines der Zeichen `& | < > ^ % "`; ein Test prüft
+das.
+
+### Die Aufgabe steht in einer Datei, nie in der Kommandozeile
+
+Der Text eines Issues ist Nutzereingabe von GitHub. Er wird nur nach
+`.gitspore/task.md` geschrieben, nie als Argument übergeben. Der Prompt ist ein
+konstanter String; alles Issue-spezifische (auch `Closes #<n>`) steht in der
+Datei. Ein Eintrag `.gitspore/` in `<git-common-dir>/info/exclude` hält sie aus
+Git heraus (Worktrees lesen die Exclude-Datei des Haupt-Repos).
+
+### Git fragt nie nach Zugangsdaten
+
+Jeder Git-Befehl des Daemons, der mit `origin` spricht, läuft mit
+`GIT_TERMINAL_PROMPT=0` (unter Windows zusätzlich `GCM_INTERACTIVE=never`). Ein
+fehlender Login führt zu einem Fehler statt zu einem blockierten Prozess.
+
+### Dispatch ganz oder gar nicht
+
+Scheitert ein Schritt, wird alles Bisherige rückgängig gemacht: Prozess beenden,
+Worktree und lokalen Branch entfernen, den Branch auf `origin` nur löschen, wenn
+dieser Dispatch ihn gepusht hat, den Agent per `agent:remove` entfernen. Slot
+und Issue sind danach frei, ein neuer Versuch funktioniert. Der Agent erscheint
+vorher als `starting`, damit der Topf sofort zu sehen ist; `agent:stop` ist in
+diesem Zustand mit `agent_starting` abgelehnt.
+
+### `agent:stop` bei geänderten Dateien
+
+Mit `removeWorktree: true` und nicht committeten Änderungen wird der Prozess
+beendet, aber nichts gelöscht. Der Agent bleibt mit Status `error` stehen und der
+Daemon sendet `worktree_dirty`. Bis es `agent:restart` gibt, lässt er sich nur
+noch mit `removeWorktree: false` stoppen.
+
 ## GS-21 – GitHub-Sync (2026-10-15)
 
 ### Fehlercodes klein geschrieben, wie der übrige Contract

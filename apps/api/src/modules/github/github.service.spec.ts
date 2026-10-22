@@ -77,7 +77,7 @@ function setup(connection?: GitHubConnection) {
   store.onPatch((patch) => patches.push(patch));
   service.onPullRequest((change) => changes.push(change));
 
-  return { api, store, service, errors, patches, changes };
+  return { api, source, store, service, errors, patches, changes };
 }
 
 // Lets the timer of the next poll fire and that poll finish.
@@ -482,6 +482,90 @@ describe("GitHubService: pull requests", () => {
   });
 });
 
+describe("GitHubService: the repo's GitHub status", () => {
+  const repo = { path: "/r", baseBranch: "main", github: "off" } as const;
+
+  it("turns it on once connected, with one repo:github patch", async () => {
+    const { store, service, patches } = setup();
+    store.setRepo(repo);
+
+    await service.start();
+
+    expect(store.snapshot().repo?.github).toBe("on");
+    expect(patches[0].ops).toEqual([{ type: "repo:github", github: "on" }]);
+    service.stop();
+  });
+
+  it("sends nothing when sync stays off", async () => {
+    const { store, service, patches } = setup({ disabled: "No token." });
+    store.setRepo(repo);
+
+    await service.start();
+
+    expect(store.snapshot().repo?.github).toBe("off");
+    expect(patches).toEqual([]);
+  });
+
+  it("turns it off when GitHub rejects the token later", async () => {
+    const { api, store, service } = setup();
+    store.setRepo(repo);
+    api.openIssues.mockRejectedValue(
+      new GitHubError("github_auth_failed", "401"),
+    );
+
+    await service.start();
+
+    expect(store.snapshot().repo?.github).toBe("off");
+  });
+});
+
+describe("GitHubService: restart", () => {
+  // The second repo's API, handed out by the source's next connect.
+  function secondRepo(source: GitHubSource) {
+    const api = fakeApi();
+    api.openIssues.mockResolvedValue({ changed: true, issues: [issue(2)] });
+    jest.mocked(source.connect).mockResolvedValueOnce({
+      api: api as unknown as GitHubApi,
+      repo: { owner: "owner", repo: "other" },
+    });
+    return api;
+  }
+
+  it("connects again and syncs the new repo", async () => {
+    const { source, store, service } = setup();
+    await service.start();
+    const other = secondRepo(source);
+
+    await service.restart();
+
+    expect(source.connect).toHaveBeenCalledTimes(2);
+    expect(store.snapshot().issues).toEqual([issue(2)]);
+    await nextPoll();
+    expect(other.openIssues).toHaveBeenCalledTimes(2);
+    service.stop();
+  });
+
+  it("drops a poll of the old repo that answers after the restart", async () => {
+    const { api, source, store, service } = setup();
+    let answerOld!: (value: { changed: true; issues: Issue[] }) => void;
+    api.openIssues.mockReturnValue(
+      new Promise((resolve) => (answerOld = resolve)),
+    );
+    void service.start();
+    await jest.advanceTimersByTimeAsync(0); // the old poll now waits
+    secondRepo(source);
+
+    await service.restart();
+    answerOld({ changed: true, issues: [issue(1)] });
+    await jest.advanceTimersByTimeAsync(0);
+
+    expect(store.snapshot().issues).toEqual([issue(2)]);
+    await nextPoll();
+    expect(api.openIssues).toHaveBeenCalledTimes(1);
+    service.stop();
+  });
+});
+
 describe("GitHubService: getIssue", () => {
   it("asks the API", async () => {
     const { api, service } = setup();
@@ -503,6 +587,38 @@ describe("GitHubService: getIssue", () => {
 
     expect(error).toBeInstanceOf(GitHubError);
     expect(error).toMatchObject({
+      code: "github_sync_disabled",
+      message: "No GitHub token.",
+    });
+  });
+});
+
+describe("GithubService: findPullRequest", () => {
+  it("asks Github now, not the last poll", async () => {
+    const { api, service } = setup();
+    await service.start();
+    api.pullRequestFor.mockResolvedValue(pullRequest(7));
+
+    const found = await service.findPullRequest("spore/42-fix-bug");
+
+    expect(found).toEqual(pullRequest(7));
+    expect(api.pullRequestFor).toHaveBeenCalledWith("spore/42-fix-bug");
+    service.stop();
+  });
+  it("gives null when the branch has no pull request", async () => {
+    const { service } = setup();
+    await service.start();
+
+    expect(await service.findPullRequest("spore/42-fix-bug")).toBeNull();
+    service.stop();
+  });
+  it("throws github_sync_disabled while sync is off", async () => {
+    const { service } = setup({ disabled: "No GitHub token." });
+    await service.start();
+
+    await expect(
+      service.findPullRequest("spore/42-fix-bug"),
+    ).rejects.toMatchObject({
       code: "github_sync_disabled",
       message: "No GitHub token.",
     });

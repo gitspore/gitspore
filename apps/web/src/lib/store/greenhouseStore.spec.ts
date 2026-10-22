@@ -10,7 +10,12 @@ import type {
   GreenhouseClient,
 } from "../client/GreenhouseClient";
 import { agent as baseAgent } from "../mock/scenarioFixtures";
-import { bindStoreToClient, createGreenhouseStore } from "./greenhouseStore";
+import {
+  bindStoreToClient,
+  createGreenhouseStore,
+  NoAnswerError,
+  REPO_ANSWER_TIMEOUT_MS,
+} from "./greenhouseStore";
 
 function agent(overrides: Partial<Agent> = {}): Agent {
   return { ...baseAgent, ...overrides };
@@ -26,7 +31,7 @@ function issue(number: number): Issue {
 }
 
 function state(overrides: Partial<GreenhouseState> = {}): GreenhouseState {
-  return { version: 1, agents: [], issues: [], ...overrides };
+  return { version: 1, repo: null, agents: [], issues: [], ...overrides };
 }
 
 const serverError: ServerError = { code: "slot_unavailable", message: "taken" };
@@ -163,6 +168,7 @@ describe("createGreenhouseStore", () => {
 
       expect(store.getState().server).toEqual({
         version: 2,
+        repo: null,
         agents: [agent({ status: "needs_input" })],
         issues: [],
       });
@@ -488,6 +494,89 @@ describe("createGreenhouseStore", () => {
 
       await expect(opened).resolves.toBeNull();
       expect(store.getState().lastError).toBe(serverError);
+    });
+
+    it("chooseRepo emits repo:choose, resolves with the repo and closes the setup screen", async () => {
+      const { store, client, ack } = setup();
+      const repo = { path: "/r", baseBranch: "main", github: "on" } as const;
+      store.getState().openSetup();
+
+      const chosen = store.getState().chooseRepo("/r", "main");
+      ack("repo:choose", { repo });
+
+      await expect(chosen).resolves.toEqual({ repo });
+      expect(client.emit).toHaveBeenCalledWith(
+        "repo:choose",
+        { path: "/r", baseBranch: "main" },
+        expect.any(Function),
+      );
+      expect(store.getState().setupOpen).toBe(false);
+    });
+
+    it("chooseRepo resolves with the problems and keeps the setup screen open", async () => {
+      const { store, ack } = setup();
+      const problems = [{ code: "not_found", message: "/r does not exist." }];
+      store.getState().openSetup();
+
+      const chosen = store.getState().chooseRepo("/r", "main");
+      ack("repo:choose", { problems });
+
+      await expect(chosen).resolves.toEqual({ problems });
+      expect(store.getState().setupOpen).toBe(true);
+    });
+
+    it("checkRepo emits repo:check and resolves with the checks", async () => {
+      const { store, client, ack } = setup();
+      const checks = [{ item: "git", result: "ok", detail: "r" }];
+
+      const checked = store.getState().checkRepo("/r", "dev");
+      ack("repo:check", { checks });
+
+      await expect(checked).resolves.toEqual({ checks });
+      expect(client.emit).toHaveBeenCalledWith(
+        "repo:check",
+        { path: "/r", baseBranch: "dev" },
+        expect.any(Function),
+      );
+    });
+
+    describe("when the daemon doesn't answer a repo request", () => {
+      beforeEach(() => jest.useFakeTimers());
+      afterEach(() => jest.useRealTimers());
+
+      it.each(["checkRepo", "chooseRepo"] as const)(
+        "%s rejects after the timeout instead of waiting forever",
+        async (action) => {
+          const { store } = setup();
+
+          const asked = store.getState()[action]("/r", "main");
+          jest.advanceTimersByTime(REPO_ANSWER_TIMEOUT_MS);
+
+          await expect(asked).rejects.toBeInstanceOf(NoAnswerError);
+        },
+      );
+
+      it("rejects at once when the connection drops", async () => {
+        const { store, setStatus } = setup();
+        setStatus({ kind: "connected" });
+
+        const asked = store.getState().checkRepo("/r", "main");
+        setStatus({ kind: "reconnecting" });
+
+        await expect(asked).rejects.toBeInstanceOf(NoAnswerError);
+      });
+
+      it("keeps the answer that came in time, and stops listening", async () => {
+        const { store, ack, statusListeners } = setup();
+        const listening = statusListeners.size;
+
+        const asked = store.getState().checkRepo("/r", "main");
+        ack("repo:check", { checks: [] });
+        jest.advanceTimersByTime(REPO_ANSWER_TIMEOUT_MS);
+
+        await expect(asked).resolves.toEqual({ checks: [] });
+        expect(statusListeners.size).toBe(listening);
+      });
     });
 
     it("sends terminal input, resize and close", () => {

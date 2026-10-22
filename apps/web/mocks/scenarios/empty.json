@@ -3,6 +3,7 @@
   "anchor": "2026-10-09T09:30:00.000Z",
   "snapshot": {
     "version": 1,
+    "repo": { "path": "/mock/repo", "baseBranch": "main", "github": "on" },
     "agents": [],
     "issues": [
       {

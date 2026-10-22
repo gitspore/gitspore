@@ -5,8 +5,12 @@ import {
   type GreenhouseState,
   type JsonValue,
   type PatchOp,
+  type RepoCheckAck,
+  type RepoChooseAck,
   type ServerToClientEvents,
   type TerminalOpenAck,
+  type ServerError,
+  type ErrorCode,
 } from "./index";
 
 // Typed as JsonValue, so a payload that isn't plain JSON (a Date, a Map, an
@@ -17,6 +21,7 @@ function roundTrip(value: JsonValue): unknown {
 
 const snapshot: GreenhouseState = {
   version: 7,
+  repo: { path: "/home/dev/repo", baseBranch: "main", github: "on" },
   agents: [
     {
       id: "agent-1",
@@ -77,6 +82,7 @@ const ops: { [T in PatchOp["type"]]: Extract<PatchOp, { type: T }> } = {
     },
   },
   "issue:remove": { type: "issue:remove", issueNumber: 43 },
+  "repo:github": { type: "repo:github", github: "off" },
 };
 
 // One sample payload per event, so the event log can hold every one of them.
@@ -87,6 +93,8 @@ const clientPayloads: {
   "agent:stop": { agentId: "agent-1", removeWorktree: true },
   "issues:refresh": {},
   "state:request": {},
+  "repo:choose": { path: "/home/dev/repo", baseBranch: "main" },
+  "repo:check": { path: "/home/dev/repo", baseBranch: "main" },
   "terminal:open": { agentId: "agent-1" },
   "terminal:input": { sessionId: "session-1", data: "y\r" },
   "terminal:resize": { sessionId: "session-1", cols: 80, rows: 24 },
@@ -98,6 +106,9 @@ const acks: {
   dispatchError: AgentDispatchAck;
   openOk: TerminalOpenAck;
   openError: TerminalOpenAck;
+  repoOk: RepoChooseAck;
+  repoProblems: RepoChooseAck;
+  repoChecks: RepoCheckAck;
 } = {
   dispatchOk: { agentId: "agent-2" },
   dispatchError: {
@@ -111,6 +122,98 @@ const acks: {
   openError: {
     error: { code: "agent_not_found", message: "No agent agent-9" },
   },
+  repoOk: { repo: snapshot.repo! },
+  repoProblems: {
+    problems: [
+      {
+        code: "not_a_repo",
+        message: "/home/dev/photos is not a git repository.",
+      },
+      {
+        code: "no_base_branch",
+        message: 'Branch "main" does not exist. Choose the base branch.',
+      },
+      {
+        code: "no_claude",
+        message: "Claude Code was not found. Install it, then check again.",
+      },
+    ],
+  },
+  repoChecks: {
+    checks: [
+      { item: "git", result: "ok", detail: "repo" },
+      { item: "base_branch", result: "fail", detail: "No branch main" },
+      { item: "github", result: "warn", detail: "No GitHub remote" },
+      { item: "claude", result: "ok", detail: "found" },
+    ],
+  },
+};
+
+const errors: { [C in ErrorCode]: ServerError & { code: C } } = {
+  invalid_payload: { code: "invalid_payload", message: "Invalid payload" },
+  slot_unavailable: {
+    code: "slot_unavailable",
+    message: "Slot 0 already has agent agent-1",
+    context: { slotIndex: 0, agentId: "agent-1" },
+  },
+  issue_not_found: { code: "issue_not_found", message: "No open issue #99" },
+  issue_taken: {
+    code: "issue_taken",
+    message: "Issue #42 already has agent agent-1",
+    context: { issueNumber: 42, agentId: "agent-1" },
+  },
+  agent_not_found: { code: "agent_not_found", message: "Agent not found" },
+  session_not_found: {
+    code: "session_not_found",
+    message: "No session session-9",
+  },
+  git_failed: {
+    code: "git_failed",
+    message: "Branch spore/42-fix-login already exists",
+  },
+  git_push_failed: {
+    code: "git_push_failed",
+    message: "Could not push spore/42-fix-login to origin: no login",
+    context: { branch: "spore/42-fix-login" },
+  },
+  worktree_dirty: {
+    code: "worktree_dirty",
+    message: "The worktree has uncommitted changes",
+    context: { agentId: "agent-1" },
+  },
+  agent_starting: {
+    code: "agent_starting",
+    message: "Agent agent-1 is still starting",
+    context: { agentId: "agent-1" },
+  },
+  claude_not_found: {
+    code: "claude_not_found",
+    message:
+      "Claude Code was not found. Install it from https://claude.com/claude-code",
+  },
+  repo_unavailable: {
+    code: "repo_unavailable",
+    message:
+      "gitspore is switching to another repository. Try again in a moment.",
+  },
+  github_failed: { code: "github_failed", message: "GitHub answered with 500" },
+  github_sync_disabled: {
+    code: "github_sync_disabled",
+    message: "No GitHub token found",
+  },
+  github_unreachable: {
+    code: "github_unreachable",
+    message: "api.github.com is not reachable",
+  },
+  github_rate_limited: {
+    code: "github_rate_limited",
+    message: "Rate limit reached",
+  },
+  github_auth_failed: {
+    code: "github_auth_failed",
+    message: "GitHub rejected the token",
+  },
+  internal: { code: "internal", message: "Unexpected error" },
 };
 
 const serverPayloads: {
@@ -123,7 +226,7 @@ const serverPayloads: {
     chunk: "\u001b[32m✔\u001b[0m Tests passed\r\n",
   },
   "terminal:exit": { sessionId: "session-1", exitCode: 0 },
-  error: { code: "git_failed", message: "worktree remove failed" },
+  error: { code: errors.git_failed.code, message: "worktree remove failed" },
 };
 
 describe("JSON round trip", () => {
@@ -138,6 +241,7 @@ describe("JSON round trip", () => {
   it.each([
     ["client payloads", clientPayloads],
     ["acks", acks],
+    ["errors", errors],
     ["server payloads", serverPayloads],
   ] as const)("keeps all %s unchanged", (_, payloads) => {
     expect(roundTrip(payloads)).toStrictEqual(payloads);
@@ -155,10 +259,20 @@ describe("applyPatch", () => {
       status: "applied",
       state: {
         version: 8,
+        repo: { ...snapshot.repo!, github: "off" },
         agents: [snapshot.agents[1]],
         issues: [snapshot.issues[0], ops["issue:upsert"].issue],
       },
     });
+  });
+
+  it("changes nothing with repo:github while no repo is chosen", () => {
+    const result = applyPatch(
+      { ...snapshot, repo: null },
+      { version: 8, ops: [ops["repo:github"]] },
+    );
+
+    expect(result).toMatchObject({ status: "applied", state: { repo: null } });
   });
 
   it("replaces an upserted entity in place", () => {

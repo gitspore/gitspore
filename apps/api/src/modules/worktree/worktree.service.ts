@@ -34,14 +34,33 @@ function gitEnv(): NodeJS.ProcessEnv {
 
 @Injectable()
 export class WorktreeService implements OnModuleInit {
-  private readonly git: SimpleGit;
-  private readonly worktreeRoot: string;
+  // null while no repo is chosen.
+  private git: SimpleGit | null = null;
+  private worktreeRoot = "";
   private readonly logger = new Logger(WorktreeService.name);
 
   constructor(private readonly config: RepoConfig) {
-    // Reads repoPath() once. When the setup-screen ticket lets the user
-    // switch repos, it has to create a new instance.
-    const repo = config.repoPath();
+    this.useRepo();
+  }
+
+  async onModuleInit(): Promise<void> {
+    await this.cleanUp();
+  }
+
+  /** The repo in RepoConfig changed (#58): work there from now on. */
+  async reconfigure(): Promise<void> {
+    this.useRepo();
+    await this.cleanUp();
+  }
+
+  // Reads repoPath() once per repo; reconfigure() reads it again.
+  private useRepo(): void {
+    if (!this.config.isSet()) {
+      this.git = null;
+      this.worktreeRoot = "";
+      return;
+    }
+    const repo = this.config.repoPath();
     this.git = simpleGit({
       baseDir: repo,
       maxConcurrentProcesses: 1,
@@ -65,7 +84,8 @@ export class WorktreeService implements OnModuleInit {
     }
   }
 
-  async onModuleInit(): Promise<void> {
+  private async cleanUp(): Promise<void> {
+    if (!this.git) return;
     await this.run(["worktree", "prune"]);
     const worktrees = await this.list();
     this.logger.log(
@@ -109,13 +129,20 @@ export class WorktreeService implements OnModuleInit {
     await appendFile(file, `${separator}${pattern}\n`);
   }
 
+  planFor(issue: { issueNumber: number; issueTitle: string }): Worktree {
+    const branch = branchForIssue(issue.issueNumber, issue.issueTitle);
+    return {
+      branch,
+      path: join(this.worktreeRoot, branch.slice(BRANCH_PREFIX.length)),
+    };
+  }
+
   async create(issue: {
     issueNumber: number;
     issueTitle: string;
     startPoint?: string;
   }): Promise<Worktree> {
-    const branch = branchForIssue(issue.issueNumber, issue.issueTitle);
-    const path = join(this.worktreeRoot, branch.slice(BRANCH_PREFIX.length));
+    const { branch, path } = this.planFor(issue);
 
     if (await this.branchExists(branch)) {
       throw new WorktreeError(
@@ -317,6 +344,11 @@ export class WorktreeService implements OnModuleInit {
 
   // Run git command:
   private run(args: string[]): Promise<string> {
+    if (!this.git) {
+      return Promise.reject(
+        new WorktreeError("no_repo", "No repository chosen yet."),
+      );
+    }
     return this.git.raw(args);
   }
 }

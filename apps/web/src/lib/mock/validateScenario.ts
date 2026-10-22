@@ -39,10 +39,17 @@ const issueSchema = z.object({
   labels: z.array(z.string()),
 }) satisfies z.ZodType<Issue>;
 
+const repoSchema = z.object({
+  path: z.string(),
+  baseBranch: z.string(),
+  github: z.enum(["on", "off"]),
+});
+
 const greenhouseStateSchema = z.object({
   agents: z.array(agentSchema),
   issues: z.array(issueSchema),
   version: z.number(),
+  repo: repoSchema.nullable(),
 }) satisfies z.ZodType<GreenhouseState>;
 
 const patchOpSchema = z.discriminatedUnion("type", [
@@ -50,6 +57,7 @@ const patchOpSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("agent:remove"), agentId: z.string() }),
   z.object({ type: z.literal("issue:upsert"), issue: issueSchema }),
   z.object({ type: z.literal("issue:remove"), issueNumber: z.number() }),
+  z.object({ type: z.literal("repo:github"), github: z.enum(["on", "off"]) }),
 ]) satisfies z.ZodType<PatchOp>;
 
 const statePatchSchema = z.object({
@@ -76,6 +84,11 @@ const serverErrorSchema = z.object({
     "agent_not_found",
     "session_not_found",
     "git_failed",
+    "git_push_failed",
+    "worktree_dirty",
+    "agent_starting",
+    "claude_not_found",
+    "repo_unavailable",
     "github_failed",
     "internal",
   ]),

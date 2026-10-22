@@ -47,8 +47,9 @@ describe("TerminalGateway", () => {
         currentProblem: () => null,
         onError: () => {},
       })
+      // No repo: the worktree service and RepoService start nothing either.
       .overrideProvider(RepoConfig)
-      .useValue(new RepoConfig(".", "main"))
+      .useValue(new RepoConfig(null, "main"))
       .compile();
     app = moduleRef.createNestApplication();
     await app.listen(0, "127.0.0.1");

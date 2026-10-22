@@ -13,9 +13,10 @@ import { OverviewAgentService } from "./overview-agent.service";
 //
 //
 // Stands in for TerminalService:
-// records spawn() and lets a test end a shell.
+// records spawn() and stop() and lets a test end a shell.
 class FakeTerminals {
   readonly spawn = jest.fn();
+  readonly stop = jest.fn().mockResolvedValue(true);
   private exitListener?: (agentId: string, exitCode: number) => void;
 
   onExited(listener: (agentId: string, exitCode: number) => void) {
@@ -60,6 +61,21 @@ describe("OverviewAgentService", () => {
       new RepoConfig(repo, "main"),
       enabled,
     ).onApplicationBootstrap();
+
+  it("starts nothing without a repo, even with the flag", async () => {
+    jest.spyOn(Logger.prototype, "log").mockImplementation(() => {});
+
+    await new OverviewAgentService(
+      terminals as unknown as TerminalService,
+      locator as unknown as ClaudeLocator,
+      store,
+      new RepoConfig(null, "main"),
+      true,
+    ).onApplicationBootstrap();
+
+    expect(terminals.spawn).not.toHaveBeenCalled();
+    expect(store.snapshot().agents).toEqual([]);
+  });
 
   it("starts claude in a shell in the repo root, by file name", async () => {
     await start(true);
@@ -148,5 +164,30 @@ describe("OverviewAgentService", () => {
     expect(logError).toHaveBeenCalledWith(
       expect.stringContaining("Claude Code was not found"),
     );
+  });
+
+  describe("after a switch to another repo", () => {
+    it("stops through TerminalService and starts again where RepoConfig points", async () => {
+      const config = new RepoConfig(repo, "main");
+      const service = new OverviewAgentService(
+        terminals as unknown as TerminalService,
+        locator as unknown as ClaudeLocator,
+        store,
+        config,
+        true,
+      );
+      const other = await mkdtemp(join(tmpdir(), "gitspore-overview-other-"));
+      await initRepo(other);
+
+      await service.stop();
+      config.set(other, "main");
+      await service.start();
+
+      expect(terminals.stop).toHaveBeenCalledWith("overview");
+      expect(terminals.spawn).toHaveBeenCalledWith(
+        expect.objectContaining({ cwd: other }),
+      );
+      await rm(other, { recursive: true, force: true });
+    });
   });
 });

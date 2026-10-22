@@ -1,7 +1,29 @@
 import { resolve } from "node:path";
 import { RepoConfig } from "./repo-config";
-import { stat } from "node:fs/promises";
-import { simpleGit } from "simple-git";
+import { branchExists, findRepoRoot } from "./find-repo";
+import type { RepoMemory } from "./repo-memory";
+
+/**
+ * The repo the daemon starts with (#58): GITSPORE_REPO when it is set (a
+ * wrong one stops the daemon, see loadRepoConfig), otherwise the last repo
+ * chosen on the setup screen if it still has its base branch, otherwise
+ * none, and the setup screen shows.
+ */
+export async function startRepoConfig(
+  env: NodeJS.ProcessEnv,
+  memory: RepoMemory,
+): Promise<RepoConfig> {
+  if (env.GITSPORE_REPO) return loadRepoConfig(env);
+
+  const [last] = await memory.recent();
+  if (last) {
+    const root = await findRepoRoot(last.path);
+    if ("top" in root && (await branchExists(root.top, last.baseBranch))) {
+      return new RepoConfig(root.top, last.baseBranch);
+    }
+  }
+  return new RepoConfig(null, env.GITSPORE_BASE_BRANCH ?? "main");
+}
 
 //
 //
@@ -16,31 +38,21 @@ export async function loadRepoConfig(
     );
   }
   const repoPath = resolve(repo);
-  const info = await stat(repoPath).catch(() => undefined);
-  if (!info?.isDirectory()) {
+  const root = await findRepoRoot(repoPath);
+  if ("problem" in root) {
     throw new Error(
-      `GITSPORE_REPO points to ${repoPath}, which does not exist or is not a folder.`,
+      root.problem === "not_found"
+        ? `GITSPORE_REPO points to ${repoPath}, which does not exist or is not a folder.`
+        : `GITSPORE_REPO points to ${repoPath} which is not inside a git repository.`,
     );
   }
 
-  let topLevel: string;
-  try {
-    topLevel = await simpleGit(repoPath).revparse(["--show-toplevel"]);
-  } catch {
-    throw new Error(
-      `GITSPORE_REPO points to ${repoPath} which is not inside a git repository.`,
-    );
-  }
-
-  const top = resolve(topLevel);
   const base = env.GITSPORE_BASE_BRANCH ?? "main";
-  try {
-    await simpleGit(top).raw(["show-ref", "--verify", `refs/heads/${base}`]);
-  } catch {
+  if (!(await branchExists(root.top, base))) {
     throw new Error(
-      `Base branch "${base}" does not exist in ${top}. Set GITSPORE_BASE_BRANCH to the branch new worktrees should start from (master or main etc.).`,
+      `Base branch "${base}" does not exist in ${root.top}. Set GITSPORE_BASE_BRANCH to the branch new worktrees should start from (master or main etc.).`,
     );
   }
 
-  return new RepoConfig(top, base);
+  return new RepoConfig(root.top, base);
 }

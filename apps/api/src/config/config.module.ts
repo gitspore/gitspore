@@ -1,21 +1,20 @@
 import { Module } from "@nestjs/common";
-import { loadRepoConfig } from "./load-repo-config";
+import { startRepoConfig } from "./load-repo-config";
 import { RepoConfig } from "./repo-config";
+import { RepoMemory } from "./repo-memory";
 
-//
-//
-//
-// Checks GITSPORE_REPO once at startup; a failed check stops the daemon.
+// Decides once at startup which repo the daemon works in (startRepoConfig).
+// A wrong GITSPORE_REPO stops the daemon; without one it may start with
+// none.
 @Module({
   providers: [
+    { provide: RepoMemory, useFactory: () => new RepoMemory() },
     {
       provide: RepoConfig,
-      useFactory: () =>
-        // TEMPORARY until the setup-screen ticket: without GITSPORE_REPO, use the
-        // repo the daemon runs in. That ticket goes back to loadRepoConfig(process.env).
-        loadRepoConfig({ GITSPORE_REPO: process.cwd(), ...process.env }),
+      useFactory: (memory: RepoMemory) => startRepoConfig(process.env, memory),
+      inject: [RepoMemory],
     },
   ],
-  exports: [RepoConfig],
+  exports: [RepoConfig, RepoMemory],
 })
 export class RepoConfigModule {}

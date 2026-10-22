@@ -11,6 +11,7 @@ import type {
   GreenhouseState,
   Issue,
   JsonValue,
+  RepoInfo,
   SessionId,
 } from "./models";
 
@@ -42,6 +43,16 @@ export type ErrorCode =
   | "github_rate_limited"
   /** Not authorized. */
   | "github_auth_failed"
+  /** Pushing the agent's branch to origin failed (no login, no rights, offline). */
+  | "git_push_failed"
+  /** The worktree has uncommitted changes, so it was not removed. */
+  | "worktree_dirty"
+  /** The agent is still starting and cannot be stopped yet. */
+  | "agent_starting"
+  /** Claude Code is not installed or not found. `message` says how to install it. */
+  | "claude_not_found"
+  /** No repository is chosen yet, or gitspore is switching to another one. */
+  | "repo_unavailable"
   /** Anything else. `message` says what. */
   | "internal";
 
@@ -63,7 +74,9 @@ export type PatchOp =
   | { type: "agent:upsert"; agent: Agent }
   | { type: "agent:remove"; agentId: AgentId }
   | { type: "issue:upsert"; issue: Issue }
-  | { type: "issue:remove"; issueNumber: number };
+  | { type: "issue:remove"; issueNumber: number }
+  /** GitHub sync for the current repo turned on or off. Nothing without a repo. */
+  | { type: "repo:github"; github: RepoInfo["github"] };
 
 /**
  * Changes from version `version - 1` to `version`. Versions increase by
@@ -110,6 +123,50 @@ export type TerminalResizePayload = {
 
 export type TerminalClosePayload = { sessionId: SessionId };
 
+export type RepoChoosePayload = {
+  /** Absolute path, or a folder inside the repo. */
+  path: string;
+  /** Defaults to "main". */
+  baseBranch?: string;
+};
+
+/** Why a repo can't be chosen. `message` is for display and says what to do. */
+export type RepoProblem = {
+  code:
+    | "not_found"
+    | "not_a_repo"
+    | "no_base_branch"
+    | "agents_running"
+    /** Claude Code is not installed; no agent could start there. */
+    | "no_claude"
+    /** Another tab is switching repos right now. */
+    | "switching"
+    /** The switch failed midway and was undone; the old repo stays. */
+    | "switch_failed"
+    /** The payload is missing fields or has values of the wrong type. */
+    | "invalid_payload";
+  message: string;
+};
+
+export type RepoChooseAck = { repo: RepoInfo } | { problems: RepoProblem[] };
+
+/** What `repo:check` looked at, one line each on the setup screen. */
+export type RepoCheckItem = "git" | "base_branch" | "github" | "claude";
+
+export type RepoCheck = {
+  item: RepoCheckItem;
+  /**
+   * "warn": gitspore works without it, e.g. GitHub off. "fail": agents
+   * can't run there; fix it before choosing the repo.
+   */
+  result: "ok" | "warn" | "fail";
+  /** For display: what was found ("main exists"), or what to do. */
+  detail: string;
+};
+
+/** In the order above. Checks that need a git repo are left out without one. */
+export type RepoCheckAck = { checks: RepoCheck[] };
+
 // --- Payloads: Server → Client --------------------------------------------
 
 export type TerminalDataPayload = {
@@ -128,9 +185,15 @@ export type TerminalExitPayload = {
 export interface ClientToServerEvents {
   /**
    * Client → Server. Start an agent on an issue in a free slot. The daemon
-   * creates a worktree and a `spore/…` branch and starts Claude Code in it.
-   * The ack carries the new agent's id; the agent itself arrives as an
-   * `agent:upsert` patch, first with status `starting`.
+   * creates a worktree and a `spore/…` branch, pushes the branch to origin
+   * and starts Claude Code in the worktree.
+   *
+   * The agent arrives as an `agent:upsert` patch with status `starting`
+   * before any git work begins, so the pot shows at once. The ack follows
+   * when Claude Code has started and carries the agent's id. If a step
+   * fails, the daemon undoes everything it did, removes the agent again with
+   * `agent:remove` and answers the ack with `{ error }`. The slot and the
+   * issue are then free for a new dispatch.
    */
   "agent:dispatch": (
     payload: AgentDispatchPayload,
@@ -141,6 +204,12 @@ export interface ClientToServerEvents {
    * Client → Server. Stop an agent's Claude Code process, close its terminal
    * sessions and free its slot, optionally deleting the worktree. Ends with
    * an `agent:remove` patch; failures arrive as `error`.
+   *
+   * Two refusals: an agent with status `starting` is not stopped
+   * (`agent_starting`, nothing changes). With `removeWorktree` and
+   * uncommitted changes in the worktree the process is stopped, but nothing
+   * is deleted and the agent stays with status `error` (`worktree_dirty`);
+   * stop it again with `removeWorktree: false`.
    */
   "agent:stop": (payload: AgentStopPayload) => void;
 
@@ -155,6 +224,26 @@ export interface ClientToServerEvents {
    * patch versions.
    */
   "state:request": (payload: EmptyPayload) => void;
+
+  /**
+   * Client → Server. Choose the repository gitspore works in. The daemon
+   * checks the path; the ack carries the repo or every problem found. On
+   * success all clients get a new `state:snapshot` for that repo. Refused
+   * while agents run.
+   */
+  "repo:choose": (
+    payload: RepoChoosePayload,
+    ack: (response: RepoChooseAck) => void,
+  ) => void;
+
+  /**
+   * Client → Server. Check a repository without choosing it, for the setup
+   * screen to show before the user commits. Changes nothing.
+   */
+  "repo:check": (
+    payload: RepoChoosePayload,
+    ack: (response: RepoCheckAck) => void,
+  ) => void;
 
   /**
    * Client → Server. Attach to an agent's terminal. The ack carries the
