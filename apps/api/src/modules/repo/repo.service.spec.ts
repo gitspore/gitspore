@@ -231,5 +231,29 @@ describe("RepoService", () => {
       const top = await realpath(dir);
       expect(seen).toEqual(["stop in /old/repo", `start with repo ${top}`]);
     });
+
+    it("refuses a second switch while one runs, and tells dispatch so", async () => {
+      await initRepo(dir);
+      let finishFirst!: () => void;
+      worktrees.reconfigure.mockImplementationOnce(
+        () => new Promise<void>((resolve) => (finishFirst = resolve)),
+      );
+      const repoService = service();
+
+      const first = repoService.choose(dir, "main");
+      // Wait until the first switch sits in reconfigure()
+      while (!finishFirst) await new Promise((r) => setTimeout(r, 5));
+      const second = await repoService.choose(dir, "main");
+
+      expect(second).toEqual({
+        problems: [expect.objectContaining({ code: "switching" })],
+      });
+      expect(repoService.isSwitching()).toBe(true);
+      finishFirst();
+      expect(await first).toHaveProperty("repo");
+      expect(repoService.isSwitching()).toBe(false);
+      // The next switch works again
+      expect(await repoService.choose(dir, "main")).toHaveProperty("repo");
+    });
   });
 });

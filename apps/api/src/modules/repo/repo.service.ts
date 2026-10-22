@@ -25,6 +25,9 @@ import { checkRepo, expandHome } from "./check-repo";
 @Injectable()
 export class RepoService implements OnModuleInit, OnApplicationBootstrap {
   private readonly logger = new Logger(RepoService.name);
+  // True from the first line of choose() until it answers. Set before any
+  // await, so two tabs can't both pass the checks.
+  private switching = false;
 
   constructor(
     private readonly store: StateStore,
@@ -76,6 +79,37 @@ export class RepoService implements OnModuleInit, OnApplicationBootstrap {
    * is allowed.
    */
   async choose(path: string, baseBranch: string): Promise<RepoChooseAck> {
+    if (this.switching) {
+      return {
+        problems: [
+          {
+            code: "switching",
+            message: "Another tab is switching repos. Try again in a moment.",
+          },
+        ],
+      };
+    }
+    this.switching = true;
+    try {
+      return await this.switchTo(path, baseBranch);
+    } finally {
+      this.switching = false;
+    }
+  }
+
+  /**
+   * While a switch runs, nothing may start an agent: the switch checked
+   * for running agents at its start and wipes the state at its end. Agent
+   * dispatch (#16) asks here and refuses.
+   */
+  isSwitching(): boolean {
+    return this.switching;
+  }
+
+  private async switchTo(
+    path: string,
+    baseBranch: string,
+  ): Promise<RepoChooseAck> {
     const problems: RepoProblem[] = [];
 
     // The overview agent doesn't count: it restarts in the new repo.
