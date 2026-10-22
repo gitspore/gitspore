@@ -140,17 +140,24 @@ export class RepoService implements OnModuleInit, OnApplicationBootstrap {
 
     if (problems.length > 0 || "problem" in root) return { problems };
 
+    // Asked before anything changes; it can't leave a half switch behind.
+    const github = await this.githubStatus(root.top);
+
     // Ends before the state starts over, so its exit (agent:remove) belongs
     // to the old repo.
     await this.overview.stop();
     // Every service that keeps the path works in the new repo from here on.
-    this.config.set(root.top, baseBranch);
-    await this.worktrees.reconfigure();
-    const repo = {
-      path: root.top,
-      baseBranch,
-      github: await this.githubStatus(root.top),
+    const before = {
+      repo: this.config.isSet() ? this.config.repoPath() : null,
+      base: this.config.baseBranch(),
     };
+    this.config.set(root.top, baseBranch);
+    try {
+      await this.worktrees.reconfigure();
+    } catch (error) {
+      return this.undoSwitch(before, path, error);
+    }
+    const repo = { path: root.top, baseBranch, github };
     // The state starts over; every tab gets a snapshot (StateGateway).
     this.store.setRepo(repo);
     // Not awaited: the new issues arrive as patches, problems as `error`.
@@ -158,6 +165,33 @@ export class RepoService implements OnModuleInit, OnApplicationBootstrap {
     await this.overview.start();
     await this.remember(repo.path, baseBranch);
     return { repo };
+  }
+
+  // reconfigure() is the only step of a switch that can throw, and the
+  // state still is the old repo's. Puts back what changed before it.
+  private async undoSwitch(
+    before: { repo: string | null; base: string },
+    path: string,
+    error: unknown,
+  ): Promise<RepoChooseAck> {
+    const message = error instanceof Error ? error.message : String(error);
+    this.logger.error(`Switching to ${path} failed: ${message}`);
+    this.config.set(before.repo, before.base);
+    try {
+      await this.worktrees.reconfigure();
+    } catch (again) {
+      const reason = again instanceof Error ? again.message : String(again);
+      this.logger.error(`The old repo's worktrees failed too: ${reason}`);
+    }
+    await this.overview.start();
+    return {
+      problems: [
+        {
+          code: "switch_failed",
+          message: `Switching to ${path} failed: ${message}. gitspore stays where it was.`,
+        },
+      ],
+    };
   }
 
   // The switch already happened; a file that can't be written only means

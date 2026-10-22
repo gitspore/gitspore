@@ -22,7 +22,8 @@ export class RepoConfig {
     return this.base;
   }
 
-  set(repo: string, base: string): void {
+  /** null goes back to no repo, when a failed switch is undone. */
+  set(repo: string | null, base: string): void {
     this.repo = repo;
     this.base = base;
   }

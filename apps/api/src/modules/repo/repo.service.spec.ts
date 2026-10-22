@@ -255,5 +255,47 @@ describe("RepoService", () => {
       // The next switch works again
       expect(await repoService.choose(dir, "main")).toHaveProperty("repo");
     });
+
+    it("undoes a switch whose worktree setup fails, and still answers", async () => {
+      await initRepo(dir);
+      const logError = jest
+        .spyOn(Logger.prototype, "error")
+        .mockImplementation(() => {});
+      worktrees.reconfigure.mockRejectedValueOnce(new Error("prune failed"));
+
+      const ack = await service().choose(dir, "main");
+
+      expect(ack).toEqual({
+        problems: [
+          {
+            code: "switch_failed",
+            message: expect.stringContaining("prune failed"),
+          },
+        ],
+      });
+      // Back where it was: config, worktrees, overview agent, state
+      expect(config.repoPath()).toBe("/old/repo");
+      expect(worktrees.reconfigure).toHaveBeenCalledTimes(2);
+      expect(overview.stop).toHaveBeenCalled();
+      expect(overview.start).toHaveBeenCalled();
+      expect(store.snapshot().repo).toBeNull();
+      expect(github.restart).not.toHaveBeenCalled();
+      expect(memory.remember).not.toHaveBeenCalled();
+      logError.mockRestore();
+    });
+
+    it("goes back to no repo when the first choice fails", async () => {
+      await initRepo(dir);
+      const logError = jest
+        .spyOn(Logger.prototype, "error")
+        .mockImplementation(() => {});
+      config = new RepoConfig(null, "main");
+      worktrees.reconfigure.mockRejectedValueOnce(new Error("prune failed"));
+
+      await service().choose(dir, "main");
+
+      expect(config.isSet()).toBe(false);
+      logError.mockRestore();
+    });
   });
 });

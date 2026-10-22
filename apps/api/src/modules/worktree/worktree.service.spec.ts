@@ -51,6 +51,16 @@ describe("WorktreeService", () => {
   });
 
   describe("reconfigure", () => {
+    it("forgets the repo when RepoConfig goes back to none", async () => {
+      const config = new RepoConfig(repo, "main");
+      service = new WorktreeService(config);
+
+      config.set(null, "main");
+      await service.reconfigure();
+
+      await expect(service.list()).rejects.toMatchObject({ code: "no_repo" });
+    });
+
     it("makes new worktrees next to the repo RepoConfig names now", async () => {
       const config = new RepoConfig(repo, "main");
       service = new WorktreeService(config);

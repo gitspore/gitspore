@@ -55,7 +55,11 @@ export class WorktreeService implements OnModuleInit {
 
   // Reads repoPath() once per repo; reconfigure() reads it again.
   private useRepo(): void {
-    if (!this.config.isSet()) return;
+    if (!this.config.isSet()) {
+      this.git = null;
+      this.worktreeRoot = "";
+      return;
+    }
     const repo = this.config.repoPath();
     this.git = simpleGit({
       baseDir: repo,
