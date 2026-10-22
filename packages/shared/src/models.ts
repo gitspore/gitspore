@@ -27,16 +27,19 @@ export type SessionId = string;
  * Where an agent is in its life. The daemon is the only one that changes it.
  *
  * - `starting`: worktree and branch are being created and pushed, Claude Code
- *   launches. The agent cannot be stopped yet.
+ *   launches, and no hook has reported yet. It can be stopped once Claude
+ *   Code runs.
  * - `working`: Claude Code runs and does not need the user.
  * - `needs_input`: Claude Code stopped and waits for the user.
-  * - `error`: Claude Code exited with an error, or the worktree of a stopped
- *   agent could not be removed. The worktree is kept. A failed git setup is
- *   not an `error`: the agent is removed again (see `agent:dispatch`).
-
+ * - `error`: Claude Code exited with an error or reported an API failure,
+ *   sent no status at all after its start (see `statusMessage`), or the
+ *   worktree of a stopped agent could not be removed. The worktree is kept.
+ *   A failed git setup is not an `error`: the agent is removed again (see
+ *   `agent:dispatch`).
  * - `done`: Claude Code finished; the branch waits for review and merge.
  * - `merged`: the branch is merged into main. The agent is removed after cleanup.
  */
+
 export type AgentStatus =
   "starting" | "working" | "needs_input" | "error" | "done" | "merged";
 
@@ -57,6 +60,7 @@ export type Agent = {
   status: AgentStatus;
   /** When `status` last changed. The client derives waiting times from it. */
   statusSince: IsoTimestamp;
+  statusMessage?: string;
   startedAt: IsoTimestamp;
 };
 
