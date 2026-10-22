@@ -79,6 +79,16 @@ describe("WorktreeService", () => {
     });
   });
 
+  describe("planFor", () => {
+    it("gives the branch and folder that create makes, and creates nothing", async () => {
+      const issue = { issueNumber: 42, issueTitle: "Fix bug" };
+      const plan = service.planFor(issue);
+
+      expect(existsSync(plan.path)).toBe(false);
+      expect(await service.create(issue)).toEqual(plan);
+    });
+  });
+
   describe("create", () => {
     it("makes a worktree on a new spore branch next to the repo", async () => {
       const result = await service.create({

@@ -43,6 +43,14 @@ export type ErrorCode =
   | "github_rate_limited"
   /** Not authorized. */
   | "github_auth_failed"
+  /** Pushing the agent's branch to origin failed (no login, no rights, offline). */
+  | "git_push_failed"
+  /** The worktree has uncommitted changes, so it was not removed. */
+  | "worktree_dirty"
+  /** The agent is still starting and cannot be stopped yet. */
+  | "agent_starting"
+  /** Claude Code is not installed or not found. `message` says how to install it. */
+  | "claude_not_found"
   /** Anything else. `message` says what. */
   | "internal";
 
@@ -175,9 +183,15 @@ export type TerminalExitPayload = {
 export interface ClientToServerEvents {
   /**
    * Client → Server. Start an agent on an issue in a free slot. The daemon
-   * creates a worktree and a `spore/…` branch and starts Claude Code in it.
-   * The ack carries the new agent's id; the agent itself arrives as an
-   * `agent:upsert` patch, first with status `starting`.
+   * creates a worktree and a `spore/…` branch, pushes the branch to origin
+   * and starts Claude Code in the worktree.
+   *
+   * The agent arrives as an `agent:upsert` patch with status `starting`
+   * before any git work begins, so the pot shows at once. The ack follows
+   * when Claude Code has started and carries the agent's id. If a step
+   * fails, the daemon undoes everything it did, removes the agent again with
+   * `agent:remove` and answers the ack with `{ error }`. The slot and the
+   * issue are then free for a new dispatch.
    */
   "agent:dispatch": (
     payload: AgentDispatchPayload,
@@ -188,6 +202,12 @@ export interface ClientToServerEvents {
    * Client → Server. Stop an agent's Claude Code process, close its terminal
    * sessions and free its slot, optionally deleting the worktree. Ends with
    * an `agent:remove` patch; failures arrive as `error`.
+   *
+   * Two refusals: an agent with status `starting` is not stopped
+   * (`agent_starting`, nothing changes). With `removeWorktree` and
+   * uncommitted changes in the worktree the process is stopped, but nothing
+   * is deleted and the agent stays with status `error` (`worktree_dirty`);
+   * stop it again with `removeWorktree: false`.
    */
   "agent:stop": (payload: AgentStopPayload) => void;
 

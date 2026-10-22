@@ -6,6 +6,7 @@ import { WorktreeModule } from "./modules/worktree/worktree.module";
 import { GitHubModule } from "./modules/github/github.module";
 import { TerminalModule } from "./modules/terminal/terminal.module";
 import { OverviewModule } from "./modules/overview/overview.module";
+import { AgentModule } from "./modules/agent/agent.module";
 
 // Feature modules from src/modules and background workers from
 // src/workers get registered here as the app grows.
@@ -18,6 +19,7 @@ import { OverviewModule } from "./modules/overview/overview.module";
     GitHubModule,
     TerminalModule,
     OverviewModule,
+    AgentModule,
   ],
   controllers: [],
   providers: [],

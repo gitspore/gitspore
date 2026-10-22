@@ -158,6 +158,18 @@ export class GitHubService implements OnModuleDestroy {
     return this.api.getIssue(issueNumber);
   }
 
+  findPullRequest(branch: string): Promise<PullRequest | null> {
+    if (!this.api) {
+      return Promise.reject(
+        new GitHubError(
+          "github_sync_disabled",
+          this.problem?.message ?? "Github sync has not started yet",
+        ),
+      );
+    }
+    return this.api.pullRequestFor(branch);
+  }
+
   onError(listener: ErrorListener): void {
     this.errorListeners.push(listener);
   }
