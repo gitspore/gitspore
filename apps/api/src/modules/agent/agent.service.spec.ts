@@ -892,4 +892,116 @@ describe("AgentService.dispatch", () => {
       expect(statuses).toEqual([]);
     });
   });
+
+  describe("after a merge", () => {
+    let agentId: string;
+    const branch = "spore/42-issue";
+    const path = () => join(root, "42-issue");
+    const merged: PullRequest = {
+      number: 7,
+      url: "https://github.com/owner/repo/pull/7",
+      state: "merged",
+    };
+
+    beforeEach(async () => {
+      service.onModuleInit();
+      service.bloomMs = 20;
+      service.watchdogMs = 40;
+      // Like the real TerminalService: kill() ends the process.
+      terminals.kill.mockImplementation((id: string) => terminals.exit(id, 1));
+      const ack = await dispatch();
+      if ("error" in ack) throw new Error("dispatch failed");
+      agentId = ack.agentId;
+      statuses = [];
+    });
+
+    const agentOf = () => store.snapshot().agents.find((a) => a.id === agentId);
+
+    it("shows merged first and touches nothing during the bloom", () => {
+      github.pullRequestChanged(branch, merged);
+
+      expect(agentOf()?.status).toBe("merged");
+      expect(terminals.kill).not.toHaveBeenCalled();
+      expect(worktrees.remove).not.toHaveBeenCalled();
+    });
+
+    it("then ends Claude, removes worktree and local branch, and frees the slot", async () => {
+      github.pullRequestChanged(branch, merged);
+      await sleep(60);
+
+      expect(terminals.kill).toHaveBeenCalledWith(agentId);
+      expect(hooks.revoke).toHaveBeenCalledWith(agentId);
+      expect(worktrees.remove).toHaveBeenCalledWith({
+        path: path(),
+        force: true,
+        deleteBranch: true,
+      });
+      expect(worktrees.deleteRemoteBranch).not.toHaveBeenCalled();
+      expect(store.snapshot().agents).toEqual([]);
+      expect(statuses).toEqual(["merged", "removed"]);
+    });
+
+    it("doesn't kill a Claude that has already ended", async () => {
+      github.pullRequestChanged(branch, merged);
+      terminals.exit(agentId, 0);
+      await sleep(60);
+
+      expect(terminals.kill).not.toHaveBeenCalled();
+      expect(store.snapshot().agents).toEqual([]);
+    });
+
+    it("keeps a worktree with uncommitted changes, with cleanup_blocked", async () => {
+      worktrees.isClean.mockResolvedValue(false);
+
+      github.pullRequestChanged(branch, merged);
+      await sleep(60);
+
+      expect(worktrees.remove).not.toHaveBeenCalled();
+      expect(agentOf()?.status).toBe("merged");
+      expect(agentOf()?.statusReason).toEqual({
+        code: "cleanup_blocked",
+        message: expect.stringMatching(/uncommitted changes/),
+      });
+    });
+
+    it("keeps the agent with cleanup_blocked when the removal fails", async () => {
+      worktrees.remove.mockRejectedValue(new Error("file is locked"));
+
+      github.pullRequestChanged(branch, merged);
+      await sleep(60);
+
+      expect(agentOf()?.statusReason?.code).toBe("cleanup_blocked");
+      expect(agentOf()?.statusReason?.message).toMatch(/file is locked/);
+    });
+
+    it("can be stopped after cleanup_blocked", async () => {
+      worktrees.isClean.mockResolvedValue(false);
+      github.pullRequestChanged(branch, merged);
+      await sleep(60);
+
+      await service.stop({ agentId, removeWorktree: false });
+
+      expect(store.snapshot().agents).toEqual([]);
+    });
+
+    it("lets a stop during the bloom win over the cleanup", async () => {
+      github.pullRequestChanged(branch, merged);
+
+      await service.stop({ agentId, removeWorktree: false });
+      await sleep(60);
+
+      expect(worktrees.remove).not.toHaveBeenCalled();
+      expect(terminals.kill).toHaveBeenCalledTimes(1);
+      expect(store.snapshot().agents).toEqual([]);
+    });
+
+    it("isn't turned into error by the watchdog", async () => {
+      worktrees.isClean.mockResolvedValue(false);
+
+      github.pullRequestChanged(branch, merged);
+      await sleep(100);
+
+      expect(agentOf()?.status).toBe("merged");
+    });
+  });
 });

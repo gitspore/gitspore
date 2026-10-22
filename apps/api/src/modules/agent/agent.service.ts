@@ -33,6 +33,8 @@ import { RepoService } from "../repo/repo.service";
 const TASK_DIR = ".gitspore";
 const STOP_TIMEOUT_MS = 10_000;
 const WATCHDOG_MS = 60_000;
+// How long a merged agent shows its bloom before it is cleaned up.
+const BLOOM_MS = 5_000;
 const WATCHDOG_REASON: StatusReason = {
   code: "no_status",
   message:
@@ -55,6 +57,8 @@ type Running = {
   // slow pull request check can tell that something newer happened meanwhile.
   changes: number;
   watchdog?: NodeJS.Timeout;
+  // Runs the cleanup once the bloom has shown.
+  cleanup?: NodeJS.Timeout;
 };
 
 type Progress = {
@@ -76,6 +80,7 @@ export class AgentService implements OnModuleInit {
   private readonly running = new Map<AgentId, Running>();
   private readonly exitWaiters = new Map<AgentId, () => void>();
   watchdogMs = WATCHDOG_MS;
+  bloomMs = BLOOM_MS;
 
   constructor(
     private readonly store: StateStore,
@@ -228,6 +233,9 @@ export class AgentService implements OnModuleInit {
 
     entry.stopping = true;
     this.clearWatchdog(entry);
+    // A stop during the bloom wins over the cleanup.
+    clearTimeout(entry.cleanup);
+    entry.cleanup = undefined;
 
     this.hooks.revoke(agentId);
     if (entry.processRunning) await this.killAndWait(agentId);
@@ -398,16 +406,78 @@ export class AgentService implements OnModuleInit {
     }
     // Newer than a pull request check that may still be under way.
     entry.changes++;
-    this.update(
-      agent.id,
-      reaction.kind === "merged"
-        ? { status: "merged", pullRequest }
-        : {
-            status: reaction.status,
-            statusReason: reaction.reason,
-            pullRequest,
-          },
-    );
+    if (reaction.kind === "merged") {
+      this.update(agent.id, { status: "merged", pullRequest });
+      this.scheduleCleanup(agent.id, entry);
+      return;
+    }
+    this.update(agent.id, {
+      status: reaction.status,
+      statusReason: reaction.reason,
+      pullRequest,
+    });
+  }
+
+  // The bloom shows for bloomMs, then the agent is cleaned up.
+  private scheduleCleanup(agentId: AgentId, entry: Running): void {
+    // A merged agent has reported; the watchdog must not make it error.
+    this.clearWatchdog(entry);
+    entry.cleanup = setTimeout(() => {
+      entry.cleanup = undefined;
+      void this.cleanUpAfterMerge(agentId, entry);
+    }, this.bloomMs);
+    entry.cleanup.unref();
+  }
+
+  // Ends Claude, removes the worktree and the local branch, frees the slot.
+  // force, because a squash merge leaves the branch unmerged in local git.
+  // The branch on origin is left to GitHub ("Automatically delete head
+  // branches").
+  private async cleanUpAfterMerge(
+    agentId: AgentId,
+    entry: Running,
+  ): Promise<void> {
+    if (this.running.get(agentId) !== entry || entry.stopping) return;
+    entry.stopping = true;
+    this.hooks.revoke(agentId);
+    if (entry.processRunning) await this.killAndWait(agentId);
+
+    try {
+      // Only after the kill: Claude can't write anything any more.
+      if (!(await this.worktrees.isClean(entry.worktreePath))) {
+        this.blockCleanup(
+          agentId,
+          entry,
+          `The pull request is merged, but ${entry.worktreePath} has ` +
+            "uncommitted changes, so it was kept. Look at them, then stop " +
+            "the agent.",
+        );
+        return;
+      }
+      await this.worktrees.remove({
+        path: entry.worktreePath,
+        force: true,
+        deleteBranch: true,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`No cleanup after the merge of ${agentId}: ${message}`);
+      this.blockCleanup(
+        agentId,
+        entry,
+        `The pull request is merged, but the worktree could not be removed ` +
+          `(${message}). Stop the agent to free the slot.`,
+      );
+      return;
+    }
+    this.running.delete(agentId);
+    this.store.apply([{ type: "agent:remove", agentId }]);
+  }
+
+  // The agent stays merged, with the reason, until the user stops it.
+  private blockCleanup(agentId: AgentId, entry: Running, message: string) {
+    entry.stopping = false;
+    this.setStatus(agentId, "merged", { code: "cleanup_blocked", message });
   }
 
   // Asks GitHub directly: a pull request Claude opened seconds ago is not in
