@@ -58,10 +58,10 @@ export type GreenhouseStoreState = {
   /**
    * Resolves with the daemon's answer: the repo, or the problems to show next
    * to the path. On success the new repo's state arrives as a snapshot and
-   * the setup screen closes.
+   * the setup screen closes. Rejects with NoAnswerError, see askDaemon.
    */
   chooseRepo: (path: string, baseBranch: string) => Promise<RepoChooseAck>;
-  /** Resolves with what the daemon found; chooses nothing. */
+  /** Resolves with what the daemon found; chooses nothing. Can reject too. */
   checkRepo: (path: string, baseBranch: string) => Promise<RepoCheckAck>;
 
   dispatchAgent: (issueNumber: number, slotIndex: number) => void;
@@ -154,16 +154,16 @@ export function createGreenhouseStore(
     openSetup: () => set({ setupOpen: true }),
     closeSetup: () => set({ setupOpen: false }),
     chooseRepo: (path, baseBranch) =>
-      new Promise((resolve) => {
+      askDaemon<RepoChooseAck>(client, (answer) =>
         client.emit("repo:choose", { path, baseBranch }, (response) => {
           if ("repo" in response) set({ setupOpen: false });
-          resolve(response);
-        });
-      }),
+          answer(response);
+        }),
+      ),
     checkRepo: (path, baseBranch) =>
-      new Promise((resolve) => {
-        client.emit("repo:check", { path, baseBranch }, resolve);
-      }),
+      askDaemon<RepoCheckAck>(client, (answer) =>
+        client.emit("repo:check", { path, baseBranch }, answer),
+      ),
     // Terminal traffic touches no state: input goes straight out, output
     // (terminal:data) goes straight to xterm.js and never through the store.
     sendTerminalInput: (sessionId, data) => {
@@ -297,4 +297,48 @@ function agentRemoved(
   const has = (state: GreenhouseState) =>
     state.agents.some((agent) => agent.id === agentId);
   return has(before) && !has(after);
+}
+
+/**
+ * How long the setup screen waits for the daemon. A check may wait for gh
+ * and `claude --version`, a switch for the overview agent to exit.
+ */
+export const REPO_ANSWER_TIMEOUT_MS = 30_000;
+
+/** The daemon didn't answer a repo request: timeout or connection lost. */
+export class NoAnswerError extends Error {
+  constructor() {
+    super("No answer from gitspore.");
+    this.name = "NoAnswerError";
+  }
+}
+
+/**
+ * Sends a request with an ack and waits for the answer. Rejects after
+ * REPO_ANSWER_TIMEOUT_MS, or at once when the connection drops, so a
+ * caller never waits forever. An answer after that is ignored.
+ */
+function askDaemon<T>(
+  client: GreenhouseClient,
+  send: (answer: (response: T) => void) => void,
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const done = () => {
+      clearTimeout(timer);
+      unsubscribe();
+    };
+    const timer = setTimeout(() => {
+      done();
+      reject(new NoAnswerError());
+    }, REPO_ANSWER_TIMEOUT_MS);
+    const unsubscribe = client.subscribeStatus(() => {
+      if (client.getStatus().kind === "connected") return;
+      done();
+      reject(new NoAnswerError());
+    });
+    send((response) => {
+      done();
+      resolve(response);
+    });
+  });
 }

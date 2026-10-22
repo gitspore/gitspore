@@ -44,6 +44,8 @@ export function ConnectScreen() {
   const [problems, setProblems] = useState<RepoProblem[]>([]);
   // True while the daemon checks or switches
   const [busy, setBusy] = useState(false);
+  // The daemon didn't answer (see askDaemon in the store)
+  const [noAnswer, setNoAnswer] = useState(false);
 
   const failed = (item: RepoCheckItem) =>
     checks?.some((c) => c.item === item && c.result === "fail") ?? false;
@@ -55,24 +57,38 @@ export function ConnectScreen() {
     set(value);
     setChecks(null);
     setProblems([]);
+    setNoAnswer(false);
   }
 
   async function check(event: SubmitEvent<HTMLFormElement>) {
     // A form would reload the page on submit
     event.preventDefault();
     setBusy(true);
-    const answer = await checkRepo(path.trim(), baseBranch.trim());
-    setBusy(false);
-    setChecks(answer.checks);
-    setProblems([]);
+    setNoAnswer(false);
+    try {
+      const answer = await checkRepo(path.trim(), baseBranch.trim());
+      setChecks(answer.checks);
+      setProblems([]);
+    } catch {
+      setNoAnswer(true);
+    } finally {
+      // Whatever happened, the fields and buttons work again
+      setBusy(false);
+    }
   }
 
   async function start() {
     setBusy(true);
-    const answer = await chooseRepo(path.trim(), baseBranch.trim());
-    setBusy(false);
-    // On success the store closes the screen; only problems are left to show
-    setProblems("problems" in answer ? answer.problems : []);
+    setNoAnswer(false);
+    try {
+      const answer = await chooseRepo(path.trim(), baseBranch.trim());
+      // On success the store closes the screen; only problems are left to show
+      setProblems("problems" in answer ? answer.problems : []);
+    } catch {
+      setNoAnswer(true);
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -166,6 +182,11 @@ export function ConnectScreen() {
               {problem.message}
             </li>
           ))}
+          {noAnswer && (
+            <li className="text-ui-meta text-wait">
+              No answer from gitspore. Check that it is running, then try again.
+            </li>
+          )}
         </ul>
 
         <div className="mt-2 flex justify-end gap-2">

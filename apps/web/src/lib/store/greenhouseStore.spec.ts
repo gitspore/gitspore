@@ -10,7 +10,12 @@ import type {
   GreenhouseClient,
 } from "../client/GreenhouseClient";
 import { agent as baseAgent } from "../mock/scenarioFixtures";
-import { bindStoreToClient, createGreenhouseStore } from "./greenhouseStore";
+import {
+  bindStoreToClient,
+  createGreenhouseStore,
+  NoAnswerError,
+  REPO_ANSWER_TIMEOUT_MS,
+} from "./greenhouseStore";
 
 function agent(overrides: Partial<Agent> = {}): Agent {
   return { ...baseAgent, ...overrides };
@@ -533,6 +538,45 @@ describe("createGreenhouseStore", () => {
         { path: "/r", baseBranch: "dev" },
         expect.any(Function),
       );
+    });
+
+    describe("when the daemon doesn't answer a repo request", () => {
+      beforeEach(() => jest.useFakeTimers());
+      afterEach(() => jest.useRealTimers());
+
+      it.each(["checkRepo", "chooseRepo"] as const)(
+        "%s rejects after the timeout instead of waiting forever",
+        async (action) => {
+          const { store } = setup();
+
+          const asked = store.getState()[action]("/r", "main");
+          jest.advanceTimersByTime(REPO_ANSWER_TIMEOUT_MS);
+
+          await expect(asked).rejects.toBeInstanceOf(NoAnswerError);
+        },
+      );
+
+      it("rejects at once when the connection drops", async () => {
+        const { store, setStatus } = setup();
+        setStatus({ kind: "connected" });
+
+        const asked = store.getState().checkRepo("/r", "main");
+        setStatus({ kind: "reconnecting" });
+
+        await expect(asked).rejects.toBeInstanceOf(NoAnswerError);
+      });
+
+      it("keeps the answer that came in time, and stops listening", async () => {
+        const { store, ack, statusListeners } = setup();
+        const listening = statusListeners.size;
+
+        const asked = store.getState().checkRepo("/r", "main");
+        ack("repo:check", { checks: [] });
+        jest.advanceTimersByTime(REPO_ANSWER_TIMEOUT_MS);
+
+        await expect(asked).resolves.toEqual({ checks: [] });
+        expect(statusListeners.size).toBe(listening);
+      });
     });
 
     it("sends terminal input, resize and close", () => {
