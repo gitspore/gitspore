@@ -1,8 +1,9 @@
 // gitspore logo: the beetle on its plate plus the word.
 
-function Beetle() {
+// Also on hotbar slot 0, the overview
+export function Beetle({ className = "size-6" }: { className?: string }) {
   return (
-    <svg viewBox="0 0 32 32" className="size-6" aria-hidden>
+    <svg viewBox="0 0 32 32" className={className} aria-hidden>
       <path
         d="M7.5 15.5 L4 13.5 M7 22.5 L3.5 24 M24.5 15.5 L28 13.5 M25 22.5 L28.5 24"
         stroke="var(--color-plate-ink)"
