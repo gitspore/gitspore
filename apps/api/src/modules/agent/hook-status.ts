@@ -14,6 +14,23 @@ const NEEDS_INPUT_NOTIFICATIONS = new Set([
   "elicitation_url_dialog",
 ]);
 
+export function parseHookPayload(payload: unknown): HookPayload | null {
+  if (typeof payload !== "object" || payload === null) return null;
+
+  const { hook_event_name, notification_type } = payload as Record<
+    string,
+    unknown
+  >;
+
+  if (typeof hook_event_name !== "string") return null;
+
+  return {
+    hook_event_name,
+    notification_type:
+      typeof notification_type === "string" ? notification_type : undefined,
+  };
+}
+
 export function statusFromHook(payload: HookPayload): HookOutcome {
   switch (payload.hook_event_name) {
     case "UserPromptSubmit":

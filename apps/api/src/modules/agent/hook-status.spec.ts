@@ -1,4 +1,8 @@
-import { statusFromHook, type HookOutcome } from "./hook-status";
+import {
+  parseHookPayload,
+  statusFromHook,
+  type HookOutcome,
+} from "./hook-status";
 
 const WORKING: HookOutcome = { kind: "set", status: "working" };
 const NEEDS_INPUT: HookOutcome = { kind: "set", status: "needs_input" };
@@ -61,6 +65,37 @@ describe("statusFromHook", () => {
     "%s keeps the status",
     (event) => {
       expect(statusFromHook({ hook_event_name: event })).toEqual(KEEP);
+    },
+  );
+});
+
+describe("parseHookPayload", () => {
+  it("keeps the event name and the notification type", () => {
+    expect(
+      parseHookPayload({
+        hook_event_name: "Notification",
+        notification_type: "permission_prompt",
+        message: "Claude needs your permission",
+      }),
+    ).toEqual({
+      hook_event_name: "Notification",
+      notification_type: "permission_prompt",
+    });
+  });
+
+  it("drops a notification type that isn't a string", () => {
+    expect(
+      parseHookPayload({
+        hook_event_name: "Notification",
+        notification_type: 1,
+      }),
+    ).toEqual({ hook_event_name: "Notification" });
+  });
+
+  it.each([null, undefined, "PreToolUse", 42, [], {}, { hook_event_name: 42 }])(
+    "refuses %p",
+    (payload) => {
+      expect(parseHookPayload(payload)).toBeNull();
     },
   );
 });
