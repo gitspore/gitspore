@@ -593,6 +593,7 @@ describe("AgentService.dispatch", () => {
       expect(statuses).toEqual(["removed"]);
     });
   });
+
   it("refuses to stop an agent that is still starting", async () => {
     const issueAnswer = deferred<Awaited<ReturnType<FakeGitHub["getIssue"]>>>();
     github.getIssue.mockReturnValue(issueAnswer.promise);
