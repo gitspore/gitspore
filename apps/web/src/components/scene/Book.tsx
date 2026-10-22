@@ -2,8 +2,9 @@ import { Outlines, RoundedBox } from "@react-three/drei";
 import { OVERVIEW_AGENT_ID } from "@gitspore/shared";
 
 import { useGreenhouseStore } from "@/lib/client/GreenhouseClientProvider";
-import { BOOK_SPOT } from "./layout";
+import { BOOK_SPOT, BOOK_TURN } from "./layout";
 import { useClickable } from "./useClickable";
+import { Beetle } from "./Beetle";
 
 //
 //
@@ -30,10 +31,12 @@ export function Book({
   cover,
   pages,
   outline,
+  logo,
 }: {
   cover: string;
   pages: string;
   outline: string;
+  logo: { ink: string; leaf: string; seam: string; glow: number };
 }) {
   const [x, z] = BOOK_SPOT;
   const overviewVisible = useGreenhouseStore((state) =>
@@ -50,7 +53,7 @@ export function Book({
   );
 
   return (
-    <group position={[x, 0, z]} {...handlers}>
+    <group position={[x, 0, z]} rotation-y={BOOK_TURN} {...handlers}>
       {[BOARD / 2, BOOK_HEIGHT - BOARD / 2].map((y) => (
         <RoundedBox
           key={y}
@@ -87,6 +90,16 @@ export function Book({
         <meshStandardMaterial color={pages} roughness={0.95} />
         {hovered && <Outlines thickness={3} color={outline} />}
       </mesh>
+      {/* The beetle emblem on the front board's top */}
+      <group position-y={BOOK_HEIGHT}>
+        <Beetle
+          ink={logo.ink}
+          plate={cover}
+          leaf={logo.leaf}
+          seam={logo.seam}
+          glow={logo.glow}
+        />
+      </group>
     </group>
   );
 }

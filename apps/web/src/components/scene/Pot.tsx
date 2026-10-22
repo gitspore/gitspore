@@ -19,8 +19,14 @@ import {
   type SceneColors,
 } from "./Plant";
 
-import { STATUS_VISUALS, WILT_PLANTS } from "./statusVisuals";
 import type { AgentStatus } from "@gitspore/shared";
+import {
+  RING_COLORS,
+  STATUS_VISUALS,
+  WILT_PLANTS,
+  type RingColor,
+} from "./statusVisuals";
+import { RING_RADIUS, RING_TUBE, StatusRing } from "./StatusRing";
 
 //
 //
@@ -28,6 +34,7 @@ import type { AgentStatus } from "@gitspore/shared";
 type Shapes = {
   bodyGeo: THREE.BufferGeometry;
   soilGeo: THREE.BufferGeometry;
+  ringGeo: THREE.BufferGeometry;
 };
 
 // pot: the profile (x = radius, y = height)
@@ -92,13 +99,18 @@ const Pot = memo(function Pot({
   test,
   colors,
   art,
+  ringColors,
+  glow,
   bodyGeo,
   soilGeo,
+  ringGeo,
 }: {
   slot: number;
   test: PlantLook | null;
   colors: SceneColors;
   art: ArtColors;
+  ringColors: Record<RingColor, string>;
+  glow: number;
 } & Shapes) {
   const agent = useGreenhouseStore(agentBySlot(slot));
   const [x, z] = POT_SPOTS[slot];
@@ -106,6 +118,10 @@ const Pot = memo(function Pot({
     agent && now !== 0 ? wiltStage(agent, now) : null,
   );
   const look = test ?? (agent ? agentLook(agent.status, stage) : null);
+  // The rim ring from the agent's status,
+  // pulsing in the first wilt stage;
+  // none while the test keys run
+  const ring = !test && agent ? RING_COLORS[agent.status] : null;
 
   const openWindow = useGreenhouseStore((state) => state.openWindow);
   const { hovered, handlers } = useClickable(
@@ -130,6 +146,15 @@ const Pot = memo(function Pot({
       >
         <meshStandardMaterial color={colors.soil} roughness={1} />
       </mesh>
+      {ring && (
+        <StatusRing
+          geometry={ringGeo}
+          color={ringColors[ring]}
+          glow={glow}
+          pulse={stage === "pulse"}
+        />
+      )}
+
       {look && (
         <group position-y={SOIL_Y}>
           <Plant
@@ -158,14 +183,22 @@ const GROWTH_STEPS = [0.5, 0.75, 1, 0, 0.25];
 export function Pots({
   colors,
   art,
+  ringColors,
+  glow,
   testKeys,
 }: {
   colors: SceneColors;
   art: ArtColors;
+  ringColors: Record<RingColor, string>;
+  glow: number;
   testKeys: boolean;
 }) {
   const bodyGeo = useMemo(() => new THREE.LatheGeometry(POT_PROFILE, 24), []);
   const soilGeo = useMemo(() => new THREE.CircleGeometry(SOIL_R, 24), []);
+  const ringGeo = useMemo(
+    () => new THREE.TorusGeometry(RING_RADIUS, RING_TUBE, 10, 64),
+    [],
+  );
 
   const [stateIndex, setStateIndex] = useState(0);
   const [growthIndex, setGrowthIndex] = useState(0);
@@ -212,6 +245,9 @@ export function Pots({
           soilGeo={soilGeo}
           colors={colors}
           art={art}
+          ringGeo={ringGeo}
+          ringColors={ringColors}
+          glow={glow}
         />
       ))}
     </>

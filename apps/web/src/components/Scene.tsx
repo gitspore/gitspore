@@ -13,6 +13,8 @@ import { Pots } from "./scene/Pot";
 import { RoomLight } from "./scene/RoomLight";
 import { Table } from "./scene/Table";
 import { Book } from "./scene/Book";
+import { Effects } from "./scene/Effects";
+import { GitMap } from "./scene/GitMap";
 
 //
 //
@@ -55,13 +57,15 @@ export function Scene({
 }) {
   // The mode: next-themes puts "light" (day) or "dark" (night) on <html>.
   // URL flags, read once: ?shadows=off for weak GPUs, ?orbit=0 for a fixed
-  // camera (orbiting is on by default), ?testing=1 for the plant test keys (see Pots)
+  // camera (orbiting is on by default), ?testing=1 for the plant test keys
+  // (see Pots), ?fx=off without post-processing (no bloom)
   const { resolvedTheme } = useTheme();
   const t = resolvedTheme === "light" ? tokens.day : tokens.night;
   const [flags] = useState(() => new URLSearchParams(window.location.search));
   const shadowsOn = flags.get("shadows") !== "off";
   const orbitOn = flags.get("orbit") !== "0";
   const testingOn = flags.get("testing") === "1";
+  const fxOn = flags.get("fx") !== "off";
 
   // The canvas is created once; a mode change only changes props.
   // - shadows: "percentage" is PCFShadowMap; three 0.186 dropped the soft one
@@ -131,16 +135,39 @@ export function Scene({
         colors={t.color.scene}
         art={t.color.art.plant}
         testKeys={testingOn}
+        ringColors={t.color.status}
+        glow={t.scene.glow}
       />
       <Book
         cover={t.color.plate}
         pages={t.color.tag.paper}
+        outline={t.color.scene.heart}
+        logo={{
+          ink: t.color["plate-ink"],
+          leaf: t.color.art.logo.leaf,
+          seam: t.color.art.logo.seam,
+          glow: t.scene.bloom.strength > 0 ? t.scene.glow : 0,
+        }}
+      />
+
+      <GitMap
+        paper={t.color.tag.paper}
+        main={t.color["branch-main"]}
+        branches={[t.color.agent["1"], t.color.agent["4"]]}
         outline={t.color.scene.heart}
       />
 
       <Table wood={t.color.wood} floor={t.color.scene.floor} />
 
       <CameraRig sceneArea={sceneArea} orbit={orbitOn} />
+      {/* Bloom only when it shows: by day its strength is 0, so the
+          composer would cost a full extra pass for nothing */}
+      {fxOn && t.scene.bloom.strength > 0 && (
+        <Effects
+          strength={t.scene.bloom.strength}
+          threshold={t.scene.bloom.threshold}
+        />
+      )}
 
       {/* Dev meters. StatsGl adds its own panel to <body>; the class
           places it. No trackGPU: its timer queries pile up on the HD 530

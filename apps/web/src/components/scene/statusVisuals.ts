@@ -30,3 +30,16 @@ export const WILT_PLANTS: Record<WiltStage, PlantState> = {
   droop: "waiting2",
   yellow: "waiting3",
 };
+
+// The rim ring's colour (a key of tokens' color.status) by agent status;
+// no ring while the plant alone says enough
+export type RingColor = "waiting" | "error" | "review";
+
+export const RING_COLORS: Record<AgentStatus, RingColor | null> = {
+  starting: null,
+  working: null,
+  needs_input: "waiting",
+  error: "error",
+  done: "review",
+  merged: null,
+};
