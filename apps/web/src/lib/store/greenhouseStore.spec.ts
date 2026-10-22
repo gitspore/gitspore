@@ -351,6 +351,92 @@ describe("createGreenhouseStore", () => {
       ]);
     });
 
+    describe("pressSlot (hotbar, #72)", () => {
+      // Pot 1 and pot 3 have agents, pot 2 is empty, plus the overview agent
+      function withAgents() {
+        const { store } = setup();
+        store.getState().applySnapshot(
+          state({
+            agents: [
+              agent({ id: "a1", slotIndex: 0 }),
+              agent({ id: "a3", slotIndex: 2 }),
+              agent({ id: "overview", slotIndex: null, issueNumber: null }),
+            ],
+          }),
+        );
+        return store;
+      }
+
+      it("opens the slot's agent window alone and selects its slot", () => {
+        const store = withAgents();
+        store.getState().openWindow("a1");
+
+        store.getState().pressSlot(3);
+
+        expect(windows(store)).toEqual([
+          { agentId: "a1", minimised: true },
+          { agentId: "a3", minimised: false },
+        ]);
+        expect(store.getState().selectedSlot).toBe(2);
+      });
+
+      it("opens it beside the others with beside", () => {
+        const store = withAgents();
+        store.getState().openWindow("a1");
+
+        store.getState().pressSlot(3, { beside: true });
+
+        expect(windows(store)).toEqual([
+          { agentId: "a1", minimised: false },
+          { agentId: "a3", minimised: false },
+        ]);
+      });
+
+      it("minimises a visible window and shows it again on the next press", () => {
+        const store = withAgents();
+        store.getState().pressSlot(1);
+
+        store.getState().pressSlot(1);
+        expect(windows(store)).toEqual([{ agentId: "a1", minimised: true }]);
+
+        store.getState().pressSlot(1);
+        expect(windows(store)).toEqual([{ agentId: "a1", minimised: false }]);
+      });
+
+      it("opens the overview agent with 0, keeping the selected slot", () => {
+        const store = withAgents();
+        store.getState().selectSlot(2);
+
+        store.getState().pressSlot(0);
+
+        expect(windows(store)).toEqual([
+          { agentId: "overview", minimised: false },
+        ]);
+        expect(store.getState().selectedSlot).toBe(2);
+      });
+
+      it.each([
+        ["an empty pot", 2],
+        ["a pot beyond the six", 7],
+      ])("does nothing for %s", (_, key) => {
+        const store = withAgents();
+        const before = store.getState().layout;
+
+        store.getState().pressSlot(key);
+
+        expect(store.getState().layout).toBe(before);
+      });
+
+      it("does nothing for 0 without an overview agent, or before a snapshot", () => {
+        const { store } = setup();
+        store.getState().pressSlot(1);
+        store.getState().applySnapshot(state({ agents: [] }));
+        store.getState().pressSlot(0);
+
+        expect(windows(store)).toEqual([]);
+      });
+    });
+
     it("closeWindow removes the window", () => {
       const { store } = setup();
       store.getState().openWindow("a1");

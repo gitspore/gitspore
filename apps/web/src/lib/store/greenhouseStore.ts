@@ -1,5 +1,6 @@
 import {
   applyPatch as applyStatePatch,
+  OVERVIEW_AGENT_ID,
   type AgentId,
   type GreenhouseState,
   type ServerError,
@@ -46,6 +47,13 @@ export type GreenhouseStoreState = {
   openWindow: (agentId: AgentId, options?: { alone?: boolean }) => void;
   closeWindow: (agentId: AgentId) => void;
   toggleMinimised: (agentId: AgentId) => void;
+  /**
+   * A hotbar slot was pressed, by click or key (#72): 1–6 are the pots, 0 the
+   * overview agent. A visible window is minimised; otherwise the agent's
+   * window shows, alone, or `beside` the open ones (shift-click, ADR 0005).
+   * A slot without an agent does nothing.
+   */
+  pressSlot: (key: number, options?: { beside?: boolean }) => void;
 
   dispatchAgent: (issueNumber: number, slotIndex: number) => void;
   stopAgent: (agentId: AgentId, removeWorktree: boolean) => void;
@@ -108,6 +116,26 @@ export function createGreenhouseStore(
           ),
         ),
       ),
+    pressSlot: (key, { beside = false } = {}) => {
+      const { server, layout } = get();
+      const agent = server?.agents.find((a) =>
+        key === 0 ? a.id === OVERVIEW_AGENT_ID : a.slotIndex === key - 1,
+      );
+      if (!agent) return;
+
+      const visible = layout.windows.some(
+        (w) => w.agentId === agent.id && !w.minimised,
+      );
+      if (visible) {
+        get().toggleMinimised(agent.id);
+        return;
+      }
+      set((s) => ({
+        ...withWindows(s, showWindow(s.layout.windows, agent.id, !beside)),
+        // The overview has no slot; the selection stays where it was
+        selectedSlot: agent.slotIndex ?? s.selectedSlot,
+      }));
+    },
 
     // Commands. Components call these instead of client.emit. The result of
     // a command arrives as a patch; only refusals end up in lastError.
