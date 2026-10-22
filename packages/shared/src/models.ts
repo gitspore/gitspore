@@ -79,10 +79,24 @@ export type TerminalSession = {
   agentId: AgentId;
 };
 
+/** The repository gitspore works in. */
+export type RepoInfo = {
+  /** Absolute path of the repo root on the user's machine. */
+  path: string;
+  baseBranch: string;
+  /**
+   * "off": no GitHub remote or no token. Agents still work, issues don't sync.
+   * Starts "off" for a new repo; a `repo:github` patch follows once GitHub
+   * answered.
+   */
+  github: "on" | "off";
+};
+
 /** The full state the daemon sends on connect and on `state:request`. */
 export type GreenhouseState = {
   /** Version of this state. Patches continue from it (see StatePatch). */
   version: number;
+  repo: RepoInfo | null;
   agents: Agent[];
   /** Open issues, with or without an agent. */
   issues: Issue[];

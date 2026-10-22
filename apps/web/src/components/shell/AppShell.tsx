@@ -7,10 +7,11 @@ import { useGreenhouseStore } from "@/lib/client/GreenhouseClientProvider";
 import { mainGrid, shellGrid } from "@/lib/layout";
 // Stays mock until the daemon sends usage (#42)
 import { mockContext, mockUsage } from "@/lib/mock";
-import { issueTitle, needsInputCount } from "@/lib/store/selectors";
+import { issueTitle, needsInputCount, showSetup } from "@/lib/store/selectors";
 import { useSceneEnabled } from "@/lib/scene";
 import { Scene } from "../Scene";
 import { Button } from "../ui/button";
+import { ConnectScreen } from "../attention/ConnectScreen";
 import { NotificationStack } from "../attention/NotificationStack";
 import { Window } from "../main/Window";
 import { SidePanel } from "../side-panel/SidePanel";
@@ -44,6 +45,8 @@ export function AppShell() {
     ),
   );
   const waitingCount = useGreenhouseStore(needsInputCount);
+  // No repo chosen yet, or the user switches repos (#58)
+  const setupVisible = useGreenhouseStore(showSetup);
 
   return (
     <>
@@ -149,6 +152,9 @@ export function AppShell() {
           </div>
         </div>
       </div>
+
+      {/* Covers the greenhouse until a repo is chosen */}
+      {setupVisible && <ConnectScreen />}
     </>
   );
 }

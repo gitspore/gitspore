@@ -17,9 +17,9 @@ The mapping between branch and issue (`branchForIssue`, `issueNumberFromBranch`)
 
 ## Startup
 
-`onApplicationBootstrap()` calls `start()` without awaiting it, so the daemon accepts connections while the token and the first issues are fetched.
+`RepoService` calls `start()` without awaiting it once a repo is known: at startup, or through `restart()` after the setup screen switched repos (#58). The daemon accepts connections meanwhile. Without a repo nothing starts.
 
-1. `git remote get-url origin` in `GITSPORE_REPO`. No remote → sync off.
+1. `git remote get-url origin` in the chosen repo. No remote → sync off.
 2. `parseGitHubRemote`: `https://github.com/o/r(.git)`, `git@github.com:o/r(.git)`, `ssh://git@github.com/o/r(.git)`. Anything else (GitLab, a local path) → sync off.
 3. Token: `GITHUB_TOKEN` from the environment, otherwise the output of `gh auth token` (5 s timeout), otherwise none → sync off.
 4. First poll right away, then every 60 s.

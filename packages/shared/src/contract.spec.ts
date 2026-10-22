@@ -5,6 +5,8 @@ import {
   type GreenhouseState,
   type JsonValue,
   type PatchOp,
+  type RepoCheckAck,
+  type RepoChooseAck,
   type ServerToClientEvents,
   type TerminalOpenAck,
   type ServerError,
@@ -19,6 +21,7 @@ function roundTrip(value: JsonValue): unknown {
 
 const snapshot: GreenhouseState = {
   version: 7,
+  repo: { path: "/home/dev/repo", baseBranch: "main", github: "on" },
   agents: [
     {
       id: "agent-1",
@@ -79,6 +82,7 @@ const ops: { [T in PatchOp["type"]]: Extract<PatchOp, { type: T }> } = {
     },
   },
   "issue:remove": { type: "issue:remove", issueNumber: 43 },
+  "repo:github": { type: "repo:github", github: "off" },
 };
 
 // One sample payload per event, so the event log can hold every one of them.
@@ -89,6 +93,8 @@ const clientPayloads: {
   "agent:stop": { agentId: "agent-1", removeWorktree: true },
   "issues:refresh": {},
   "state:request": {},
+  "repo:choose": { path: "/home/dev/repo", baseBranch: "main" },
+  "repo:check": { path: "/home/dev/repo", baseBranch: "main" },
   "terminal:open": { agentId: "agent-1" },
   "terminal:input": { sessionId: "session-1", data: "y\r" },
   "terminal:resize": { sessionId: "session-1", cols: 80, rows: 24 },
@@ -100,6 +106,9 @@ const acks: {
   dispatchError: AgentDispatchAck;
   openOk: TerminalOpenAck;
   openError: TerminalOpenAck;
+  repoOk: RepoChooseAck;
+  repoProblems: RepoChooseAck;
+  repoChecks: RepoCheckAck;
 } = {
   dispatchOk: { agentId: "agent-2" },
   dispatchError: {
@@ -112,6 +121,31 @@ const acks: {
   openOk: { sessionId: "session-1" },
   openError: {
     error: { code: "agent_not_found", message: "No agent agent-9" },
+  },
+  repoOk: { repo: snapshot.repo! },
+  repoProblems: {
+    problems: [
+      {
+        code: "not_a_repo",
+        message: "/home/dev/photos is not a git repository.",
+      },
+      {
+        code: "no_base_branch",
+        message: 'Branch "main" does not exist. Choose the base branch.',
+      },
+      {
+        code: "no_claude",
+        message: "Claude Code was not found. Install it, then check again.",
+      },
+    ],
+  },
+  repoChecks: {
+    checks: [
+      { item: "git", result: "ok", detail: "repo" },
+      { item: "base_branch", result: "fail", detail: "No branch main" },
+      { item: "github", result: "warn", detail: "No GitHub remote" },
+      { item: "claude", result: "ok", detail: "found" },
+    ],
   },
 };
 
@@ -156,6 +190,11 @@ const errors: { [C in ErrorCode]: ServerError & { code: C } } = {
     code: "claude_not_found",
     message:
       "Claude Code was not found. Install it from https://claude.com/claude-code",
+  },
+  repo_unavailable: {
+    code: "repo_unavailable",
+    message:
+      "gitspore is switching to another repository. Try again in a moment.",
   },
   github_failed: { code: "github_failed", message: "GitHub answered with 500" },
   github_sync_disabled: {
@@ -220,10 +259,20 @@ describe("applyPatch", () => {
       status: "applied",
       state: {
         version: 8,
+        repo: { ...snapshot.repo!, github: "off" },
         agents: [snapshot.agents[1]],
         issues: [snapshot.issues[0], ops["issue:upsert"].issue],
       },
     });
+  });
+
+  it("changes nothing with repo:github while no repo is chosen", () => {
+    const result = applyPatch(
+      { ...snapshot, repo: null },
+      { version: 8, ops: [ops["repo:github"]] },
+    );
+
+    expect(result).toMatchObject({ status: "applied", state: { repo: null } });
   });
 
   it("replaces an upserted entity in place", () => {

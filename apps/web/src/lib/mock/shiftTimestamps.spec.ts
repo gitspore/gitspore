@@ -22,6 +22,7 @@ function scenario(events: Scenario["events"] = []): Scenario {
     anchor: "2026-10-09T09:30:00.000Z",
     snapshot: {
       version: 1,
+      repo: { path: "/mock/repo", baseBranch: "main", github: "on" },
       agents: [agent],
       issues: [{ number: 1, title: "Issue", url: "u", labels: ["bug"] }],
     },

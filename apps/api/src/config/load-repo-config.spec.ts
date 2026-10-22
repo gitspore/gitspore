@@ -1,4 +1,5 @@
-import { loadRepoConfig } from "./load-repo-config";
+import { loadRepoConfig, startRepoConfig } from "./load-repo-config";
+import type { RememberedRepo, RepoMemory } from "./repo-memory";
 import { initRepo } from "../../test/git-repo";
 
 import { randomUUID } from "node:crypto";
@@ -77,5 +78,74 @@ describe("loadRepoConfig", () => {
     });
 
     expect(config.baseBranch()).toBe("test-branch");
+  });
+});
+
+describe("startRepoConfig", () => {
+  let dir: string;
+
+  // A memory that knows these repos, last chosen first
+  const remembering = (...recent: RememberedRepo[]) =>
+    ({ recent: jest.fn().mockResolvedValue(recent) }) as unknown as RepoMemory;
+
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), "gitspore-start-"));
+  });
+
+  afterEach(() => rm(dir, { recursive: true, force: true }));
+
+  it("uses GITSPORE_REPO over the remembered repo", async () => {
+    await initRepo(dir);
+    const memory = remembering({ path: "/elsewhere", baseBranch: "main" });
+
+    const config = await startRepoConfig({ GITSPORE_REPO: dir }, memory);
+
+    expect(config.repoPath()).toBe(await realpath(dir));
+    expect(memory.recent).not.toHaveBeenCalled();
+  });
+
+  it("still stops the daemon for a wrong GITSPORE_REPO", async () => {
+    await expect(
+      startRepoConfig({ GITSPORE_REPO: dir }, remembering()),
+    ).rejects.toThrow("not inside a git repository");
+  });
+
+  it("starts in the last remembered repo with its base branch", async () => {
+    await initRepo(dir, "develop");
+
+    const config = await startRepoConfig(
+      {},
+      remembering(
+        { path: dir, baseBranch: "develop" },
+        { path: "/older", baseBranch: "main" },
+      ),
+    );
+
+    expect(config.repoPath()).toBe(await realpath(dir));
+    expect(config.baseBranch()).toBe("develop");
+  });
+
+  it.each([
+    ["is gone", (d: string) => join(d, "gone"), "main"],
+    ["lost its base branch", (d: string) => d, "develop"],
+  ])(
+    "starts without a repo when the remembered one %s",
+    async (_, path, baseBranch) => {
+      await initRepo(dir);
+
+      const config = await startRepoConfig(
+        {},
+        remembering({ path: path(dir), baseBranch }),
+      );
+
+      expect(config.isSet()).toBe(false);
+    },
+  );
+
+  it("starts without a repo when none is remembered", async () => {
+    const config = await startRepoConfig({}, remembering());
+
+    expect(config.isSet()).toBe(false);
+    expect(() => config.repoPath()).toThrow("No repository chosen yet");
   });
 });
