@@ -1,0 +1,156 @@
+{
+  "name": "pr-closed",
+  "anchor": "2026-10-09T09:30:00.000Z",
+  "snapshot": {
+    "version": 1,
+    "repo": { "path": "/mock/repo", "baseBranch": "main", "github": "on" },
+    "agents": [],
+    "issues": [
+      {
+        "number": 301,
+        "title": "Login fails with umlauts in the password",
+        "url": "https://github.com/gitspore/gitspore/issues/301",
+        "labels": ["bug"]
+      },
+      {
+        "number": 302,
+        "title": "Dark mode",
+        "url": "https://github.com/gitspore/gitspore/issues/302",
+        "labels": ["enhancement"]
+      },
+      {
+        "number": 303,
+        "title": "Flaky checkout test fails on CI only under load",
+        "url": "https://github.com/gitspore/gitspore/issues/303",
+        "labels": ["ci"]
+      },
+      {
+        "number": 304,
+        "title": "Export the issue list as CSV",
+        "url": "https://github.com/gitspore/gitspore/issues/304",
+        "labels": ["enhancement"]
+      },
+      {
+        "number": 305,
+        "title": "Update the README",
+        "url": "https://github.com/gitspore/gitspore/issues/305",
+        "labels": []
+      },
+      {
+        "number": 306,
+        "title": "Rename the settings page",
+        "url": "https://github.com/gitspore/gitspore/issues/306",
+        "labels": ["chore"]
+      }
+    ]
+  },
+  "events": [
+    {
+      "at": 1000,
+      "event": "state:patch",
+      "payload": {
+        "version": 2,
+        "ops": [
+          {
+            "type": "agent:upsert",
+            "agent": {
+              "id": "agent-1",
+              "slotIndex": 0,
+              "issueNumber": 302,
+              "branch": "spore/302-dark-mode",
+              "worktreePath": "/home/dev/repo/.worktrees/302-dark-mode",
+              "startedAt": "2026-10-09T09:30:01.000Z",
+              "pullRequest": null,
+              "statusReason": null,
+              "statusSince": "2026-10-09T09:30:01.000Z",
+              "status": "starting"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "at": 3000,
+      "event": "state:patch",
+      "payload": {
+        "version": 3,
+        "ops": [
+          {
+            "type": "agent:upsert",
+            "agent": {
+              "id": "agent-1",
+              "slotIndex": 0,
+              "issueNumber": 302,
+              "branch": "spore/302-dark-mode",
+              "worktreePath": "/home/dev/repo/.worktrees/302-dark-mode",
+              "startedAt": "2026-10-09T09:30:01.000Z",
+              "pullRequest": null,
+              "statusReason": null,
+              "statusSince": "2026-10-09T09:30:03.000Z",
+              "status": "working"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "at": 20000,
+      "event": "state:patch",
+      "payload": {
+        "version": 4,
+        "ops": [
+          {
+            "type": "agent:upsert",
+            "agent": {
+              "id": "agent-1",
+              "slotIndex": 0,
+              "issueNumber": 302,
+              "branch": "spore/302-dark-mode",
+              "worktreePath": "/home/dev/repo/.worktrees/302-dark-mode",
+              "startedAt": "2026-10-09T09:30:01.000Z",
+              "pullRequest": {
+                "number": 312,
+                "url": "https://github.com/gitspore/gitspore/pull/312",
+                "state": "open"
+              },
+              "statusReason": null,
+              "statusSince": "2026-10-09T09:30:20.000Z",
+              "status": "done"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "at": 30000,
+      "event": "state:patch",
+      "payload": {
+        "version": 5,
+        "ops": [
+          {
+            "type": "agent:upsert",
+            "agent": {
+              "id": "agent-1",
+              "slotIndex": 0,
+              "issueNumber": 302,
+              "branch": "spore/302-dark-mode",
+              "worktreePath": "/home/dev/repo/.worktrees/302-dark-mode",
+              "startedAt": "2026-10-09T09:30:01.000Z",
+              "pullRequest": {
+                "number": 312,
+                "url": "https://github.com/gitspore/gitspore/pull/312",
+                "state": "closed"
+              },
+              "statusReason": {
+                "code": "pr_closed",
+                "message": "Pull request #312 was closed without merging. Nothing was deleted: reopen it on GitHub, ask the agent for a new one, or stop the agent."
+              },
+              "statusSince": "2026-10-09T09:30:30.000Z",
+              "status": "error"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
