@@ -130,6 +130,10 @@ const acks: {
         code: "no_base_branch",
         message: 'Branch "main" does not exist. Choose the base branch.',
       },
+      {
+        code: "no_claude",
+        message: "Claude Code was not found. Install it, then try again.",
+      },
     ],
   },
   repoChecks: {

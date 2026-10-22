@@ -227,6 +227,12 @@ export class MockClient implements GreenhouseClient {
           message: `Branch "${baseBranch}" does not exist. Choose the base branch.`,
         });
       }
+      if (path.includes("no-claude")) {
+        problems.push({
+          code: "no_claude",
+          message: "Claude Code was not found. Install it, then try again.",
+        });
+      }
       if (this.state.agents.some((a) => a.slotIndex !== null)) {
         problems.push({
           code: "agents_running",

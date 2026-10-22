@@ -263,6 +263,7 @@ describe("MockClient", () => {
       ["/home/dev/missing", "not_found"],
       ["/home/dev/not-git", "not_a_repo"],
       ["/home/dev/no-branch", "no_base_branch"],
+      ["/home/dev/no-claude", "no_claude"],
     ])("refuses %s with %s and keeps the state", (path, code) => {
       const { client, snapshots } = setup([], []);
 

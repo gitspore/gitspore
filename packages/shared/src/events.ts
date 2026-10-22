@@ -118,9 +118,21 @@ export type RepoChoosePayload = {
   baseBranch?: string;
 };
 
-/** Why a path can't be used. `message` is for display and says what to do. */
+/** Why a repo can't be chosen. `message` is for display and says what to do. */
 export type RepoProblem = {
-  code: "not_found" | "not_a_repo" | "no_base_branch" | "agents_running";
+  code:
+    | "not_found"
+    | "not_a_repo"
+    | "no_base_branch"
+    | "agents_running"
+    /** Claude Code is not installed; no agent could start there. */
+    | "no_claude"
+    /** Another tab is switching repos right now. */
+    | "switching"
+    /** The switch failed midway and was undone; the old repo stays. */
+    | "switch_failed"
+    /** The payload is missing fields or has values of the wrong type. */
+    | "invalid_payload";
   message: string;
 };
 
