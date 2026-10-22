@@ -96,6 +96,7 @@ class FakeHooks {
 }
 
 const settle = () => new Promise((resolve) => setImmediate(resolve));
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -538,6 +539,60 @@ describe("AgentService.dispatch", () => {
     });
   });
 
+  describe("watchdog", () => {
+    let agentId: string;
+
+    beforeEach(async () => {
+      service.onModuleInit();
+      service.watchdogMs = 20;
+      // Like the real TerminalService: kill() ends the process.
+      terminals.kill.mockImplementation((id: string) => terminals.exit(id, 1));
+      const ack = await dispatch();
+      if ("error" in ack) throw new Error("dispatch failed");
+      agentId = ack.agentId;
+      statuses = [];
+    });
+
+    const agentOf = () => store.snapshot().agents.find((a) => a.id === agentId);
+
+    it("is error with a hint at the trust question when no hook arrives", async () => {
+      await sleep(60);
+
+      expect(agentOf()?.status).toBe("error");
+      expect(agentOf()?.statusMessage).toMatch(/trust the folder/);
+    });
+
+    it("is satisfied by the first hook, even SessionStart", async () => {
+      hooks.send(agentId, { hook_event_name: "SessionStart" });
+      await sleep(60);
+
+      expect(agentOf()?.status).toBe("starting");
+      expect(statuses).toEqual([]);
+    });
+
+    it("recovers when the hooks arrive later, and drops its message", async () => {
+      await sleep(60);
+      hooks.send(agentId, { hook_event_name: "UserPromptSubmit" });
+      await settle();
+
+      expect(agentOf()?.status).toBe("working");
+      expect(agentOf()?.statusMessage).toBeUndefined();
+    });
+
+    it("is cleared when Claude Code exits", async () => {
+      terminals.exit(agentId, 0);
+      await sleep(60);
+
+      expect(statuses).toEqual(["needs_input"]);
+    });
+
+    it("is cleared on stop", async () => {
+      await service.stop({ agentId, removeWorktree: false });
+      await sleep(60);
+
+      expect(statuses).toEqual(["removed"]);
+    });
+  });
   it("refuses to stop an agent that is still starting", async () => {
     const issueAnswer = deferred<Awaited<ReturnType<FakeGitHub["getIssue"]>>>();
     github.getIssue.mockReturnValue(issueAnswer.promise);

@@ -20,6 +20,11 @@ import { hookSettings } from "./hook-files";
 
 const TASK_DIR = ".gitspore";
 const STOP_TIMEOUT_MS = 10_000;
+const WATCHDOG_MS = 60_000;
+const WATCHDOG_MESSAGE =
+  "Claude Code has sent no status since it started. In a new worktree it " +
+  "usually waits for you to trust the folder: open the agent's terminal and " +
+  "confirm. The status updates as soon as Claude Code reports.";
 // nest build copies it next to the compiled service (nest-cli.json assets).
 const HOOK_SCRIPT = join(__dirname, "hook-script.mjs");
 
@@ -32,6 +37,7 @@ type Running = {
   // Counts status changes from hooks and the exit, so a slow pull request
   // check can tell that something newer happened meanwhile.
   changes: number;
+  watchdog?: NodeJS.Timeout;
 };
 
 type Progress = {
@@ -45,6 +51,7 @@ export class AgentService implements OnModuleInit {
   private readonly logger = new Logger(AgentService.name);
   private readonly running = new Map<AgentId, Running>();
   private readonly exitWaiters = new Map<AgentId, () => void>();
+  watchdogMs = WATCHDOG_MS;
 
   constructor(
     private readonly store: StateStore,
@@ -123,14 +130,17 @@ export class AgentService implements OnModuleInit {
       const sessionId = randomUUID();
       this.spawnClaude(agentId, path, claude, sessionId);
       progress.spawned = true;
-      this.running.set(agentId, {
+      const entry: Running = {
         worktreePath: path,
         branch,
         sessionId,
         processRunning: true,
         stopping: false,
         changes: 0,
-      });
+      };
+      this.running.set(agentId, entry);
+      this.startWatchdog(agentId, entry);
+
       // Stays starting until the first hook reports.
       return { agentId };
     } catch (error) {
@@ -172,6 +182,8 @@ export class AgentService implements OnModuleInit {
     if (entry.stopping) return;
 
     entry.stopping = true;
+    this.clearWatchdog(entry);
+
     this.hooks.revoke(agentId);
     if (entry.processRunning) await this.killAndWait(agentId);
 
@@ -217,6 +229,19 @@ export class AgentService implements OnModuleInit {
       this.setStatus(agentId, "error");
       throw error;
     }
+  }
+
+  private startWatchdog(agentId: AgentId, entry: Running): void {
+    entry.watchdog = setTimeout(() => {
+      entry.watchdog = undefined;
+      if (this.running.get(agentId) !== entry || entry.stopping) return;
+      this.setStatus(agentId, "error", WATCHDOG_MESSAGE);
+    }, this.watchdogMs);
+  }
+
+  private clearWatchdog(entry: Running): void {
+    clearTimeout(entry.watchdog);
+    entry.watchdog = undefined;
   }
 
   // hook.json tells the hook script where to post and with which secret;
@@ -274,6 +299,7 @@ export class AgentService implements OnModuleInit {
     const entry = this.running.get(agentId);
     const event = parseHookPayload(payload);
     if (!entry || entry.stopping || !event) return;
+    this.clearWatchdog(entry);
 
     const outcome = statusFromHook(event);
     if (outcome.kind === "keep") return;
@@ -294,6 +320,7 @@ export class AgentService implements OnModuleInit {
     const entry = this.running.get(agentId);
     if (!entry) return;
     entry.processRunning = false;
+    this.clearWatchdog(entry);
     entry.changes++;
     this.hooks.revoke(agentId);
 
@@ -357,15 +384,25 @@ export class AgentService implements OnModuleInit {
     }
   }
 
-  // Same status again changes nothing, so it sends nothing either.
-  private setStatus(agentId: AgentId, status: AgentStatus): void {
+  // Same status again changes nothing, so it sends nothing either. A message
+  // belongs to its status and goes with the next change.
+  private setStatus(
+    agentId: AgentId,
+    status: AgentStatus,
+    message?: string,
+  ): void {
     const agent = this.store.snapshot().agents.find((a) => a.id === agentId);
 
     if (!agent || agent.status === status) return;
     this.store.apply([
       {
         type: "agent:upsert",
-        agent: { ...agent, status, statusSince: new Date().toISOString() },
+        agent: {
+          ...agent,
+          status,
+          statusSince: new Date().toISOString(),
+          statusMessage: message,
+        },
       },
     ]);
   }
