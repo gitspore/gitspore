@@ -54,6 +54,7 @@ Der Daemon bindet nur an `127.0.0.1`. Bei jedem Start erzeugt er einen zufällig
 | `GITSPORE_REPO`           | Repo, in dem der Daemon läuft | Pfad zum Git-Repository, in dem gitspore Worktrees anlegt. Ein Unterordner wird auf den Repo-Stamm aufgelöst. Ein gesetzter, aber ungültiger Pfad stoppt den Daemon. Der Standard gilt vorläufig, bis es den Setup-Screen gibt. |
 | `GITSPORE_BASE_BRANCH`    | `main`                        | Lokaler Branch, von dem neue Worktrees abzweigen. Muss lokal existieren.                                                                                                                                                        |
 | `GITSPORE_START_OVERVIEW` | aus                           | `1` startet beim Daemon-Start Claude Code im Repo-Stamm als Übersichts-Agent (`id: "overview"`), im Plan-Modus (nur lesend). Jeder andere Wert oder keiner: kein `claude`.                                                      |
+| `GITSPORE_CLAUDE_BIN`     | gesucht im `PATH`             | Voller Pfad zu Claude Code. Ersetzt die Suche im `PATH` (unter Windows erst `claude.exe`, dann `claude.cmd`) und fällt nie auf sie zurück. Die Tests setzen hier `fake-claude` ein.                                             |
 
 ### GitHub-Sync
 

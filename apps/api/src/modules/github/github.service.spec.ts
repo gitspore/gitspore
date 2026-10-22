@@ -508,3 +508,35 @@ describe("GitHubService: getIssue", () => {
     });
   });
 });
+
+describe("GithubService: findPullRequest", () => {
+  it("asks Github now, not the last poll", async () => {
+    const { api, service } = setup();
+    await service.start();
+    api.pullRequestFor.mockResolvedValue(pullRequest(7));
+
+    const found = await service.findPullRequest("spore/42-fix-bug");
+
+    expect(found).toEqual(pullRequest(7));
+    expect(api.pullRequestFor).toHaveBeenCalledWith("spore/42-fix-bug");
+    service.stop();
+  });
+  it("gives null when the branch has no pull request", async () => {
+    const { service } = setup();
+    await service.start();
+
+    expect(await service.findPullRequest("spore/42-fix-bug")).toBeNull();
+    service.stop();
+  });
+  it("throws github_sync_disabled while sync is off", async () => {
+    const { service } = setup({ disabled: "No GitHub token." });
+    await service.start();
+
+    await expect(
+      service.findPullRequest("spore/42-fix-bug"),
+    ).rejects.toMatchObject({
+      code: "github_sync_disabled",
+      message: "No GitHub token.",
+    });
+  });
+});
