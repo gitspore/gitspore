@@ -51,6 +51,8 @@ export type ErrorCode =
   | "agent_starting"
   /** Claude Code is not installed or not found. `message` says how to install it. */
   | "claude_not_found"
+  /** No repository is chosen yet, or gitspore is switching to another one. */
+  | "repo_unavailable"
   /** Anything else. `message` says what. */
   | "internal";
 

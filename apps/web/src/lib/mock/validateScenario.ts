@@ -88,6 +88,7 @@ const serverErrorSchema = z.object({
     "worktree_dirty",
     "agent_starting",
     "claude_not_found",
+    "repo_unavailable",
     "github_failed",
     "internal",
   ]),

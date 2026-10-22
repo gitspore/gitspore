@@ -13,8 +13,12 @@ import type { TerminalService } from "../terminal/terminal.service";
 import { WorktreeError } from "../worktree/worktree-error";
 import type { WorktreeService } from "../worktree/worktree.service";
 import { AgentService } from "./agent.service";
+import type { RepoService } from "../repo/repo.service";
 import { PROMPT, taskFile } from "./task-file";
 import type { PullRequest } from "../github/github-api";
+
+// No repo switch is running.
+const notSwitching = { isSwitching: () => false } as unknown as RepoService;
 
 const issue = (number: number): Issue => ({
   number,
@@ -114,6 +118,7 @@ describe("AgentService.dispatch", () => {
       terminals as unknown as TerminalService,
       locator as unknown as ClaudeLocator,
       new RepoConfig("/repo", "main"),
+      notSwitching,
     );
 
     // Every status an agent goes through, in order.
@@ -202,6 +207,35 @@ describe("AgentService.dispatch", () => {
     expect(statuses).toEqual([]);
     expect(locator.resolve).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ["while a repo switch runs", "/repo", true, "switching"],
+    ["without a repo", null, false, "No repository"],
+  ])(
+    "refuses %s and starts nothing (#58)",
+    async (_, repoPath, switching, message) => {
+      service = new AgentService(
+        store,
+        github as unknown as GitHubService,
+        worktrees as unknown as WorktreeService,
+        terminals as unknown as TerminalService,
+        locator as unknown as ClaudeLocator,
+        new RepoConfig(repoPath, "main"),
+        { isSwitching: () => switching } as unknown as RepoService,
+      );
+
+      const ack = await service.dispatch({ issueNumber: 42, slotIndex: 0 });
+
+      expect(ack).toEqual({
+        error: {
+          code: "repo_unavailable",
+          message: expect.stringContaining(message),
+        },
+      });
+      expect(statuses).toEqual([]);
+      expect(locator.resolve).not.toHaveBeenCalled();
+    },
+  );
 
   it("lets only one of two dispatches for the same slot through", async () => {
     const acks = await Promise.all([dispatch(42, 0), dispatch(43, 0)]);

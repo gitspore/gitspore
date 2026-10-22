@@ -191,6 +191,11 @@ const errors: { [C in ErrorCode]: ServerError & { code: C } } = {
     message:
       "Claude Code was not found. Install it from https://claude.com/claude-code",
   },
+  repo_unavailable: {
+    code: "repo_unavailable",
+    message:
+      "gitspore is switching to another repository. Try again in a moment.",
+  },
   github_failed: { code: "github_failed", message: "GitHub answered with 500" },
   github_sync_disabled: {
     code: "github_sync_disabled",
