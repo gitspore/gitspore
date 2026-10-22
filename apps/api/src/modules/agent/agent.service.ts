@@ -1,12 +1,17 @@
 import type {
+  Agent,
   AgentDispatchAck,
   AgentId,
   AgentStatus,
+  PullRequest,
   StatusReason,
 } from "@gitspore/shared";
 import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { StateStore } from "../state/state.store";
-import { GitHubService } from "../github/github.service";
+import {
+  GitHubService,
+  type PullRequestChange,
+} from "../github/github.service";
 import { WorktreeService } from "../worktree/worktree.service";
 import { TerminalService } from "../terminal/terminal.service";
 import { ClaudeLocator } from "../terminal/claude-locator";
@@ -22,6 +27,7 @@ import { TerminalError } from "../terminal/terminal-error";
 import { AgentError, toServerError } from "./agent-error";
 import { parseHookPayload, statusFromHook } from "./hook-status";
 import { hookSettings } from "./hook-files";
+import { reactToPullRequest } from "./pull-request-reaction";
 import { RepoService } from "../repo/repo.service";
 
 const TASK_DIR = ".gitspore";
@@ -45,8 +51,8 @@ type Running = {
   sessionId: string;
   processRunning: boolean;
   stopping: boolean;
-  // Counts status changes from hooks and the exit, so a slow pull request
-  // check can tell that something newer happened meanwhile.
+  // Counts status changes from hooks, the exit and the GitHub poll, so a
+  // slow pull request check can tell that something newer happened meanwhile.
   changes: number;
   watchdog?: NodeJS.Timeout;
 };
@@ -55,6 +61,13 @@ type Progress = {
   worktree: boolean;
   pushed: boolean;
   spawned: boolean;
+};
+
+// What update() may change. Left out means unchanged.
+type AgentChange = {
+  status?: AgentStatus;
+  statusReason?: StatusReason | null;
+  pullRequest?: PullRequest | null;
 };
 
 @Injectable()
@@ -81,6 +94,9 @@ export class AgentService implements OnModuleInit {
     });
     this.hooks.onEvent((agentId, payload) => {
       void this.handleHook(agentId, payload);
+    });
+    this.github.onPullRequest((change) => {
+      this.handlePullRequest(change);
     });
   }
 
@@ -330,18 +346,20 @@ export class AgentService implements OnModuleInit {
     const event = parseHookPayload(payload);
     if (!entry || entry.stopping || !event) return;
     this.clearWatchdog(entry);
+    // Merged: the cleanup is on its way, nothing moves the agent back.
+    if (this.isMerged(agentId)) return;
 
     const outcome = statusFromHook(event);
     if (outcome.kind === "keep") return;
 
     const change = ++entry.changes;
-    const status =
+    const next =
       outcome.kind === "set"
-        ? outcome.status
-        : await this.statusFromPullRequest(entry.branch);
+        ? { status: outcome.status }
+        : await this.checkPullRequest(entry.branch);
     // Something newer came in while GitHub was being asked.
     if (entry.changes !== change || entry.stopping) return;
-    this.setStatus(agentId, status);
+    this.update(agentId, next);
   }
 
   // Claude Code ended. The hooks can't report that, so the exit code and the
@@ -351,30 +369,62 @@ export class AgentService implements OnModuleInit {
     if (!entry) return;
     entry.processRunning = false;
     this.clearWatchdog(entry);
-    entry.changes++;
+    const change = ++entry.changes;
     this.hooks.revoke(agentId);
 
     this.exitWaiters.get(agentId)?.();
-    if (entry.stopping) return;
+    if (entry.stopping || this.isMerged(agentId)) return;
 
     if (exitCode !== 0) {
       this.setStatus(agentId, "error");
       return;
     }
-    this.setStatus(agentId, await this.statusFromPullRequest(entry.branch));
+    const next = await this.checkPullRequest(entry.branch);
+    if (entry.changes !== change || entry.stopping) return;
+    this.update(agentId, next);
+  }
+
+  // The GitHub poll saw a new pull request on an agent's branch, or a new
+  // state. The pull request goes on the agent in any case.
+  private handlePullRequest({ branch, pullRequest }: PullRequestChange): void {
+    const agent = this.store.snapshot().agents.find((a) => a.branch === branch);
+    const entry = agent && this.running.get(agent.id);
+    if (!agent || !entry || entry.stopping) return;
+
+    const reaction = reactToPullRequest(agent.status, pullRequest);
+    if (reaction.kind === "keep") {
+      this.update(agent.id, { pullRequest });
+      return;
+    }
+    // Newer than a pull request check that may still be under way.
+    entry.changes++;
+    this.update(
+      agent.id,
+      reaction.kind === "merged"
+        ? { status: "merged", pullRequest }
+        : {
+            status: reaction.status,
+            statusReason: reaction.reason,
+            pullRequest,
+          },
+    );
   }
 
   // Asks GitHub directly: a pull request Claude opened seconds ago is not in
-  // the last poll yet.
-  private async statusFromPullRequest(branch: string): Promise<AgentStatus> {
+  // the last poll yet. Without an answer the agent keeps the pull request it
+  // has.
+  private async checkPullRequest(branch: string): Promise<AgentChange> {
     try {
       const pullRequest = await this.github.findPullRequest(branch);
-      // A merged one stays needs_input until merge handling (GS-48).
-      return pullRequest?.state === "open" ? "done" : "needs_input";
+      // A merged one is left to the poll, which hands it to the merge handling.
+      return {
+        status: pullRequest?.state === "open" ? "done" : "needs_input",
+        pullRequest,
+      };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.warn(`No pull request check for ${branch}: ${message}`);
-      return "needs_input";
+      return { status: "needs_input" };
     }
   }
 
@@ -414,27 +464,42 @@ export class AgentService implements OnModuleInit {
     }
   }
 
-  // Same status again changes nothing, so it sends nothing either. A message
-  // belongs to its status and goes with the next change.
   private setStatus(
     agentId: AgentId,
     status: AgentStatus,
-    reason: StatusReason | null = null,
+    statusReason: StatusReason | null = null,
   ): void {
-    const agent = this.store.snapshot().agents.find((a) => a.id === agentId);
+    this.update(agentId, { status, statusReason });
+  }
 
-    if (!agent || agent.status === status) return;
-    this.store.apply([
-      {
-        type: "agent:upsert",
-        agent: {
-          ...agent,
-          status,
-          statusSince: new Date().toISOString(),
-          statusReason: reason,
-        },
-      },
-    ]);
+  // Changes the agent in one patch, and sends nothing if nothing changed.
+  // statusSince moves only with the status. A reason belongs to its status:
+  // a status set without one clears the old one.
+  private update(agentId: AgentId, change: AgentChange): void {
+    const agent = this.store.snapshot().agents.find((a) => a.id === agentId);
+    if (!agent) return;
+
+    const next: Agent = { ...agent };
+    if (change.status !== undefined) {
+      next.status = change.status;
+      next.statusReason = change.statusReason ?? null;
+      if (change.status !== agent.status) {
+        next.statusSince = new Date().toISOString();
+      }
+    }
+    if (change.pullRequest !== undefined) next.pullRequest = change.pullRequest;
+
+    const unchanged =
+      next.status === agent.status &&
+      sameReason(next.statusReason, agent.statusReason) &&
+      samePullRequest(next.pullRequest, agent.pullRequest);
+    if (unchanged) return;
+    this.store.apply([{ type: "agent:upsert", agent: next }]);
+  }
+
+  private isMerged(agentId: AgentId): boolean {
+    const agent = this.store.snapshot().agents.find((a) => a.id === agentId);
+    return agent?.status === "merged";
   }
 
   private report(error: unknown) {
@@ -442,4 +507,17 @@ export class AgentService implements OnModuleInit {
     if (serverError.code === "internal") this.logger.error(error);
     return serverError;
   }
+}
+
+// Field by field rather than a deep compare: the store hands out clones, and
+// a deep compare would also weigh where an object was made.
+function sameReason(a: StatusReason | null, b: StatusReason | null): boolean {
+  return a?.code === b?.code && a?.message === b?.message;
+}
+
+function samePullRequest(
+  a: PullRequest | null,
+  b: PullRequest | null,
+): boolean {
+  return a?.number === b?.number && a?.state === b?.state && a?.url === b?.url;
 }

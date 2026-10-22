@@ -75,6 +75,7 @@ describe("Agent dispatch and stop, end to end", () => {
   let github: {
     getIssue: jest.Mock<Promise<Issue & { body: string }>, [number]>;
     findPullRequest: jest.Mock<Promise<PullRequest | null>, [string]>;
+    onPullRequest: jest.Mock;
   };
   const exited = new Set<AgentId>();
 
@@ -129,6 +130,7 @@ describe("Agent dispatch and stop, end to end", () => {
       findPullRequest: jest.fn<Promise<PullRequest | null>, [string]>(
         async () => null,
       ),
+      onPullRequest: jest.fn(),
     };
     terminals = new TerminalService(spawn);
     exited.clear();
