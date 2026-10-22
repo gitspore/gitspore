@@ -22,9 +22,11 @@ const TASK_DIR = ".gitspore";
 const STOP_TIMEOUT_MS = 10_000;
 const WATCHDOG_MS = 60_000;
 const WATCHDOG_MESSAGE =
-  "Claude Code has sent no status since it started. In a new worktree it " +
-  "usually waits for you to trust the folder: open the agent's terminal and " +
-  "confirm. The status updates as soon as Claude Code reports.";
+  "Claude Code has sent no status since it started. It probably waits for " +
+  "you to trust the folder: open the agent's terminal and confirm. Opening " +
+  "the repo once in Claude Code and trusting it saves the question for " +
+  "every future agent. The status updates as soon as Claude Code reports.";
+
 // nest build copies it next to the compiled service (nest-cli.json assets).
 const HOOK_SCRIPT = join(__dirname, "hook-script.mjs");
 
