@@ -239,6 +239,7 @@ export class AgentService implements OnModuleInit {
       if (this.running.get(agentId) !== entry || entry.stopping) return;
       this.setStatus(agentId, "error", WATCHDOG_MESSAGE);
     }, this.watchdogMs);
+    entry.watchdog.unref();
   }
 
   private clearWatchdog(entry: Running): void {
