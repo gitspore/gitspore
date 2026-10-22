@@ -1,6 +1,6 @@
 "use client";
 
-import { OVERVIEW_AGENT_ID, type Agent } from "@gitspore/shared";
+import type { Agent } from "@gitspore/shared";
 
 import { useShallow } from "zustand/react/shallow";
 import { useGreenhouseStore } from "@/lib/client/GreenhouseClientProvider";
@@ -8,6 +8,7 @@ import { mainGrid, shellGrid } from "@/lib/layout";
 // Stays mock until the daemon sends usage (#42)
 import { mockContext, mockUsage } from "@/lib/mock";
 import { issueTitle, needsInputCount } from "@/lib/store/selectors";
+import { useHotbarKeys } from "@/lib/hotbarKeys";
 import { useSceneEnabled } from "@/lib/scene";
 import { Scene } from "../Scene";
 import { Button } from "../ui/button";
@@ -25,11 +26,9 @@ export function AppShell() {
   const setSidePanel = useGreenhouseStore((s) => s.setSidePanel);
   const setMode = useGreenhouseStore((s) => s.setMode);
   const toggleMinimised = useGreenhouseStore((s) => s.toggleMinimised);
-  const openWindow = useGreenhouseStore((s) => s.openWindow);
-  // Slot 0 toggles: a visible overview window is minimised, otherwise opened
-  const overviewVisible = layout.windows.some(
-    (w) => w.agentId === OVERVIEW_AGENT_ID && !w.minimised,
-  );
+  // One action for every hotbar slot, by click or key 0–6 (#72)
+  const pressSlot = useGreenhouseStore((s) => s.pressSlot);
+  useHotbarKeys(pressSlot);
 
   // No scene with ?scene=off or without WebGL; the interface works the same (#18)
   const showScene = useSceneEnabled();
@@ -118,11 +117,7 @@ export function AppShell() {
             <button
               type="button"
               aria-label="Open the overview agent"
-              onClick={() =>
-                overviewVisible
-                  ? toggleMinimised(OVERVIEW_AGENT_ID)
-                  : openWindow(OVERVIEW_AGENT_ID, { alone: true })
-              }
+              onClick={() => pressSlot(0)}
 
               className="hotbar-slot grid place-items-center rounded-xl bg-panel-2 font-mono"
             >
