@@ -2,18 +2,19 @@
 
 Turns an issue into a running agent and stops it again: `agent:dispatch` makes a worktree on a pushed `spore/…` branch, writes a task file and starts Claude Code in it; `agent:stop` ends it. While it runs, Claude Code's hooks report its status. Agents live in the `StateStore` (in memory), next to the overview agent. Git and the running processes are the source of truth; there is no database.
 
-| File                | Holds                                                                                       |
-| ------------------- | ------------------------------------------------------------------------------------------- |
-| `agent.service.ts`  | `AgentService`: `dispatch`, `stop`, the status from hooks and after Claude's exit, watchdog |
-| `agent.gateway.ts`  | `agent:dispatch` (with ack) and `agent:stop` (failures as `error` event)                    |
-| `agent-request.ts`  | `checkDispatch` and `checkStop`: validation and the slot/issue check, synchronous           |
-| `agent-error.ts`    | `AgentError`, and `toServerError`, which turns every error into one of the contract         |
-| `task-file.ts`      | `PROMPT` (constant) and `taskFile(issue)`, the text of `.gitspore/task.md`                  |
-| `hook-status.ts`    | `parseHookPayload` and `statusFromHook`: hook event → status, pure                          |
-| `hook-files.ts`     | `hookSettings`, the content of `.gitspore/settings.json`                                    |
-| `hook-script.mjs`   | The script Claude Code runs per hook event; posts it to the daemon. Shipped as build asset  |
-| `agent.module.ts`   | Provides `AgentService` and `AgentGateway`; imports State, GitHub, Terminal, Worktree, Hook |
-| `agent.e2e.spec.ts` | Acceptance tests with real git, real PTYs, the fake claude and its hooks                    |
+| File                       | Holds                                                                                       |
+| -------------------------- | ------------------------------------------------------------------------------------------- |
+| `agent.service.ts`         | `AgentService`: `dispatch`, `stop`, the status from hooks and after Claude's exit, watchdog |
+| `agent.gateway.ts`         | `agent:dispatch` (with ack) and `agent:stop` (failures as `error` event)                    |
+| `agent-request.ts`         | `checkDispatch` and `checkStop`: validation and the slot/issue check, synchronous           |
+| `agent-error.ts`           | `AgentError`, and `toServerError`, which turns every error into one of the contract         |
+| `task-file.ts`             | `PROMPT` (constant) and `taskFile(issue)`, the text of `.gitspore/task.md`                  |
+| `hook-status.ts`           | `parseHookPayload` and `statusFromHook`: hook event → status, pure                          |
+| `hook-files.ts`            | `hookSettings`, the content of `.gitspore/settings.json`                                    |
+| `pull-request-reaction.ts` | `reactToPullRequest`: a changed pull request → status or merge handling, pure               |
+| `hook-script.mjs`          | The script Claude Code runs per hook event; posts it to the daemon. Shipped as build asset  |
+| `agent.module.ts`          | Provides `AgentService` and `AgentGateway`; imports State, GitHub, Terminal, Worktree, Hook |
+| `agent.e2e.spec.ts`        | Acceptance tests with real git, real PTYs, the fake claude and its hooks                    |
 
 The hook endpoint itself (`POST /hooks/:agentId`, secrets) is in `modules/hooks/`. It only checks and passes events on; what they mean is decided here.
 
@@ -130,7 +131,7 @@ A spawn that throws although the locator found Claude is `claude_not_found`, and
 ## Tests
 
 - `agent.service.spec.ts`: the logic of dispatch, rollback, hooks, watchdog, exit and stop, with stand-ins for git, GitHub, the terminals, the locator and the hook service.
-- `agent-request.spec.ts`, `agent-error.spec.ts`, `task-file.spec.ts`, `hook-status.spec.ts`, `hook-files.spec.ts`: the pure functions.
+- `agent-request.spec.ts`, `agent-error.spec.ts`, `task-file.spec.ts`, `hook-status.spec.ts`, `hook-files.spec.ts`, `pull-request-reaction.spec.ts`: the pure functions.
 - `hook-script.spec.ts`: the real script against a stand-in daemon, including a daemon that is down or never answers.
 - `agent.gateway.spec.ts`: the events reach the service and the answers come back.
 - `agent.e2e.spec.ts`: the acceptance criteria of GS-66 and GS-67 with real git (a bare repo in a temp folder as origin), real PTYs, the real hook endpoint and `apps/api/test/fake-claude.mjs` through `GITSPORE_CLAUDE_BIN`. `FAKE_CLAUDE_HOOKS` makes the fake fire hook events through the written `settings.json`. Only GitHub is a stand-in. About a minute on Windows.
