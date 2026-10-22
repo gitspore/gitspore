@@ -15,6 +15,8 @@ import { MAX_SLOTS } from "@gitspore/shared";
 //
 // One terminal per slot agent, plus one for the overview agent.
 const MAX_TERMINALS = MAX_SLOTS + 1;
+// How long stop() waits for a shell to exit, like AgentService's.
+const STOP_TIMEOUT_MS = 10_000;
 
 // parameter is a function type and types don't exist at runtime,
 // so Nest has nothing to look up.
@@ -45,6 +47,8 @@ export class TerminalService {
   private readonly terminals = new Map<AgentId, AgentTerminal>();
   private readonly sessions = new Map<SessionId, Session>();
   private readonly exitListeners: ExitListener[] = [];
+  // stop() calls that wait for their agent's shell to exit.
+  private readonly stopping = new Map<AgentId, (() => void)[]>();
 
   constructor(@Inject(SPAWN_PTY) private readonly spawnPty: SpawnPty) {}
 
@@ -111,6 +115,39 @@ export class TerminalService {
     }
   }
 
+  /**
+   * Ends an agent's terminal and resolves with true once its shell has
+   * exited, after the exit listeners. Spawning the same agent again before
+   * that would fail with already_running. Resolves with false when the shell
+   * is still there after timeoutMs, so a caller (a repo switch) never waits
+   * forever; the terminal then stays known until it does exit. Resolves with
+   * true at once without a terminal.
+   */
+  stop(agentId: AgentId, timeoutMs = STOP_TIMEOUT_MS): Promise<boolean> {
+    const terminal = this.terminals.get(agentId);
+    if (terminal === undefined) {
+      return Promise.resolve(true);
+    }
+    return new Promise((resolve) => {
+      const exited = () => {
+        clearTimeout(timer);
+        resolve(true);
+      };
+      const timer = setTimeout(() => {
+        this.stopping.set(
+          agentId,
+          (this.stopping.get(agentId) ?? []).filter((w) => w !== exited),
+        );
+        resolve(false);
+      }, timeoutMs);
+      this.stopping.set(agentId, [
+        ...(this.stopping.get(agentId) ?? []),
+        exited,
+      ]);
+      terminal.kill();
+    });
+  }
+
   onExited(listener: ExitListener): void {
     this.exitListeners.push(listener);
   }
@@ -149,5 +186,9 @@ export class TerminalService {
     for (const listener of this.exitListeners) {
       listener(agentId, exitCode);
     }
+    for (const resolve of this.stopping.get(agentId) ?? []) {
+      resolve();
+    }
+    this.stopping.delete(agentId);
   }
 }

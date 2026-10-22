@@ -1,0 +1,48 @@
+{
+  "name": "no-repo",
+  "anchor": "2026-10-20T09:30:00.000Z",
+  "snapshot": {
+    "version": 1,
+    "repo": null,
+    "agents": [],
+    "issues": [
+      {
+        "number": 201,
+        "title": "Password reset email is not sent",
+        "url": "https://github.com/gitspore/gitspore/issues/201",
+        "labels": ["bug"]
+      },
+      {
+        "number": 202,
+        "title": "Add keyboard shortcuts for switching between agents",
+        "url": "https://github.com/gitspore/gitspore/issues/202",
+        "labels": ["enhancement", "good first issue"]
+      },
+      {
+        "number": 203,
+        "title": "Search results page shows duplicate entries when the query contains special characters such as umlauts, quotes or a trailing slash",
+        "url": "https://github.com/gitspore/gitspore/issues/203",
+        "labels": ["bug", "search", "regression", "needs triage"]
+      },
+      {
+        "number": 204,
+        "title": "Typo in footer",
+        "url": "https://github.com/gitspore/gitspore/issues/204",
+        "labels": []
+      },
+      {
+        "number": 205,
+        "title": "Upgrade to the latest Node LTS",
+        "url": "https://github.com/gitspore/gitspore/issues/205",
+        "labels": ["chore"]
+      },
+      {
+        "number": 206,
+        "title": "Document the deployment process",
+        "url": "https://github.com/gitspore/gitspore/issues/206",
+        "labels": ["documentation"]
+      }
+    ]
+  },
+  "events": []
+}

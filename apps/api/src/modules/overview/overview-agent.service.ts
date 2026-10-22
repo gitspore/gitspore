@@ -39,21 +39,58 @@ export class OverviewAgentService implements OnApplicationBootstrap {
   async onApplicationBootstrap(): Promise<void> {
     if (!this.enabled) return;
 
+    // TerminalService tells listeners about every agent's exit. The shell
+    // exits only on `exit`; no restart, the agent leaves the state.
+    // Registered once here, not per start: a repo switch starts it again.
+    this.terminals.onExited((agentId) => {
+      if (agentId === OVERVIEW_AGENT_ID) {
+        this.store.apply([{ type: "agent:remove", agentId }]);
+      }
+    });
+
+    await this.start();
+  }
+
+  /**
+   * Starts the overview agent in the repo RepoConfig names: at startup, and
+   * again after RepoService switched repos (#58).
+   */
+  async start(): Promise<void> {
+    if (!this.enabled) return;
+    // Without a repo there is nothing to look at; the setup screen shows.
+    if (!this.config.isSet()) {
+      this.logger.log("No repository chosen yet; overview agent not started");
+      return;
+    }
+
     // A throw here would stop the daemon.
     // Without the overview agent
     // everything else still works,
     // so we log and continue.
     try {
-      await this.start();
+      await this.spawnAgent();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Could not start the overview agent: ${message}`);
     }
   }
 
-  private async start(): Promise<void> {
+  /**
+   * Ends the overview agent, before a switch to another repo (#58). Never
+   * waits forever, or the switch would stay "switching" and refuse every
+   * dispatch. A shell that doesn't exit is left behind; start() in the new
+   * repo then fails with already_running and logs it.
+   */
+  async stop(): Promise<void> {
+    const exited = await this.terminals.stop(OVERVIEW_AGENT_ID);
+    if (!exited) {
+      this.logger.warn("The overview agent's shell did not exit; going on");
+    }
+  }
+
+  private async spawnAgent(): Promise<void> {
     const repo = this.config.repoPath();
-    // The branch checked out in the repo root, read once at startup.
+    // The branch checked out in the repo root, read once per start.
     const branch = await simpleGit(repo).revparse(["--abbrev-ref", "HEAD"]);
 
     // Without Claude, start nothing and add no agent.
@@ -91,14 +128,6 @@ export class OverviewAgentService implements OnApplicationBootstrap {
         },
       },
     ]);
-
-    // TerminalService tells listeners about every agent's exit. The shell
-    // exits only on `exit`; no restart, the agent leaves the state.
-    this.terminals.onExited((agentId) => {
-      if (agentId === OVERVIEW_AGENT_ID) {
-        this.store.apply([{ type: "agent:remove", agentId }]);
-      }
-    });
 
     this.logger.log(`Overview agent started in ${repo} on ${branch}`);
   }

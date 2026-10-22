@@ -39,7 +39,15 @@ describe("AppModule", () => {
     await app?.close();
     browserTab = undefined;
     app = undefined;
-    await rm(repo, { recursive: true, force: true });
+    // Windows can't remove a folder while a process still runs in it, like
+    // the git of the GitHub sync that start() doesn't wait for: EBUSY. rm
+    // retries on that.
+    await rm(repo, {
+      recursive: true,
+      force: true,
+      maxRetries: 10,
+      retryDelay: 100,
+    });
   });
 
   // compile() runs no lifecycle hooks

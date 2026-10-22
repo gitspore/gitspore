@@ -22,6 +22,7 @@ const agent = (overrides: Partial<Agent>): Agent => ({
 
 const state = (agents: Agent[] = []): GreenhouseState => ({
   version: 1,
+  repo: { path: "/repo", baseBranch: "main", github: "on" },
   agents,
   issues: [issue(42), issue(43)],
 });

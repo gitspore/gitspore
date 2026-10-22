@@ -35,7 +35,11 @@ import { ClaudeLocator, systemDeps } from "../terminal/claude-locator";
 import { TerminalService } from "../terminal/terminal.service";
 import { WorktreeService } from "../worktree/worktree.service";
 import { AgentService } from "./agent.service";
+import type { RepoService } from "../repo/repo.service";
 import { PROMPT } from "./task-file";
+
+// No repo switch is running.
+const notSwitching = { isSwitching: () => false } as unknown as RepoService;
 
 // Windows needs about a second per PTY, and every dispatch runs fetch,
 // ls-remote and push.
@@ -133,6 +137,7 @@ describe("Agent dispatch and stop, end to end", () => {
       new ClaudeLocator(systemDeps()),
       new RepoConfig(repo, "main"),
       hooks,
+      notSwitching,
     );
     service.onModuleInit();
 

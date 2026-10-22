@@ -17,6 +17,7 @@ import { TerminalError } from "../terminal/terminal-error";
 import { AgentError, toServerError } from "./agent-error";
 import { parseHookPayload, statusFromHook } from "./hook-status";
 import { hookSettings } from "./hook-files";
+import { RepoService } from "../repo/repo.service";
 
 const TASK_DIR = ".gitspore";
 const STOP_TIMEOUT_MS = 10_000;
@@ -63,6 +64,7 @@ export class AgentService implements OnModuleInit {
     private readonly locator: ClaudeLocator,
     private readonly config: RepoConfig,
     private readonly hooks: HookService,
+    private readonly repos: RepoService,
   ) {}
 
   onModuleInit(): void {
@@ -75,6 +77,21 @@ export class AgentService implements OnModuleInit {
   }
 
   async dispatch(payload: unknown): Promise<AgentDispatchAck> {
+    // Before anything else and synchronously: a repo switch (#58) checks for
+    // agents when it starts and wipes the state when it ends, so an agent
+    // started in between would run unseen. Without a repo there is no
+    // worktree to make.
+    if (!this.config.isSet() || this.repos.isSwitching()) {
+      return {
+        error: {
+          code: "repo_unavailable",
+          message: this.config.isSet()
+            ? "gitspore is switching to another repository. Try again in a moment."
+            : "No repository is chosen yet.",
+        },
+      };
+    }
+
     let slotIndex: number;
     let issue;
 

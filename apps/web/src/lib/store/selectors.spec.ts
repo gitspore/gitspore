@@ -9,6 +9,7 @@ import {
   needsInputCount,
   openIssuesWithoutAgent,
   selectAgents,
+  showSetup,
 } from "./selectors";
 
 function agent(overrides: Partial<Agent> = {}): Agent {
@@ -30,9 +31,13 @@ function storeWith(server: Partial<GreenhouseState> | null) {
   } as GreenhouseClient;
   const store = createGreenhouseStore(client, "live");
   if (server)
-    store
-      .getState()
-      .applySnapshot({ version: 1, agents: [], issues: [], ...server });
+    store.getState().applySnapshot({
+      version: 1,
+      repo: null,
+      agents: [],
+      issues: [],
+      ...server,
+    });
   return store.getState();
 }
 
@@ -49,6 +54,23 @@ describe("selectors", () => {
       expect(freeSlots(state)).toEqual([0, 1, 2, 3, 4, 5]);
       expect(openIssuesWithoutAgent(state)).toEqual([]);
       expect(needsInputCount(state)).toBe(0);
+    });
+  });
+
+  describe("showSetup", () => {
+    const repo = { path: "/r", baseBranch: "main", github: "on" } as const;
+
+    it("hides before the first snapshot", () => {
+      expect(showSetup(storeWith(null))).toBe(false);
+    });
+
+    it("shows while no repo is chosen", () => {
+      expect(showSetup(storeWith({ repo: null }))).toBe(true);
+    });
+
+    it("hides with a repo, and shows again once the user opens it", () => {
+      expect(showSetup(storeWith({ repo }))).toBe(false);
+      expect(showSetup({ ...storeWith({ repo }), setupOpen: true })).toBe(true);
     });
   });
 
