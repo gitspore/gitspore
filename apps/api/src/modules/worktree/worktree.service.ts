@@ -109,13 +109,20 @@ export class WorktreeService implements OnModuleInit {
     await appendFile(file, `${separator}${pattern}\n`);
   }
 
+  planFor(issue: { issueNumber: number; issueTitle: string }): Worktree {
+    const branch = branchForIssue(issue.issueNumber, issue.issueTitle);
+    return {
+      branch,
+      path: join(this.worktreeRoot, branch.slice(BRANCH_PREFIX.length)),
+    };
+  }
+
   async create(issue: {
     issueNumber: number;
     issueTitle: string;
     startPoint?: string;
   }): Promise<Worktree> {
-    const branch = branchForIssue(issue.issueNumber, issue.issueTitle);
-    const path = join(this.worktreeRoot, branch.slice(BRANCH_PREFIX.length));
+    const { branch, path } = this.planFor(issue);
 
     if (await this.branchExists(branch)) {
       throw new WorktreeError(
