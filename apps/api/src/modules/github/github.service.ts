@@ -11,8 +11,12 @@ import type { GitHubApi, IssueDetails } from "./github-api";
 import { GitHubError, type GitHubErrorCode } from "./github-error";
 import { GitHubSource } from "./github-source";
 
-/** How often the issues and the agents' pull requests are asked for. */
-export const POLL_INTERVAL_MS = 60_000;
+/**
+ * How often the issues and the agents' pull requests are asked for. At most
+ * 7 requests a poll (issues, six branches), so about 1,700 an hour of the
+ * 5,000 GitHub allows; unchanged issues (304) don't count.
+ */
+export const POLL_INTERVAL_MS = 15_000;
 
 /** A pull request of an agent's branch appeared or changed its state. */
 export type PullRequestChange = {
@@ -99,7 +103,7 @@ export class GitHubService implements OnModuleDestroy {
   }
 
   /**
-   * `issues:refresh`: polls right away and starts the 60 s over. While sync
+   * `issues:refresh`: polls right away and starts the 15 s over. While sync
    * is off or paused by the rate limit, nothing is asked; the current
    * problem is sent again instead, so whoever pressed refresh learns why.
    */
