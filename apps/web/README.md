@@ -37,12 +37,12 @@ In mock mode a small panel in the bottom right shows the scenario and has button
 
 ### Scenarios
 
-| Name         | What it shows                                                                                                    |
-| ------------ | ---------------------------------------------------------------------------------------------------------------- |
-| `empty`      | No agents, 6 issues. For seed packets and dispatching.                                                           |
-| `all-states` | One agent per status (starting, working, needs_input, error, done, merged), static. For styling all of them.     |
-| `core-loop`  | One agent: start, work, waits for input for 70 s (all wilting stages), work, done, merged. 97 s in total.        |
-| `stress`     | 6 agents with rapid status changes, and one version that is skipped on purpose to test recovery with a snapshot. |
+| Name         | What it shows                                                                                                                        |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `empty`      | No agents, 6 issues. For seed packets and dispatching.                                                                               |
+| `all-states` | One agent per status (starting, working, needs_input, error, done, merged) plus the overview agent, static. For styling all of them. |
+| `core-loop`  | One agent: start, work, waits for input for 70 s (all wilting stages), work, done, merged. 97 s in total.                            |
+| `stress`     | 6 agents with rapid status changes, and one version that is skipped on purpose to test recovery with a snapshot.                     |
 
 The mock also answers commands: `agent:dispatch` creates an agent (starting, then working after 1.5 s), `terminal:open` opens a fake terminal that prints a greeting and echoes input, `state:request` and `issues:refresh` send a snapshot. `agent:stop` and `terminal:resize` do nothing.
 

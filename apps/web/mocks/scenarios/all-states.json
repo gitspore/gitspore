@@ -63,6 +63,16 @@
         "status": "merged",
         "statusSince": "2026-10-09T09:28:00.000Z",
         "startedAt": "2026-10-09T09:00:00.000Z"
+      },
+      {
+        "id": "overview",
+        "slotIndex": null,
+        "issueNumber": null,
+        "branch": "main",
+        "worktreePath": "/home/dev/repo",
+        "status": "working",
+        "statusSince": "2026-10-09T09:00:00.000Z",
+        "startedAt": "2026-10-09T09:00:00.000Z"
       }
     ],
     "issues": [

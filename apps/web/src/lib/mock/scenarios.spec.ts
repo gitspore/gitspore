@@ -1,5 +1,6 @@
 import {
   applyPatch,
+  OVERVIEW_AGENT_ID,
   type AgentStatus,
   type GreenhouseState,
   type StatePatch,
@@ -34,10 +35,11 @@ describe("the scenarios that ship", () => {
   });
 
   describe("all-states", () => {
-    it("shows every status once, from the start", () => {
+    it("shows every status once in the pots, from the start", () => {
       const { snapshot, events } = getScenario("all-states");
+      const pots = snapshot.agents.filter((agent) => agent.slotIndex !== null);
 
-      expect(snapshot.agents.map((agent) => agent.status).sort()).toEqual(
+      expect(pots.map((agent) => agent.status).sort()).toEqual(
         (
           [
             "done",
@@ -50,6 +52,14 @@ describe("the scenarios that ship", () => {
         ).sort(),
       );
       expect(events).toEqual([]);
+    });
+
+    it("has the overview agent, so hotbar slot 0 works without the daemon", () => {
+      const { snapshot } = getScenario("all-states");
+
+      expect(
+        snapshot.agents.some((agent) => agent.id === OVERVIEW_AGENT_ID),
+      ).toBe(true);
     });
   });
 
