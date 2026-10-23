@@ -87,7 +87,7 @@ export function AppShell() {
 
         {/* Main Section */}
         <section
-          className="relative grid gap-layout-edge [grid-area:main]"
+          className="relative grid min-w-0 grid-cols-[minmax(0,1fr)] gap-layout-edge [grid-area:main]"
           style={mainGrid(layout)}
         >
           <div
@@ -97,7 +97,7 @@ export function AppShell() {
 
           {visibleWindows.length > 0 && (
             // Side by side for now; tiling (1, 2, 2+1, 2×2) comes with WindowGrid
-            <div className="pointer-events-auto flex gap-2 [grid-area:windows]">
+            <div className="pointer-events-auto flex min-w-0 gap-2 [grid-area:windows]">
               {visibleWindows.map((agent) => (
                 <AgentWindow
                   key={agent.id}
