@@ -51,6 +51,10 @@ function applyOp(state: GreenhouseState, op: PatchOp): GreenhouseState {
         ...state,
         issues: state.issues.filter((i) => i.number !== op.issueNumber),
       };
+    case "repo:github":
+      return state.repo
+        ? { ...state, repo: { ...state.repo, github: op.github } }
+        : state;
   }
 }
 

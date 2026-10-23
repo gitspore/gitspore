@@ -2,6 +2,8 @@ import {
   applyPatch as applyStatePatch,
   type AgentId,
   type GreenhouseState,
+  type RepoCheckAck,
+  type RepoChooseAck,
   type ServerError,
   type SessionId,
   type StatePatch,
@@ -31,6 +33,10 @@ export type GreenhouseStoreState = {
   // Snapshots and patches only close the windows of agents that are gone.
   layout: LayoutSettings;
 
+  // The user opened the setup screen to switch repos. Without a repo the
+  // screen shows anyway, see showSetup in selectors.ts.
+  setupOpen: boolean;
+
   applySnapshot: (state: GreenhouseState) => void;
   applyPatch: (patch: StatePatch) => void;
   selectSlot: (slot: number | null) => void;
@@ -54,6 +60,17 @@ export type GreenhouseStoreState = {
    * A slot without an agent does nothing.
    */
   pressSlot: (key: number, options?: { beside?: boolean }) => void;
+  openSetup: () => void;
+  closeSetup: () => void;
+
+  /**
+   * Resolves with the daemon's answer: the repo, or the problems to show next
+   * to the path. On success the new repo's state arrives as a snapshot and
+   * the setup screen closes. Rejects with NoAnswerError, see askDaemon.
+   */
+  chooseRepo: (path: string, baseBranch: string) => Promise<RepoChooseAck>;
+  /** Resolves with what the daemon found; chooses nothing. Can reject too. */
+  checkRepo: (path: string, baseBranch: string) => Promise<RepoCheckAck>;
 
   dispatchAgent: (issueNumber: number, slotIndex: number) => void;
   stopAgent: (agentId: AgentId, removeWorktree: boolean) => void;
@@ -80,6 +97,7 @@ export function createGreenhouseStore(
     mode,
     lastError: null,
     layout: { sidePanel: "agents", mode: "scene", windows: [] },
+    setupOpen: false,
     selectSlot: (slot) => set({ selectedSlot: slot }),
     setConnection: (status) => set({ connection: status }),
     setError: (error) => set({ lastError: error }),
@@ -159,6 +177,19 @@ export function createGreenhouseStore(
           }
         });
       }),
+    openSetup: () => set({ setupOpen: true }),
+    closeSetup: () => set({ setupOpen: false }),
+    chooseRepo: (path, baseBranch) =>
+      askDaemon<RepoChooseAck>(client, (answer) =>
+        client.emit("repo:choose", { path, baseBranch }, (response) => {
+          if ("repo" in response) set({ setupOpen: false });
+          answer(response);
+        }),
+      ),
+    checkRepo: (path, baseBranch) =>
+      askDaemon<RepoCheckAck>(client, (answer) =>
+        client.emit("repo:check", { path, baseBranch }, answer),
+      ),
     // Terminal traffic touches no state: input goes straight out, output
     // (terminal:data) goes straight to xterm.js and never through the store.
     sendTerminalInput: (sessionId, data) => {
@@ -305,4 +336,48 @@ function agentRemoved(
   const has = (state: GreenhouseState) =>
     state.agents.some((agent) => agent.id === agentId);
   return has(before) && !has(after);
+}
+
+/**
+ * How long the setup screen waits for the daemon. A check may wait for gh
+ * and `claude --version`, a switch for the overview agent to exit.
+ */
+export const REPO_ANSWER_TIMEOUT_MS = 30_000;
+
+/** The daemon didn't answer a repo request: timeout or connection lost. */
+export class NoAnswerError extends Error {
+  constructor() {
+    super("No answer from gitspore.");
+    this.name = "NoAnswerError";
+  }
+}
+
+/**
+ * Sends a request with an ack and waits for the answer. Rejects after
+ * REPO_ANSWER_TIMEOUT_MS, or at once when the connection drops, so a
+ * caller never waits forever. An answer after that is ignored.
+ */
+function askDaemon<T>(
+  client: GreenhouseClient,
+  send: (answer: (response: T) => void) => void,
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const done = () => {
+      clearTimeout(timer);
+      unsubscribe();
+    };
+    const timer = setTimeout(() => {
+      done();
+      reject(new NoAnswerError());
+    }, REPO_ANSWER_TIMEOUT_MS);
+    const unsubscribe = client.subscribeStatus(() => {
+      if (client.getStatus().kind === "connected") return;
+      done();
+      reject(new NoAnswerError());
+    });
+    send((response) => {
+      done();
+      resolve(response);
+    });
+  });
 }

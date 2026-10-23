@@ -2,15 +2,17 @@
 
 import type { Agent } from "@gitspore/shared";
 
+import { useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useGreenhouseStore } from "@/lib/client/GreenhouseClientProvider";
 import { mainGrid, shellGrid } from "@/lib/layout";
 // Stays mock until the daemon sends usage (#42)
 import { mockContext, mockUsage } from "@/lib/mock";
-import { issueTitle, needsInputCount } from "@/lib/store/selectors";
+import { issueTitle, needsInputCount, showSetup } from "@/lib/store/selectors";
 import { useHotbarKeys } from "@/lib/hotbarKeys";
 import { useSceneEnabled } from "@/lib/scene";
 import { Scene } from "../Scene";
+import { ConnectScreen } from "../attention/ConnectScreen";
 import { NotificationStack } from "../attention/NotificationStack";
 import { Hotbar } from "../main/Hotbar";
 import { Window } from "../main/Window";
@@ -30,6 +32,11 @@ export function AppShell() {
 
   // No scene with ?scene=off or without WebGL; the interface works the same (#18)
   const showScene = useSceneEnabled();
+  // The scene's free part of the main area; the camera frames the table
+  // into it. Focus mode with a window open has no scene area, so it hides
+  const sceneArea = useRef<HTMLDivElement>(null);
+  const sceneHidden =
+    layout.mode === "focus" && layout.windows.some((w) => !w.minimised);
 
   // The agents of the visible windows; a window whose agent is gone is skipped
   const visibleWindows = useGreenhouseStore(
@@ -41,12 +48,14 @@ export function AppShell() {
     ),
   );
   const waitingCount = useGreenhouseStore(needsInputCount);
+  // No repo chosen yet, or the user switches repos (#58)
+  const setupVisible = useGreenhouseStore(showSetup);
 
   return (
     <>
       {/* The scene fills the page under the interface */}
       <div className="fixed inset-0 z-0 bg-panel-2">
-        {showScene && <Scene />}
+        {showScene && <Scene sceneArea={sceneArea} />}
       </div>
 
       <div
@@ -79,6 +88,11 @@ export function AppShell() {
           className="relative grid gap-layout-edge [grid-area:main]"
           style={mainGrid(layout)}
         >
+          <div
+            ref={sceneArea}
+            className={sceneHidden ? "hidden" : "[grid-area:scene]"}
+          />
+
           {visibleWindows.length > 0 && (
             // Side by side for now; tiling (1, 2, 2+1, 2×2) comes with WindowGrid
             <div className="pointer-events-auto flex gap-2 [grid-area:windows]">
@@ -115,6 +129,9 @@ export function AppShell() {
           </div>
         </div>
       </div>
+
+      {/* Covers the greenhouse until a repo is chosen */}
+      {setupVisible && <ConnectScreen />}
     </>
   );
 }

@@ -18,11 +18,20 @@ export function data(at: number, chunk: string): ScenarioEntry {
   return { at, event: "terminal:data", payload: { sessionId: "s", chunk } };
 }
 
-export function makeScenario(events: ScenarioEntry[] = []): Scenario {
+// `agents`: the snapshot's agents, by default the one agent above in slot 0.
+export function makeScenario(
+  events: ScenarioEntry[] = [],
+  agents: Agent[] = [agent],
+): Scenario {
   return {
     name: "test",
     anchor: ANCHOR,
-    snapshot: { version: 1, agents: [agent], issues: [] },
+    snapshot: {
+      version: 1,
+      repo: { path: "/mock/repo", baseBranch: "main", github: "on" },
+      agents,
+      issues: [],
+    },
     events,
   };
 }

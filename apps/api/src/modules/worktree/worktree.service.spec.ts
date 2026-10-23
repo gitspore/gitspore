@@ -40,6 +40,45 @@ describe("WorktreeService", () => {
 
   afterEach(() => rm(parent, { recursive: true, force: true }));
 
+  describe("without a repo", () => {
+    it("starts without git and refuses work with no_repo", async () => {
+      service = new WorktreeService(new RepoConfig(null, "main"));
+
+      await service.onModuleInit();
+
+      await expect(service.list()).rejects.toMatchObject({ code: "no_repo" });
+    });
+  });
+
+  describe("reconfigure", () => {
+    it("forgets the repo when RepoConfig goes back to none", async () => {
+      const config = new RepoConfig(repo, "main");
+      service = new WorktreeService(config);
+
+      config.set(null, "main");
+      await service.reconfigure();
+
+      await expect(service.list()).rejects.toMatchObject({ code: "no_repo" });
+    });
+
+    it("makes new worktrees next to the repo RepoConfig names now", async () => {
+      const config = new RepoConfig(repo, "main");
+      service = new WorktreeService(config);
+      const other = join(parent, "other-repo");
+      await mkdir(other);
+      await initRepo(other);
+
+      config.set(other, "main");
+      await service.reconfigure();
+      const result = await service.create({ issueNumber: 7, issueTitle: "X" });
+
+      expect(result.path).toBe(
+        join(parent, ".gitspore-worktrees", "other-repo", "7-x"),
+      );
+      expect(await service.list()).toEqual([result]);
+    });
+  });
+
   describe("planFor", () => {
     it("gives the branch and folder that create makes, and creates nothing", async () => {
       const issue = { issueNumber: 42, issueTitle: "Fix bug" };
@@ -49,6 +88,7 @@ describe("WorktreeService", () => {
       expect(await service.create(issue)).toEqual(plan);
     });
   });
+
   describe("create", () => {
     it("makes a worktree on a new spore branch next to the repo", async () => {
       const result = await service.create({

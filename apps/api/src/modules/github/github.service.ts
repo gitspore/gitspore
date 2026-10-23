@@ -3,12 +3,7 @@ import {
   MAX_SLOTS,
   type ServerError,
 } from "@gitspore/shared";
-import {
-  Injectable,
-  Logger,
-  OnApplicationBootstrap,
-  OnModuleDestroy,
-} from "@nestjs/common";
+import { Injectable, Logger, OnModuleDestroy } from "@nestjs/common";
 import { StateStore } from "../state/state.store";
 import { diffIssues } from "./diff-issues";
 import type { GitHubApi, IssueDetails, PullRequest } from "./github-api";
@@ -45,7 +40,7 @@ type PullRequestListener = (change: PullRequestChange) => void;
  * after a poll succeeded in between.
  */
 @Injectable()
-export class GitHubService implements OnApplicationBootstrap, OnModuleDestroy {
+export class GitHubService implements OnModuleDestroy {
   private readonly logger = new Logger(GitHubService.name);
 
   // null while starting and once sync is off (no remote, no token, 401).
@@ -56,6 +51,9 @@ export class GitHubService implements OnApplicationBootstrap, OnModuleDestroy {
   // Rate limit: no request to GitHub before this time (ms since 1970).
   private pausedUntil = 0;
   private stopped = false;
+  // Counts restarts. Work started for an older repo sees a different number
+  // and drops its result instead of writing into the new repo's state.
+  private generation = 0;
 
   // The problem sync has right now, for clients that connect later.
   private problem: ServerError | null = null;
@@ -74,20 +72,19 @@ export class GitHubService implements OnApplicationBootstrap, OnModuleDestroy {
     private readonly source: GitHubSource,
   ) {}
 
-  // Not awaited: asking gh for a token and GitHub for the issues takes a
-  // moment, and the daemon should accept connections meanwhile.
-  onApplicationBootstrap(): void {
-    void this.start();
-  }
-
   onModuleDestroy(): void {
     this.stop();
   }
 
-  /** Connects and runs the first poll. Called once at startup. */
+  /**
+   * Connects and runs the first poll. RepoService calls it once a repo is
+   * known: at startup, or after the setup screen through restart().
+   */
   async start(): Promise<void> {
+    const generation = this.generation;
     const connection = await this.source.connect();
-    if (this.stopped) return;
+    if (this.stopped || generation !== this.generation) return;
+    this.setRepoGitHub("disabled" in connection ? "off" : "on");
 
     if ("disabled" in connection) {
       this.report("github_sync_disabled", connection.disabled);
@@ -111,6 +108,21 @@ export class GitHubService implements OnApplicationBootstrap, OnModuleDestroy {
       return Promise.resolve();
     }
     return this.poll();
+  }
+
+  /**
+   * Starts over for another repo (#58): forgets the connection, the pull
+   * requests and the problem, then connects again. A poll of the old repo
+   * that is still running finishes without touching the state.
+   */
+  restart(): Promise<void> {
+    this.generation++;
+    this.clearTimer();
+    this.api = null;
+    this.running = null;
+    this.pullRequests.clear();
+    this.problemSolved();
+    return this.start();
   }
 
   /** Stops polling for good. A running poll still finishes. */
@@ -168,32 +180,39 @@ export class GitHubService implements OnApplicationBootstrap, OnModuleDestroy {
   }
 
   private poll(): Promise<void> {
-    this.running ??= this.runPoll().finally(() => {
-      this.running = null;
-    });
+    if (!this.running) {
+      const run = this.runPoll().finally(() => {
+        // After a restart, `running` may already be the new repo's poll.
+        if (this.running === run) this.running = null;
+      });
+      this.running = run;
+    }
     return this.running;
   }
 
   private async runPoll(): Promise<void> {
     const api = this.api;
     if (!api) return;
+    const generation = this.generation;
     this.clearTimer();
 
     let nextIn: number | null = POLL_INTERVAL_MS;
     try {
-      await this.syncIssues(api);
-      await this.syncPullRequests(api);
+      await this.syncIssues(api, generation);
+      await this.syncPullRequests(api, generation);
+      if (generation !== this.generation) return;
       this.problemSolved();
     } catch (error) {
+      if (generation !== this.generation) return;
       nextIn = this.handleFailure(error);
     }
 
     if (nextIn !== null) this.schedule(nextIn);
   }
 
-  private async syncIssues(api: GitHubApi): Promise<void> {
+  private async syncIssues(api: GitHubApi, generation: number): Promise<void> {
     const result = await api.openIssues();
-    if (!result.changed) return;
+    if (!result.changed || generation !== this.generation) return;
 
     // Only issues change here. An agent whose issue was closed keeps
     // running; merge handling decides what happens to it.
@@ -201,7 +220,10 @@ export class GitHubService implements OnApplicationBootstrap, OnModuleDestroy {
     this.store.apply(ops);
   }
 
-  private async syncPullRequests(api: GitHubApi): Promise<void> {
+  private async syncPullRequests(
+    api: GitHubApi,
+    generation: number,
+  ): Promise<void> {
     // Only branches the daemon made (`spore/<n>…`); the overview agent in
     // the repo root and foreign branches are left out.
     const branches = [
@@ -219,6 +241,7 @@ export class GitHubService implements OnApplicationBootstrap, OnModuleDestroy {
       // The current pull request also on a 304. A branch that came back after
       // its agent left is then reported as it is, not as "nothing".
       const now = await api.pullRequestFor(branch);
+      if (generation !== this.generation) return;
       const before = this.pullRequests.get(branch) ?? null;
       this.pullRequests.set(branch, now);
 
@@ -248,6 +271,7 @@ export class GitHubService implements OnApplicationBootstrap, OnModuleDestroy {
     switch (error.code) {
       case "github_auth_failed":
         this.api = null;
+        this.setRepoGitHub("off");
         this.report(
           error.code,
           "GitHub rejected the token. Sync is off until the daemon restarts with a valid token.",
@@ -271,6 +295,15 @@ export class GitHubService implements OnApplicationBootstrap, OnModuleDestroy {
         // the state, the next poll tries again.
         this.report(error.code, error.message);
         return POLL_INTERVAL_MS;
+    }
+  }
+
+  // The state's repo shows whether sync is on (#58). Only a change becomes a
+  // patch.
+  private setRepoGitHub(github: "on" | "off"): void {
+    const { repo } = this.store.snapshot();
+    if (repo && repo.github !== github) {
+      this.store.apply([{ type: "repo:github", github }]);
     }
   }
 

@@ -3,6 +3,7 @@ import {
   OVERVIEW_AGENT_ID,
   type Agent,
   type Issue,
+  type RepoInfo,
 } from "@gitspore/shared";
 import type { GreenhouseStoreState } from "./greenhouseStore";
 
@@ -22,6 +23,21 @@ export function selectAgents(state: GreenhouseStoreState): Agent[] {
 
 export function selectIssues(state: GreenhouseStoreState): Issue[] {
   return state.server?.issues ?? NO_ISSUES;
+}
+
+/** The repo gitspore works in, null before a snapshot and while none is chosen. */
+export function selectRepo(state: GreenhouseStoreState): RepoInfo | null {
+  return state.server?.repo ?? null;
+}
+
+/**
+ * Whether the setup screen shows: the daemon has no repo yet, or the user
+ * opened the screen to switch. Not before the first snapshot: until then
+ * nobody knows if a repo is set, and offline shows the connection state.
+ */
+export function showSetup(state: GreenhouseStoreState): boolean {
+  if (state.server === null) return false;
+  return state.server.repo === null || state.setupOpen;
 }
 
 /** The agent in a slot, or null for an empty slot. */

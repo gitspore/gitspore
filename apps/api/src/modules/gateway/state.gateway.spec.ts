@@ -1,3 +1,4 @@
+import { Logger } from "@nestjs/common";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import type { AddressInfo } from "node:net";
@@ -5,6 +6,8 @@ import { io, type Socket } from "socket.io-client";
 import type { ServerError } from "@gitspore/shared";
 import { RepoConfig } from "@/config/repo-config";
 import { GitHubService } from "../github/github.service";
+import { RepoService } from "../repo/repo.service";
+import { StateStore } from "../state/state.store";
 import { GatewayModule } from "./gateway.module";
 import { SessionAuth } from "./session-auth.service";
 
@@ -26,6 +29,9 @@ describe("StateGateway", () => {
       githubError = listener;
     },
   };
+
+  // Stands in for RepoService, for the same reason.
+  const repo = { check: jest.fn(), choose: jest.fn() };
 
   const connect = (options: {
     token?: string;
@@ -58,9 +64,11 @@ describe("StateGateway", () => {
     })
       .overrideProvider(GitHubService)
       .useValue(github)
-      // The real one checks GITSPORE_REPO and the base branch at startup.
+      .overrideProvider(RepoService)
+      .useValue(repo)
+      // No repo: the worktree service runs no git either.
       .overrideProvider(RepoConfig)
-      .useValue(new RepoConfig(".", "main"))
+      .useValue(new RepoConfig(null, "main"))
       .compile();
     app = moduleRef.createNestApplication();
     await app.listen(0, "127.0.0.1");
@@ -156,6 +164,87 @@ describe("StateGateway", () => {
       );
 
       expect(received).toEqual(problem);
+    });
+  });
+
+  describe("repo", () => {
+    it("answers repo:check with RepoService's checks, main by default", async () => {
+      const socket = connect({ token: auth.token, origin: ORIGIN });
+      await expect(outcome(socket)).resolves.toBe("snapshot");
+      const checks = [{ item: "claude", result: "ok", detail: "found" }];
+      repo.check.mockResolvedValue(checks);
+
+      const ack = await socket.emitWithAck("repo:check", { path: "/r" });
+
+      expect(ack).toEqual({ checks });
+      expect(repo.check).toHaveBeenCalledWith("/r", "main");
+    });
+
+    it("acks repo:choose to the asking tab and sends every tab the new state", async () => {
+      const asking = connect({ token: auth.token, origin: ORIGIN });
+      const other = connect({ token: auth.token, origin: ORIGIN });
+      await expect(outcome(asking)).resolves.toBe("snapshot");
+      await expect(outcome(other)).resolves.toBe("snapshot");
+      const chosen = { path: "/r", baseBranch: "dev", github: "off" } as const;
+      // Like the real one: the state starts over, then the ack
+      repo.choose.mockImplementation(() => {
+        app.get(StateStore).setRepo(chosen);
+        return Promise.resolve({ repo: chosen });
+      });
+      const snapshotOf = (socket: Socket) =>
+        new Promise((resolve) => socket.once("state:snapshot", resolve));
+      const snapshots = Promise.all([snapshotOf(asking), snapshotOf(other)]);
+
+      const ack = await asking.emitWithAck("repo:choose", {
+        path: "/r",
+        baseBranch: "dev",
+      });
+
+      expect(ack).toEqual({ repo: chosen });
+      expect(repo.choose).toHaveBeenCalledWith("/r", "dev");
+      for (const snapshot of await snapshots) {
+        expect(snapshot).toMatchObject({ repo: chosen });
+      }
+    });
+
+    it.each([
+      ["repo:check", { checks: [expect.objectContaining({ result: "fail" })] }],
+      [
+        "repo:choose",
+        { problems: [expect.objectContaining({ code: "invalid_payload" })] },
+      ],
+    ] as const)("answers %s without a path", async (event, answer) => {
+      const socket = connect({ token: auth.token, origin: ORIGIN });
+      await expect(outcome(socket)).resolves.toBe("snapshot");
+      repo.check.mockClear();
+      repo.choose.mockClear();
+
+      const ack = await socket.emitWithAck(event, {} as never);
+
+      expect(ack).toEqual(answer);
+      expect(repo.check).not.toHaveBeenCalled();
+      expect(repo.choose).not.toHaveBeenCalled();
+    });
+
+    it("still answers when RepoService throws", async () => {
+      const socket = connect({ token: auth.token, origin: ORIGIN });
+      await expect(outcome(socket)).resolves.toBe("snapshot");
+      const logError = jest
+        .spyOn(Logger.prototype, "error")
+        .mockImplementation(() => {});
+      repo.check.mockRejectedValueOnce(new Error("boom"));
+      repo.choose.mockRejectedValueOnce(new Error("boom"));
+
+      const check = await socket.emitWithAck("repo:check", { path: "/r" });
+      const choose = await socket.emitWithAck("repo:choose", { path: "/r" });
+
+      expect(check).toEqual({
+        checks: [expect.objectContaining({ result: "fail" })],
+      });
+      expect(choose).toEqual({
+        problems: [expect.objectContaining({ code: "switch_failed" })],
+      });
+      logError.mockRestore();
     });
   });
 });

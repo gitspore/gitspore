@@ -29,7 +29,12 @@ describe("StateStore", () => {
 
   describe("initial state", () => {
     it("starts at version 0 without agents and issues", () => {
-      expect(store.snapshot()).toEqual({ version: 0, agents: [], issues: [] });
+      expect(store.snapshot()).toEqual({
+        version: 0,
+        repo: null,
+        agents: [],
+        issues: [],
+      });
     });
   });
 
@@ -103,6 +108,7 @@ describe("StateStore", () => {
 
       expect(store.snapshot()).toEqual({
         version: 1,
+        repo: null,
         agents: [],
         issues: [issue(1)],
       });
@@ -113,7 +119,12 @@ describe("StateStore", () => {
 
       store.apply([{ type: "issue:upsert", issue: issue(1) }]);
 
-      expect(before).toEqual({ version: 0, agents: [], issues: [] });
+      expect(before).toEqual({
+        version: 0,
+        repo: null,
+        agents: [],
+        issues: [],
+      });
     });
   });
 
@@ -189,6 +200,38 @@ describe("StateStore", () => {
       store.apply([]);
 
       expect(listener).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("setRepo", () => {
+    const repo = { path: "/r", baseBranch: "main", github: "on" } as const;
+
+    it("starts over in a new version without the old agents and issues", () => {
+      store.apply([
+        { type: "agent:upsert", agent: agent("a1") },
+        { type: "issue:upsert", issue: issue(1) },
+      ]);
+
+      store.setRepo(repo);
+
+      expect(store.snapshot()).toEqual({
+        version: 2,
+        repo,
+        agents: [],
+        issues: [],
+      });
+    });
+
+    it("tells reset listeners, not patch listeners", () => {
+      const onPatch = jest.fn();
+      const onReset = jest.fn();
+      store.onPatch(onPatch);
+      store.onReset(onReset);
+
+      store.setRepo(repo);
+
+      expect(onReset).toHaveBeenCalledTimes(1);
+      expect(onPatch).not.toHaveBeenCalled();
     });
   });
 });

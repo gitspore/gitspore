@@ -1,6 +1,8 @@
 import { RepoConfigModule } from "@/config/config.module";
 import { Module } from "@nestjs/common";
 import { GitHubModule } from "../github/github.module";
+import { HookModule } from "../hooks/hook.module";
+import { RepoModule } from "../repo/repo.module";
 import { StateModule } from "../state/state.module";
 import { TerminalModule } from "../terminal/terminal.module";
 import { WorktreeModule } from "../worktree/worktree.module";
@@ -14,6 +16,9 @@ import { AgentService } from "./agent.service";
     GitHubModule,
     TerminalModule,
     WorktreeModule,
+    HookModule,
+    // Dispatch refuses while a repo switch runs.
+    RepoModule,
   ],
   providers: [AgentService, AgentGateway],
   exports: [AgentService],
