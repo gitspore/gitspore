@@ -1,4 +1,9 @@
-import { MAX_SLOTS, type Agent, type Issue } from "@gitspore/shared";
+import {
+  MAX_SLOTS,
+  OVERVIEW_AGENT_ID,
+  type Agent,
+  type Issue,
+} from "@gitspore/shared";
 import type { GreenhouseStoreState } from "./greenhouseStore";
 
 // Selectors for useGreenhouseStore. The ones that return a new array on each
@@ -23,6 +28,15 @@ export function selectIssues(state: GreenhouseStoreState): Issue[] {
 export function agentBySlot(slot: number) {
   return (state: GreenhouseStoreState): Agent | null =>
     selectAgents(state).find((agent) => agent.slotIndex === slot) ?? null;
+}
+
+/** The agent on a hotbar key: 1–6 the pots, 0 the overview. Null if none. */
+export function agentByKey(key: number) {
+  return (state: GreenhouseStoreState): Agent | null =>
+    key === 0
+      ? (selectAgents(state).find((agent) => agent.id === OVERVIEW_AGENT_ID) ??
+        null)
+      : agentBySlot(key - 1)(state);
 }
 
 /**

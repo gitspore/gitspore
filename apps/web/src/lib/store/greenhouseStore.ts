@@ -1,6 +1,5 @@
 import {
   applyPatch as applyStatePatch,
-  OVERVIEW_AGENT_ID,
   type AgentId,
   type GreenhouseState,
   type ServerError,
@@ -18,6 +17,7 @@ import type {
   OpenWindow,
   SidePanelTab,
 } from "../layout";
+import { agentByKey } from "./selectors";
 
 export type GreenhouseStoreState = {
   server: GreenhouseState | null;
@@ -117,10 +117,8 @@ export function createGreenhouseStore(
         ),
       ),
     pressSlot: (key, { beside = false } = {}) => {
-      const { server, layout } = get();
-      const agent = server?.agents.find((a) =>
-        key === 0 ? a.id === OVERVIEW_AGENT_ID : a.slotIndex === key - 1,
-      );
+      const { layout } = get();
+      const agent = agentByKey(key)(get());
       if (!agent) return;
 
       const visible = layout.windows.some(

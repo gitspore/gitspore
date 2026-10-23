@@ -11,14 +11,12 @@ import { issueTitle, needsInputCount } from "@/lib/store/selectors";
 import { useHotbarKeys } from "@/lib/hotbarKeys";
 import { useSceneEnabled } from "@/lib/scene";
 import { Scene } from "../Scene";
-import { Button } from "../ui/button";
 import { NotificationStack } from "../attention/NotificationStack";
+import { Hotbar } from "../main/Hotbar";
 import { Window } from "../main/Window";
 import { SidePanel } from "../side-panel/SidePanel";
 import { ToolRail } from "./ToolRail";
 import { TopBar } from "./TopBar";
-
-const HOTBAR_SLOTS = ["1", "2", "3", "4", "5", "6"];
 
 export function AppShell() {
   // Side panel, main mode and open windows live in the store
@@ -26,7 +24,7 @@ export function AppShell() {
   const setSidePanel = useGreenhouseStore((s) => s.setSidePanel);
   const setMode = useGreenhouseStore((s) => s.setMode);
   const toggleMinimised = useGreenhouseStore((s) => s.toggleMinimised);
-  // One action for every hotbar slot, by click or key 0–6 (#72)
+  // Keys 0–6 press the hotbar slots (#72)
   const pressSlot = useGreenhouseStore((s) => s.pressSlot);
   useHotbarKeys(pressSlot);
 
@@ -57,16 +55,7 @@ export function AppShell() {
       >
         {/* Header */}
         <header className="pointer-events-auto rounded-xl bg-panel text-ink [grid-area:topbar]">
-          <TopBar usage={mockUsage}>
-            {/* Debug control, remove once the hotbar exists */}
-            <Button
-              onClick={() =>
-                layout.windows.forEach((w) => toggleMinimised(w.agentId))
-              }
-            >
-              Toggle Terminal
-            </Button>
-          </TopBar>
+          <TopBar usage={mockUsage} />
         </header>
 
         {/* Rail */}
@@ -103,26 +92,8 @@ export function AppShell() {
             </div>
           )}
 
-          <div className="hotbar pointer-events-auto flex items-center gap-1.5 justify-self-center rounded-2xl bg-panel p-1.5 text-ink [grid-area:hotbar]">
-            {HOTBAR_SLOTS.map((key) => (
-              <div
-                key={key}
-                className="hotbar-slot grid place-items-center rounded-xl bg-panel-2 font-mono"
-              >
-                {key}
-              </div>
-            ))}
-            <div className="h-10 w-0.5 bg-line" />
-            {/* Slot 0 is the overview agent (ADR 0004, 0005) */}
-            <button
-              type="button"
-              aria-label="Open the overview agent"
-              onClick={() => pressSlot(0)}
-
-              className="hotbar-slot grid place-items-center rounded-xl bg-panel-2 font-mono"
-            >
-              0
-            </button>
+          <div className="pointer-events-auto justify-self-center [grid-area:hotbar]">
+            <Hotbar />
           </div>
         </section>
 
