@@ -2,11 +2,11 @@
 
 Gives every agent its own git worktree: a separate folder of the repo on its own `spore/…` branch, so up to six agents work in parallel without touching each other's files or the user's checkout. The module creates, lists and removes worktrees, and puts their branches on origin. Starting Claude Code in one is the agent ticket (GS-66).
 
-| File                | Holds                                                                                                                                    |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `worktree.service`  | `WorktreeService`: `create`, `list`, `remove`, `fetch`, `publish`, `deleteRemoteBranch`, `isClean`, `ensureExcluded`, cleanup at startup |
-| `worktree-error.ts` | `WorktreeError` with a `code` (see [Errors](#errors))                                                                                    |
-| `worktree.module`   | Provides and exports `WorktreeService`; imports `RepoConfigModule`                                                                       |
+| File                | Holds                                                                                                                                                           |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `worktree.service`  | `WorktreeService`: `create`, `leftoverFor`, `open`, `list`, `remove`, `fetch`, `publish`, `deleteRemoteBranch`, `isClean`, `ensureExcluded`, cleanup at startup |
+| `worktree-error.ts` | `WorktreeError` with a `code` (see [Errors](#errors))                                                                                                           |
+| `worktree.module`   | Provides and exports `WorktreeService`; imports `RepoConfigModule`                                                                                              |
 
 The branch name comes from `branchForIssue(issueNumber, title)` in `packages/shared/src/branch.ts`, next to `issueNumberFromBranch`, which reads the number back.
 
@@ -29,6 +29,8 @@ The branch name comes from `branchForIssue(issueNumber, title)` in `packages/sha
 
 ```ts
 create({ issueNumber, issueTitle, startPoint? }): Promise<{ branch, path }>
+leftoverFor({ issueNumber, issueTitle }): Promise<{ branch, path | null, local, onOrigin } | null>
+open(leftover): Promise<{ branch, path }>
 list(): Promise<{ branch, path }[]>
 remove({ path, force?, deleteBranch? }): Promise<void>
 
@@ -40,6 +42,10 @@ ensureExcluded(pattern): Promise<void>
 ```
 
 **`create()`** refuses with `branch_exists` when the branch exists locally. With `startPoint` it also asks origin (`ls-remote --heads origin refs/heads/<branch>`): `fetch()` only updates the base branch, so `origin/<branch>` may be missing or stale. A missing branch is empty output, not an error; an unreachable origin throws and never counts as "free". Without `startPoint`, `create()` does not talk to origin.
+
+**`leftoverFor()`** finds the branch an earlier agent left for the issue (#102): local branches (`for-each-ref refs/heads/`) and origin's (`ls-remote --heads origin`) whose number (`issueNumberFromBranch`) is the issue's. By number, not by name, so a renamed issue still finds its branch; `spore/420-…` is not #42's. Of several, the one `planFor` would make, else the first by name. `path` is its worktree if `list()` still has one. An unreachable origin throws.
+
+**`open(leftover)`** makes a worktree for a branch that exists: `git worktree add <path> <branch>` for a local one; for one only on origin it fetches `refs/heads/<branch>` and runs `worktree add --track -b <branch> <path> origin/<branch>`. The folder comes from the branch name. Nothing is pushed. It refuses `not_ours` and an existing folder (`path_exists`).
 
 **`fetch()`** runs `git fetch origin <base>`. It updates `origin/<base>` and leaves every local branch, the user's checkout and the local base branch alone. The daemon never pulls.
 
@@ -60,22 +66,22 @@ ensureExcluded(pattern): Promise<void>
 
 Then `git worktree remove` (`--force` with `force`) and, with `deleteBranch`, `git branch -D`. Without `deleteBranch` the branch is always kept. A folder deleted by hand is fine: `git worktree remove` cleans up its registration.
 
-**Startup.** `onModuleInit()` runs `git worktree prune` (registrations of folders that no longer exist, repo-wide; branches stay) and logs what `list()` finds. It doesn't rebuild agents; that is the state store's job (#16).
+**Startup.** `onModuleInit()` runs `git worktree prune` (registrations of folders that no longer exist, repo-wide; branches stay) and logs what `list()` finds. It doesn't rebuild agents; the agent module takes the worktrees over (#102).
 
 ## Errors
 
 All refusals are a `WorktreeError` with a `code`. The agent module maps `push_failed` to the shared `git_push_failed` and every other code to `git_failed`.
 
-| Code            | From                            | Meaning                                                 |
-| --------------- | ------------------------------- | ------------------------------------------------------- |
-| `branch_exists` | `create`                        | The branch already exists, locally or on origin         |
-| `path_exists`   | `create`                        | The target folder already exists; it is left alone      |
-| `outside_root`  | `remove`                        | Not a folder directly inside our worktree folder        |
-| `not_found`     | `remove`                        | Not one of our registered worktrees                     |
-| `dirty`         | `remove`                        | Uncommitted changes, including untracked files          |
-| `unmerged`      | `remove`                        | `deleteBranch` on a branch with commits not in the base |
-| `push_failed`   | `publish`                       | The push to origin failed; the message says why         |
-| `not_ours`      | `publish`, `deleteRemoteBranch` | The branch does not start with `BRANCH_PREFIX`          |
+| Code            | From                                    | Meaning                                                 |
+| --------------- | --------------------------------------- | ------------------------------------------------------- |
+| `branch_exists` | `create`                                | The branch already exists, locally or on origin         |
+| `path_exists`   | `create`, `open`                        | The target folder already exists; it is left alone      |
+| `outside_root`  | `remove`                                | Not a folder directly inside our worktree folder        |
+| `not_found`     | `remove`                                | Not one of our registered worktrees                     |
+| `dirty`         | `remove`                                | Uncommitted changes, including untracked files          |
+| `unmerged`      | `remove`                                | `deleteBranch` on a branch with commits not in the base |
+| `push_failed`   | `publish`                               | The push to origin failed; the message says why         |
+| `not_ours`      | `publish`, `deleteRemoteBranch`, `open` | The branch does not start with `BRANCH_PREFIX`          |
 
 Anything else (git missing, timeout) is simple-git's `GitError`.
 

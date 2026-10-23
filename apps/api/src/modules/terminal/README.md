@@ -35,6 +35,8 @@ resize(sessionId, ownerId, cols, rows): void
 detach(sessionId, ownerId): void
 detachOwner(ownerId): void
 onExited((agentId, exitCode) => void): void
+onMissing((agentId) => Promise<void>): void
+revive(agentId): Promise<void>
 ```
 
 **`spawn`** starts the user's shell (`$SHELL`, `powershell.exe` on Windows) in `cwd` with `TERM=xterm-256color` and `COLORTERM=truecolor`, then types `command args…` and Enter into it. With `mode: "exec"` it starts `command` directly with `args` as an array, without a shell (see [Shell or exec](#shell-or-exec)). It refuses a second terminal for the same agent, and more than `MAX_SLOTS + 1` = 7 terminals (six slot agents plus the overview agent). Both checks run before the shell starts.
@@ -48,6 +50,8 @@ onExited((agentId, exitCode) => void): void
 **`kill`** ends an agent's process with `pty.kill()`. A kill on a process that has just exited is ignored. Process trees stay in #53.
 
 **`onExited`** is for #16: it hears when an agent's shell (or, in exec mode, its program) ended, with the exit code.
+
+**`revive`** runs before every `terminal:open`: for an agent without a terminal it asks the `onMissing` revivers, and the agent module starts Claude Code again (#102). With a terminal, or without revivers, it does nothing; `attach` then refuses an unknown agent as before. The revivers live outside this module, so the gateway doesn't depend on the agent module.
 
 ## Shell or exec
 

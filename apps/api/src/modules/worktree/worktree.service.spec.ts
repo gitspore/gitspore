@@ -629,6 +629,146 @@ describe("WorktreeService", () => {
       });
     });
 
+    describe("leftoverFor", () => {
+      const issue = { issueNumber: 42, issueTitle: "Fix bug" };
+      const branch = `${BRANCH_PREFIX}42-fix-bug`;
+
+      it("is null when no branch belongs to the issue", async () => {
+        await service.create({ issueNumber: 7, issueTitle: "Other" });
+
+        expect(await service.leftoverFor(issue)).toBeNull();
+      });
+
+      it("finds a branch with its worktree", async () => {
+        const { path } = await service.create(issue);
+
+        expect(await service.leftoverFor(issue)).toEqual({
+          branch,
+          path,
+          local: true,
+          onOrigin: false,
+        });
+      });
+
+      it("finds a pushed branch whose worktree was removed", async () => {
+        const { path } = await service.create(issue);
+        await service.publish(branch);
+        await service.remove({ path });
+
+        expect(await service.leftoverFor(issue)).toEqual({
+          branch,
+          path: null,
+          local: true,
+          onOrigin: true,
+        });
+      });
+
+      it("finds a branch that exists only on origin", async () => {
+        await simpleGit(repo).raw([
+          "push",
+          "origin",
+          `main:refs/heads/${branch}`,
+        ]);
+
+        expect(await service.leftoverFor(issue)).toEqual({
+          branch,
+          path: null,
+          local: false,
+          onOrigin: true,
+        });
+      });
+
+      it("finds the branch by number after the issue was renamed", async () => {
+        await service.create(issue);
+
+        const leftover = await service.leftoverFor({
+          issueNumber: 42,
+          issueTitle: "Fix the login bug",
+        });
+
+        expect(leftover?.branch).toBe(branch);
+      });
+
+      it("does not take #420's branch for #42", async () => {
+        await service.create({ issueNumber: 420, issueTitle: "Fix bug" });
+
+        expect(await service.leftoverFor(issue)).toBeNull();
+      });
+    });
+
+    describe("open", () => {
+      const branch = `${BRANCH_PREFIX}42-fix-bug`;
+      const path = () =>
+        join(parent, ".gitspore-worktrees", "my-repo", "42-fix-bug");
+
+      it("makes a worktree on a local branch and keeps its commits", async () => {
+        const { path: first } = await service.create({
+          issueNumber: 42,
+          issueTitle: "Fix bug",
+        });
+        await simpleGit(first).raw(["commit", "--allow-empty", "-m", "work"]);
+        const work = await simpleGit(first).revparse(["HEAD"]);
+        await service.remove({ path: first });
+
+        const result = await service.open({
+          branch,
+          path: null,
+          local: true,
+          onOrigin: false,
+        });
+
+        expect(result).toEqual({ branch, path: path() });
+        expect(await simpleGit(path()).revparse(["HEAD"])).toBe(work);
+        expect(await service.list()).toEqual([result]);
+      });
+
+      it("makes a local branch that tracks a branch only on origin", async () => {
+        // A commit this repo hasn't fetched: open() has to.
+        const elsewhere = join(parent, "elsewhere");
+        const theirs = await pushFromElsewhere(origin, elsewhere);
+        await simpleGit(elsewhere).raw([
+          "push",
+          "origin",
+          `HEAD:refs/heads/${branch}`,
+        ]);
+
+        await service.open({
+          branch,
+          path: null,
+          local: false,
+          onOrigin: true,
+        });
+
+        expect(await simpleGit(path()).revparse(["HEAD"])).toBe(theirs);
+        const upstream = await simpleGit(repo).revparse([
+          "--abbrev-ref",
+          `${branch}@{upstream}`,
+        ]);
+        expect(upstream).toBe(`origin/${branch}`);
+      });
+
+      it("refuses when the folder already exists, and leaves it alone", async () => {
+        await mkdir(path(), { recursive: true });
+        await writeFile(join(path(), "mine.txt"), "keep");
+
+        await expect(
+          service.open({ branch, path: null, local: true, onOrigin: false }),
+        ).rejects.toMatchObject({ code: "path_exists" });
+        expect(await readFile(join(path(), "mine.txt"), "utf8")).toBe("keep");
+      });
+
+      it("refuses a branch that is not ours", async () => {
+        await expect(
+          service.open({
+            branch: "main",
+            path: null,
+            local: true,
+            onOrigin: true,
+          }),
+        ).rejects.toMatchObject({ code: "not_ours" });
+      });
+    });
+
     describe("publish", () => {
       it("pushes the branch to origin and sets its upstream", async () => {
         const { branch } = await service.create({

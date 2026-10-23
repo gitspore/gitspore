@@ -1,6 +1,6 @@
 # Agent module
 
-Turns an issue into a running agent and stops it again: `agent:dispatch` makes a worktree on a pushed `spore/…` branch, writes a task file and starts Claude Code in it; `agent:stop` ends it. While it runs, Claude Code's hooks report its status. Agents live in the `StateStore` (in memory), next to the overview agent. Git and the running processes are the source of truth; there is no database.
+Turns an issue into a running agent and stops it again: `agent:dispatch` makes a worktree on a pushed `spore/…` branch, writes a task file and starts Claude Code in it; `agent:stop` ends it. While it runs, Claude Code's hooks report its status. Agents live in the `StateStore` (in memory), next to the overview agent. Git and the running processes are the source of truth; there is no database. After a restart the worktrees on disk bring the agents back, without their Claude Code (see [After a restart](#after-a-restart)).
 
 | File                       | Holds                                                                                       |
 | -------------------------- | ------------------------------------------------------------------------------------------- |
@@ -25,8 +25,10 @@ The gateway lives here and not in `GatewayModule`, so the gateway specs there do
 ```
 synchronous  checkDispatch → planFor → agent:upsert "starting"
              ── from here on the call may await ──
-async        locator.resolve → getIssue → fetch → create(origin/<base>) → ensureExcluded(".gitspore/")
-             → publish → write .gitspore/task.md, hook.json, settings.json → spawn (exec mode)
+async        locator.resolve → getIssue → fetch → leftoverFor
+             → create(origin/<base>)  or, for a leftover branch, its worktree / open(branch)
+             → ensureExcluded(".gitspore/") → publish (unless origin has the branch)
+             → write .gitspore/task.md, hook.json, settings.json → spawn (exec mode)
              → watchdog → ack { agentId }
 ```
 
@@ -34,19 +36,33 @@ async        locator.resolve → getIssue → fetch → create(origin/<base>) �
 2. **Branch and folder** come from `WorktreeService.planFor`, with the title from the synced list. `create` gets the same title, so the branch is the one the agent was shown with, even if the issue was renamed on GitHub since the last poll.
 3. **Claude first.** `ClaudeLocator.resolve()` runs before any git work, so a missing Claude fails before a branch is pushed. After the first success it answers from its cache.
 4. **`getIssue`** fetches body and URL. An issue closed since the last poll gives `issue_not_found`.
-5. **Git:** `fetch` updates `origin/<base>`, `create` starts the branch there and refuses a branch that exists locally or on origin, `ensureExcluded` keeps `.gitspore/` out of git, `publish` pushes the branch. The daemon never pulls; the user's checkout stays untouched.
+5. **Git:** `fetch` updates `origin/<base>`. `leftoverFor` looks for a branch an earlier agent left for the issue (see below). Without one, `create` starts the branch at `origin/<base>`, and still refuses a branch that exists locally or on origin (two dispatches at once). `ensureExcluded` keeps `.gitspore/` out of git, `publish` pushes the branch. The daemon never pulls; the user's checkout stays untouched.
 6. **Task file.** Issue number, title, URL, body and the instruction to put `Closes #<n>` into the pull request go into `<worktree>/.gitspore/task.md`. Issue text is user input from GitHub: it is only written to this file, never passed on a command line.
 7. **Hook files.** `HookService.issue` makes a secret for the agent. `hook.json` gets `{ url, agentId, secret }`, `settings.json` registers `hook-script.mjs` for every event `statusFromHook` reads (see below). Both are written before the spawn, because Claude runs `SessionStart` right away.
 8. **Spawn** in exec mode, cwd the worktree: `claude --settings .gitspore/settings.json --session-id <uuid> "<PROMPT>"`. The settings path is relative and the prompt is constant and contains none of `& | < > ^ % "` (a test enforces it), because `claude.cmd` on Windows runs through `cmd.exe`. The session id is kept for a later `claude --resume`.
 9. **Still `starting`**, the watchdog starts, then the ack with the id. The first hook sets the status.
+
+### On a branch an earlier agent left
+
+A `spore/<n>-…` branch for the issue can be left from an agent that was stopped, or from before a restart (#102). The new agent continues on it instead of failing:
+
+| Left                                  | The dispatch …                                                    |
+| ------------------------------------- | ----------------------------------------------------------------- |
+| branch with its worktree              | starts Claude in that worktree; creates nothing                   |
+| local branch, no worktree             | `open`: a new worktree on the branch, its commits kept            |
+| branch only on origin                 | `open`: fetches it, a local branch that tracks it, a new worktree |
+| local branch that origin doesn't have | as above, then `publish`                                          |
+
+- The branch is found by the issue number, so an issue renamed since still finds its branch. The agent then moves to that branch and folder in a second `agent:upsert`.
+- `task.md`, the hook files and the prompt are written as for a new agent. Claude starts fresh, with the earlier commits (and pull request) on the branch.
 
 ### Rollback
 
 All or nothing. On any failure after the `starting` upsert, in reverse order, only what this dispatch made:
 
 1. Claude was started: kill it.
-2. The worktree was created: `remove({ force, deleteBranch })`. A branch that existed before (`branch_exists`) is never touched.
-3. The branch was pushed: `deleteRemoteBranch`.
+2. The worktree was created: `remove({ force, deleteBranch })`, `deleteBranch` only if this dispatch made the local branch. A branch that existed before is never touched; a local copy of a branch only origin had is deleted (origin keeps it).
+3. The branch was pushed: `deleteRemoteBranch`. Only a branch that origin didn't have before is pushed, so a branch with a pull request is never deleted.
 4. The secret is revoked, then `agent:remove`, so slot and issue are free and a retry works.
 
 A failing rollback step is logged and the next one still runs. The ack carries the original error, not one from the cleanup.
@@ -116,7 +132,30 @@ Hooks can't report an exit, so the exit code and the pull request decide:
 
 The PR is asked from GitHub directly (`GitHubService.findPullRequest`), not from the last poll: Claude may have opened it seconds ago. The exit revokes the agent's secret. The overview agent's exit is not handled here.
 
-After the exit the agent stays in the state with its worktree and branch until `agent:stop`.
+After the exit the agent stays in the state with its worktree and branch until `agent:stop`. Opening its terminal starts Claude Code again (see [Claude again](#claude-again)).
+
+## After a restart
+
+Agents are only in memory, so a restart of the daemon (or of the dev server) loses them, and their Claude Code ends with it. The worktrees, branches and pull requests are still there. `onModuleInit` takes them over before GitHub sync starts, and so does a repo switch (`RepoService.onSwitched`), before the new repo's first poll:
+
+1. Every worktree `WorktreeService.list()` returns becomes an agent in the next free slot, with the issue number from its branch.
+2. It has no process (`processRunning: false`), no secret and no watchdog. Its status is `error` with `daemon_restarted`.
+3. The first poll treats its branch like any other: an open pull request makes it `done`, a merged one `merged` with bloom and cleanup, a closed one `pr_closed`. Without a pull request it stays `daemon_restarted`.
+4. It can be stopped, with or without its worktree. Planting the issue again afterwards continues on its branch.
+
+Skipped and logged: a second worktree for the same issue, and worktrees beyond the six slots. Opening the terminal of a taken-over agent starts its Claude Code again (next section).
+
+## Claude again
+
+An agent without a running Claude (it exited, or was taken over after a restart) gets it back when a tab opens its terminal: the gateway calls `TerminalService.revive`, which asks `AgentService.resume` (registered with `onMissing`).
+
+1. Nothing happens for an agent that runs, is being stopped, is `merged`, or isn't a slot agent of this service; the overview agent has its own.
+2. `.gitspore/hook.json` and `settings.json` are written again with a new secret: the old one was revoked at the exit or died with the daemon, and the port may have changed.
+3. `claude --settings .gitspore/settings.json --continue` in the worktree: Claude Code continues the newest conversation of that folder, which is the agent's own. No prompt is sent; Claude waits for the user.
+4. A `daemon_restarted` agent becomes `needs_input`, because Claude now runs and waits. Any other status stays until the hooks report.
+5. Two tabs at once start Claude once. If Claude can't start (not found), the agent stays as it is, the secret is revoked, and the tab gets `agent_not_found` as before.
+
+The exit of the new Claude is handled like any other.
 
 ## Stop
 
@@ -150,16 +189,16 @@ A spawn that throws although the locator found Claude is `claude_not_found`, and
 ## Not handled here
 
 - Showing `statusReason` in the web app.
-- `agent:restart` (`claude --resume <session id>`) and "continue or discard" for an issue whose branch already exists: a follow-up. Until then such a dispatch fails with `git_failed` (`branch_exists`).
-- Skipping the trust dialog, a configurable permission mode, resuming agents after a daemon restart.
+- An explicit restart button, or a choice between continuing and a fresh session. Opening the terminal always continues.
+- Skipping the trust dialog, a configurable permission mode.
 - Process trees and a clean shutdown of the daemon: GS-53. `kill` ends Claude, not programs Claude started.
 
 ## Tests
 
-- `agent.service.spec.ts`: the logic of dispatch, rollback, hooks, watchdog, exit and stop, with stand-ins for git, GitHub, the terminals, the locator and the hook service.
+- `agent.service.spec.ts`: the logic of dispatch, leftover branches, rollback, taking over after a restart, hooks, watchdog, exit and stop, with stand-ins for git, GitHub, the terminals, the locator and the hook service.
 - `agent-request.spec.ts`, `agent-error.spec.ts`, `task-file.spec.ts`, `hook-status.spec.ts`, `hook-files.spec.ts`, `pull-request-reaction.spec.ts`: the pure functions.
 - `hook-script.spec.ts`: the real script against a stand-in daemon, including a daemon that is down or never answers.
 - `agent.gateway.spec.ts`: the events reach the service and the answers come back.
-- `agent.e2e.spec.ts`: the acceptance criteria of GS-66, GS-67 and GS-48 with real git (a bare repo in a temp folder as origin), real PTYs, the real hook endpoint and `apps/api/test/fake-claude.mjs` through `GITSPORE_CLAUDE_BIN`. `FAKE_CLAUDE_HOOKS` makes the fake fire hook events through the written `settings.json`. Only GitHub is a stand-in; the tests fire its pull request events themselves, including a squash merge (a commit only on the branch) and a worktree with uncommitted changes. About a minute on Windows.
+- `agent.e2e.spec.ts`: the acceptance criteria of GS-66, GS-67, GS-48 and GS-102 with real git (a bare repo in a temp folder as origin), real PTYs, the real hook endpoint and `apps/api/test/fake-claude.mjs` through `GITSPORE_CLAUDE_BIN`. `FAKE_CLAUDE_HOOKS` makes the fake fire hook events through the written `settings.json`. Only GitHub is a stand-in; the tests fire its pull request events themselves, including a squash merge (a commit only on the branch) and a worktree with uncommitted changes. About a minute on Windows.
 
 Run them with `npm run test:api`, or one file with `npm run test -w apps/api -- agent.e2e`.

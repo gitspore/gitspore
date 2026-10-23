@@ -34,6 +34,7 @@ export class RepoService implements OnModuleInit, OnApplicationBootstrap {
   // True from the first line of choose() until it answers. Set before any
   // await, so two tabs can't both pass the checks.
   private switching = false;
+  private readonly switchedListeners: (() => Promise<void>)[] = [];
 
   constructor(
     private readonly store: StateStore,
@@ -105,6 +106,15 @@ export class RepoService implements OnModuleInit, OnApplicationBootstrap {
     return this.switching;
   }
 
+  /**
+   * Runs after a switch has started the state over, before GitHub sync
+   * starts for the new repo. AgentService takes over the worktrees the new
+   * repo still has (#102), so the first poll already sees their branches.
+   */
+  onSwitched(listener: () => Promise<void>): void {
+    this.switchedListeners.push(listener);
+  }
+
   private async switchTo(
     path: string,
     baseBranch: string,
@@ -150,6 +160,7 @@ export class RepoService implements OnModuleInit, OnApplicationBootstrap {
     const repo: RepoInfo = { path: root.top, baseBranch, github: "off" };
     // The state starts over; every tab gets a snapshot (StateGateway).
     this.store.setRepo(repo);
+    for (const listener of this.switchedListeners) await listener();
     // Not awaited: the new issues arrive as patches, problems as `error`.
     void this.github.restart();
     await this.overview.start();

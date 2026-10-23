@@ -4,7 +4,7 @@ The daemon's only connection to GitHub. Keeps the open issues of the repo in the
 
 | File                | Holds                                                                                       |
 | ------------------- | ------------------------------------------------------------------------------------------- |
-| `github.service.ts` | `GitHubService`: the 60 s poll, `refresh`, error reporting, pull request events, `getIssue` |
+| `github.service.ts` | `GitHubService`: the 15 s poll, `refresh`, error reporting, pull request events, `getIssue` |
 | `github-api.ts`     | `GitHubApi`: the Octokit calls with ETag, pagination and error mapping. No Nest, no timers  |
 | `github-source.ts`  | `GitHubSource`: remote + token → a `GitHubApi`, or the reason sync is off                   |
 | `credentials.ts`    | `GitHubCredentialsProvider`: `GITHUB_TOKEN`, then `gh auth token`                           |
@@ -22,7 +22,7 @@ The mapping between branch and issue (`branchForIssue`, `issueNumberFromBranch`)
 1. `git remote get-url origin` in the chosen repo. No remote → sync off.
 2. `parseGitHubRemote`: `https://github.com/o/r(.git)`, `git@github.com:o/r(.git)`, `ssh://git@github.com/o/r(.git)`. Anything else (GitLab, a local path) → sync off.
 3. Token: `GITHUB_TOKEN` from the environment, otherwise the output of `gh auth token` (5 s timeout), otherwise none → sync off.
-4. First poll right away, then every 60 s.
+4. First poll right away, then every 15 s.
 
 "Sync off" sends one `github_sync_disabled` error whose `message` says what to do. The daemon keeps running; the issue list stays empty.
 
@@ -41,8 +41,8 @@ GitHubApi.pullRequestFor(branch)  GET /pulls?head=owner:branch&state=all, with E
 - Issues come from `GET /repos/{owner}/{repo}/issues?state=open&per_page=100`, page by page until a page has fewer than 100 entries. That count includes pull requests, which the endpoint lists too; they are filtered out afterwards.
 - Each page has its own ETag, because editing an old issue changes only its page. "Unchanged" means every page answered 304. A 304 doesn't count against the rate limit.
 - An issue that disappears from the list gets `issue:remove`. An agent working on it is not touched.
-- Pull requests are checked after the issues in the same poll. So when a merge closes an issue (`Closes #n`), the pull request is checked right away, not a minute later.
-- `issues:refresh` from the browser polls immediately and starts the 60 s over. A refresh during a running poll joins that poll instead of starting a second one.
+- Pull requests are checked after the issues in the same poll. So when a merge closes an issue (`Closes #n`), the pull request is checked right away, not a poll later.
+- `issues:refresh` from the browser polls immediately and starts the 15 s over. A refresh during a running poll joins that poll instead of starting a second one.
 
 ## API
 
@@ -70,8 +70,8 @@ onPullRequest(listener: (change: { branch, issueNumber, pullRequest }) => void)
 | `github_sync_disabled` | No remote, not a GitHub remote, no token                 | No polling                                    |
 | `github_auth_failed`   | 401                                                      | Sync off until the daemon restarts            |
 | `github_rate_limited`  | 403/429 with `x-ratelimit-remaining: 0` or `retry-after` | No request until the reset time, then resumes |
-| `github_unreachable`   | No answer (network, DNS, timeout) or 5xx                 | Keeps the last issues, tries again in 60 s    |
-| `github_failed`        | Anything else, e.g. 403 without access, 404 repo         | Keeps the last issues, tries again in 60 s    |
+| `github_unreachable`   | No answer (network, DNS, timeout) or 5xx                 | Keeps the last issues, tries again in 15 s    |
+| `github_failed`        | Anything else, e.g. 403 without access, 404 repo         | Keeps the last issues, tries again in 15 s    |
 | `issue_not_found`      | `getIssue` only                                          | Thrown to the caller                          |
 
 - Each problem is reported **once**. The same code is sent again only after a poll succeeded in between.

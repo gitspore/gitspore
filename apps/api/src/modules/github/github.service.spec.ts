@@ -212,14 +212,15 @@ describe("GitHubService: polling", () => {
 describe("GitHubService: refresh", () => {
   it("polls right away and starts the interval over", async () => {
     const { api, service } = setup();
+    const half = POLL_INTERVAL_MS / 2;
     await service.start();
-    await jest.advanceTimersByTimeAsync(30_000);
+    await jest.advanceTimersByTimeAsync(half);
 
     await service.refresh();
-    await jest.advanceTimersByTimeAsync(30_000);
+    await jest.advanceTimersByTimeAsync(half);
 
     expect(api.openIssues).toHaveBeenCalledTimes(2);
-    await jest.advanceTimersByTimeAsync(30_000);
+    await jest.advanceTimersByTimeAsync(half);
     expect(api.openIssues).toHaveBeenCalledTimes(3);
     service.stop();
   });

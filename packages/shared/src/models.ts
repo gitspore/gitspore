@@ -41,8 +41,11 @@ export type PullRequest = {
  *   deleted (`error`).
  * - `cleanup_blocked`: the branch is merged, but the worktree has uncommitted
  *   changes, so it was kept (`merged`).
+ * - `daemon_restarted`: the worktree is from before a daemon restart, so
+ *   Claude Code no longer runs in it. Worktree and branch are kept (`error`).
  */
-export type StatusReasonCode = "no_status" | "pr_closed" | "cleanup_blocked";
+export type StatusReasonCode =
+  "no_status" | "pr_closed" | "cleanup_blocked" | "daemon_restarted";
 
 export type StatusReason = {
   code: StatusReasonCode;
@@ -60,8 +63,10 @@ export type StatusReason = {
  * - `needs_input`: Claude Code stopped and waits for the user.
  * - `error`: Claude Code exited with an error or reported an API failure,
  *   sent no status at all after its start (`no_status`), its pull request
- *   was closed without merging (`pr_closed`), or the worktree of a stopped
- *   agent could not be removed. The worktree is kept.
+ *   was closed without merging (`pr_closed`), the worktree of a stopped
+ *   agent could not be removed, or the agent was taken over from before a
+ *   daemon restart and its branch has no pull request (`daemon_restarted`).
+ *   The worktree is kept.
  *   A failed git setup is not an `error`: the agent is removed again (see
  *   `agent:dispatch`).
  * - `done`: the branch has an open pull request and waits for review and
