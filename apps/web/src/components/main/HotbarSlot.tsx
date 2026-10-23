@@ -48,10 +48,11 @@ export function HotbarSlot({
       aria-pressed={selected}
       onClick={(e) => onPress(e.shiftKey)}
       className={cn(
-        "hotbar-slot relative grid shrink-0 place-items-center rounded-xl",
+        // The fill is a variable, so the slot beetle's cuts follow it on hover
+        "hotbar-slot relative grid shrink-0 place-items-center rounded-xl bg-(--slot-fill)",
         waiting
-          ? "bg-wait text-wait-ink hover:bg-[color-mix(in_srgb,var(--color-wait)_80%,var(--color-panel))] motion-safe:animate-bob"
-          : "bg-panel-2 text-ink hover:bg-[color-mix(in_srgb,var(--color-panel-2)_80%,var(--color-panel))]",
+          ? "text-wait-ink [--slot-fill:var(--color-wait)] hover:[--slot-fill:color-mix(in_srgb,var(--color-wait)_80%,var(--color-panel))] motion-safe:animate-bob"
+          : "text-ink [--slot-fill:var(--color-panel-2)] hover:[--slot-fill:color-mix(in_srgb,var(--color-panel-2)_80%,var(--color-panel))]",
         // color.accent is shadcn's primary
         selected &&
           "outline-(length:--border-selected) outline-offset-2 outline-primary",
@@ -67,7 +68,7 @@ export function HotbarSlot({
       )}
 
       {overview ? (
-        <Beetle className="size-8" />
+        <Beetle variant="slot" className="size-10" />
       ) : agent ? (
         // Agent colour circle; the plant goes inside later
         <span
