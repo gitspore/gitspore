@@ -27,6 +27,11 @@ const itOnUnix = process.platform === "win32" ? it.skip : it;
 const COUNT_TO_10000 =
   process.platform === "win32" ? "1..10000" : "seq 1 10000";
 
+// How long to wait for the shell. The first PowerShell on a busy Windows CI
+// runner has taken more than 20 s to print anything. The tests themselves get
+// 60 s, so the wait fails first and shows the output.
+const WAIT_MS = process.platform === "win32" ? 40_000 : 10_000;
+
 describe("TerminalService with a real PTY", () => {
   let ptys: { pty: IPty; running: boolean; exited: Promise<void> }[];
   let service: TerminalService;
@@ -79,7 +84,7 @@ describe("TerminalService with a real PTY", () => {
     });
     output = scrollback;
 
-    // Resolves once `found(output)` is true; fails after 10 s (20 s on Windows) showing the output.
+    // Resolves once `found(output)` is true; fails after WAIT_MS showing the output.
     function waitFor(
       found: (output: string) => boolean,
       what: string,
@@ -87,7 +92,7 @@ describe("TerminalService with a real PTY", () => {
       return new Promise((resolve, reject) => {
         const timer = setTimeout(
           () => reject(new Error(`No ${what} in time:\n${output}`)),
-          process.platform === "win32" ? 20_000 : 10_000,
+          WAIT_MS,
         );
         check = () => {
           if (found(output)) {
@@ -139,7 +144,7 @@ describe("TerminalService with a real PTY", () => {
     const browserTab = attachTab("agent-1");
 
     await browserTab.waitForShell();
-  }, 30_000);
+  }, 60_000);
 
   it("resizes the terminal so the shell reports 100 columns", async () => {
     service.spawn({
@@ -155,7 +160,7 @@ describe("TerminalService with a real PTY", () => {
     service.write(browserTab.sessionId, "socket-1", `${ASK_COLUMNS}\r`);
 
     await browserTab.waitForLine("100");
-  }, 30_000);
+  }, 60_000);
 
   itOnUnix(
     "passes colour codes and UTF-8 through unchanged",
@@ -179,7 +184,7 @@ describe("TerminalService with a real PTY", () => {
 
       await browserTab.waitForOutput("\x1b[32mgrün 🌱\x1b[0m");
     },
-    30_000,
+    60_000,
   );
 
   it("sends 10,000 lines in far fewer than 10,000 chunks", async () => {
@@ -196,7 +201,7 @@ describe("TerminalService with a real PTY", () => {
     await browserTab.waitForLine("10000");
 
     expect(browserTab.chunkCount()).toBeLessThan(1_000);
-  }, 30_000);
+  }, 60_000);
 
   it("keeps the shell running when a tab detaches", async () => {
     service.spawn({
@@ -213,7 +218,7 @@ describe("TerminalService with a real PTY", () => {
     service.write(otherBrowserTab.sessionId, "socket-2", "echo still-here\r");
 
     await otherBrowserTab.waitForLine("still-here");
-  }, 30_000);
+  }, 60_000);
 
   it("forgets the terminal when the shell exits", async () => {
     service.spawn({
@@ -229,7 +234,7 @@ describe("TerminalService with a real PTY", () => {
 
     await expect(browserTab.exited).resolves.toBe(0);
     expect(() => attachTab("agent-1")).toThrow("No terminal for agent-1");
-  }, 30_000);
+  }, 60_000);
   describe("exec mode with fake claude", () => {
     let dir: string;
     let fake: string;
@@ -266,7 +271,7 @@ describe("TerminalService with a real PTY", () => {
       await tab.waitForOutput("hello-from-fake-claude");
       await expect(tab.exited).resolves.toBe(3);
       expect(() => attachTab("agent-1")).toThrow("No terminal for agent-1");
-    }, 30_000);
+    }, 60_000);
 
     it("passes the prompt as one argument", async () => {
       const argsFile = join(dir, "args.json");
@@ -281,7 +286,7 @@ describe("TerminalService with a real PTY", () => {
       await tab.exited;
 
       expect(JSON.parse(readFileSync(argsFile, "utf8"))).toEqual(args);
-    }, 30_000);
+    }, 60_000);
 
     it("kills a program that is still running", async () => {
       process.env.FAKE_CLAUDE_STAY = "1";
@@ -292,6 +297,6 @@ describe("TerminalService with a real PTY", () => {
       service.kill("agent-1");
 
       await expect(tab.exited).resolves.toEqual(expect.any(Number));
-    }, 30_000);
+    }, 60_000);
   });
 });

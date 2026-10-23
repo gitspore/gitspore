@@ -2,18 +2,19 @@
 
 Turns an issue into a running agent and stops it again: `agent:dispatch` makes a worktree on a pushed `spore/…` branch, writes a task file and starts Claude Code in it; `agent:stop` ends it. While it runs, Claude Code's hooks report its status. Agents live in the `StateStore` (in memory), next to the overview agent. Git and the running processes are the source of truth; there is no database.
 
-| File                | Holds                                                                                       |
-| ------------------- | ------------------------------------------------------------------------------------------- |
-| `agent.service.ts`  | `AgentService`: `dispatch`, `stop`, the status from hooks and after Claude's exit, watchdog |
-| `agent.gateway.ts`  | `agent:dispatch` (with ack) and `agent:stop` (failures as `error` event)                    |
-| `agent-request.ts`  | `checkDispatch` and `checkStop`: validation and the slot/issue check, synchronous           |
-| `agent-error.ts`    | `AgentError`, and `toServerError`, which turns every error into one of the contract         |
-| `task-file.ts`      | `PROMPT` (constant) and `taskFile(issue)`, the text of `.gitspore/task.md`                  |
-| `hook-status.ts`    | `parseHookPayload` and `statusFromHook`: hook event → status, pure                          |
-| `hook-files.ts`     | `hookSettings`, the content of `.gitspore/settings.json`                                    |
-| `hook-script.mjs`   | The script Claude Code runs per hook event; posts it to the daemon. Shipped as build asset  |
-| `agent.module.ts`   | Provides `AgentService` and `AgentGateway`; imports State, GitHub, Terminal, Worktree, Hook |
-| `agent.e2e.spec.ts` | Acceptance tests with real git, real PTYs, the fake claude and its hooks                    |
+| File                       | Holds                                                                                       |
+| -------------------------- | ------------------------------------------------------------------------------------------- |
+| `agent.service.ts`         | `AgentService`: `dispatch`, `stop`, the status from hooks and after Claude's exit, watchdog |
+| `agent.gateway.ts`         | `agent:dispatch` (with ack) and `agent:stop` (failures as `error` event)                    |
+| `agent-request.ts`         | `checkDispatch` and `checkStop`: validation and the slot/issue check, synchronous           |
+| `agent-error.ts`           | `AgentError`, and `toServerError`, which turns every error into one of the contract         |
+| `task-file.ts`             | `PROMPT` (constant) and `taskFile(issue)`, the text of `.gitspore/task.md`                  |
+| `hook-status.ts`           | `parseHookPayload` and `statusFromHook`: hook event → status, pure                          |
+| `hook-files.ts`            | `hookSettings`, the content of `.gitspore/settings.json`                                    |
+| `pull-request-reaction.ts` | `reactToPullRequest`: a changed pull request → status or merge handling, pure               |
+| `hook-script.mjs`          | The script Claude Code runs per hook event; posts it to the daemon. Shipped as build asset  |
+| `agent.module.ts`          | Provides `AgentService` and `AgentGateway`; imports State, GitHub, Terminal, Worktree, Hook |
+| `agent.e2e.spec.ts`        | Acceptance tests with real git, real PTYs, the fake claude and its hooks                    |
 
 The hook endpoint itself (`POST /hooks/:agentId`, secrets) is in `modules/hooks/`. It only checks and passes events on; what they mean is decided here.
 
@@ -71,20 +72,47 @@ Claude Code runs `hook-script.mjs` for each event, with the daemon's own Node (`
 
 ### Watchdog
 
-If not a single hook arrives within 60 s of the spawn, the agent becomes `error` with a `statusMessage`: Claude most likely waits for the trust question in its terminal. It is not killed: once the question is answered, the hooks arrive and the status moves on by itself. Worktrees seem to inherit the trust of their main repo, so trusting the repo once in Claude Code saves the question for all agents. The first readable hook, the exit and stop clear the watchdog.
+If not a single hook arrives within 60 s of the spawn, the agent becomes `error` with the `statusReason` `no_status`: Claude most likely waits for the trust question in its terminal. It is not killed: once the question is answered, the hooks arrive and the status moves on by itself. Worktrees seem to inherit the trust of their main repo, so trusting the repo once in Claude Code saves the question for all agents. The first readable hook, the exit and stop clear the watchdog.
+
+## When the pull request changes
+
+The GitHub poll reports every new pull request on an agent branch and every new state (`GitHubService.onPullRequest`). The pull request goes on the agent, and `reactToPullRequest` decides the status, in one patch:
+
+| Pull request | Status                                       |
+| ------------ | -------------------------------------------- |
+| open         | `done`; a `working` agent stays `working`    |
+| merged       | `merged`, then cleaned up (see below)        |
+| closed       | `error` with `pr_closed`; nothing is deleted |
+
+- A merged agent stays as it is: later PR changes, hooks and Claude's exit don't move it back.
+- After `pr_closed` the hooks go on as usual, e.g. when Claude opens a new pull request. A reopened one makes the agent `done` again.
+- The `Stop` hook and the exit ask GitHub themselves and put the pull request they find on the agent; a merged one there is left to the poll. Without an answer from GitHub the agent keeps the pull request it has.
+- Hooks, the exit and the poll share the counter that lets the newest change win.
+
+### After a merge
+
+1. The agent is `merged` (one patch, with the pull request), and the watchdog is cleared.
+2. Nothing happens for 5 s (`bloomMs`), so the bloom can be seen. A stop in that time wins: the cleanup doesn't run.
+3. Claude is killed if it still runs, and its secret revoked. Hooks, the exit and a stop no longer change the agent.
+4. A worktree with uncommitted changes is kept: the agent stays `merged` with `cleanup_blocked`, until the user stops it. The check runs after the kill, so Claude can't write anything in between.
+5. Otherwise `remove({ force, deleteBranch })` deletes the worktree and the local branch; `force`, because a squash merge leaves the branch unmerged in local git. The branch on origin is left to GitHub ("Automatically delete head branches").
+6. `agent:remove`: the slot is free.
+
+A failing removal also gives `cleanup_blocked`, with the reason in its message.
 
 ## When Claude exits
 
 Hooks can't report an exit, so the exit code and the pull request decide:
 
-| Claude ends …                             | Status                                    |
-| ----------------------------------------- | ----------------------------------------- |
-| with exit code ≠ 0                        | `error`                                   |
-| with 0, and the branch has an **open** PR | `done`                                    |
-| with 0, and no PR                         | `needs_input`                             |
-| with 0, and GitHub can't be asked         | `needs_input`                             |
-| with 0, and the PR is already merged      | `needs_input` (merge handling is GS-48)   |
-| because of `agent:stop`                   | unchanged; `stop` takes care of the agent |
+| Claude ends …                             | Status                                         |
+| ----------------------------------------- | ---------------------------------------------- |
+| with exit code ≠ 0                        | `error`                                        |
+| with 0, and the branch has an **open** PR | `done`                                         |
+| with 0, and no PR                         | `needs_input`                                  |
+| with 0, and GitHub can't be asked         | `needs_input`                                  |
+| with 0, and the PR is already merged      | `needs_input`; the poll then makes it `merged` |
+| after the agent is `merged`               | unchanged                                      |
+| because of `agent:stop`                   | unchanged; `stop` takes care of the agent      |
 
 The PR is asked from GitHub directly (`GitHubService.findPullRequest`), not from the last poll: Claude may have opened it seconds ago. The exit revokes the agent's secret. The overview agent's exit is not handled here.
 
@@ -121,8 +149,7 @@ A spawn that throws although the locator found Claude is `claude_not_found`, and
 
 ## Not handled here
 
-- Merge detection and `merged`: GS-48. A merged PR keeps the pot at `done` until the next hook.
-- Showing `statusMessage` in the web app.
+- Showing `statusReason` in the web app.
 - `agent:restart` (`claude --resume <session id>`) and "continue or discard" for an issue whose branch already exists: a follow-up. Until then such a dispatch fails with `git_failed` (`branch_exists`).
 - Skipping the trust dialog, a configurable permission mode, resuming agents after a daemon restart.
 - Process trees and a clean shutdown of the daemon: GS-53. `kill` ends Claude, not programs Claude started.
@@ -130,9 +157,9 @@ A spawn that throws although the locator found Claude is `claude_not_found`, and
 ## Tests
 
 - `agent.service.spec.ts`: the logic of dispatch, rollback, hooks, watchdog, exit and stop, with stand-ins for git, GitHub, the terminals, the locator and the hook service.
-- `agent-request.spec.ts`, `agent-error.spec.ts`, `task-file.spec.ts`, `hook-status.spec.ts`, `hook-files.spec.ts`: the pure functions.
+- `agent-request.spec.ts`, `agent-error.spec.ts`, `task-file.spec.ts`, `hook-status.spec.ts`, `hook-files.spec.ts`, `pull-request-reaction.spec.ts`: the pure functions.
 - `hook-script.spec.ts`: the real script against a stand-in daemon, including a daemon that is down or never answers.
 - `agent.gateway.spec.ts`: the events reach the service and the answers come back.
-- `agent.e2e.spec.ts`: the acceptance criteria of GS-66 and GS-67 with real git (a bare repo in a temp folder as origin), real PTYs, the real hook endpoint and `apps/api/test/fake-claude.mjs` through `GITSPORE_CLAUDE_BIN`. `FAKE_CLAUDE_HOOKS` makes the fake fire hook events through the written `settings.json`. Only GitHub is a stand-in. About a minute on Windows.
+- `agent.e2e.spec.ts`: the acceptance criteria of GS-66, GS-67 and GS-48 with real git (a bare repo in a temp folder as origin), real PTYs, the real hook endpoint and `apps/api/test/fake-claude.mjs` through `GITSPORE_CLAUDE_BIN`. `FAKE_CLAUDE_HOOKS` makes the fake fire hook events through the written `settings.json`. Only GitHub is a stand-in; the tests fire its pull request events themselves, including a squash merge (a commit only on the branch) and a worktree with uncommitted changes. About a minute on Windows.
 
 Run them with `npm run test:api`, or one file with `npm run test -w apps/api -- agent.e2e`.

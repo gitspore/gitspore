@@ -1,12 +1,13 @@
 import {
   issueNumberFromBranch,
   MAX_SLOTS,
+  type PullRequest,
   type ServerError,
 } from "@gitspore/shared";
 import { Injectable, Logger, OnModuleDestroy } from "@nestjs/common";
 import { StateStore } from "../state/state.store";
 import { diffIssues } from "./diff-issues";
-import type { GitHubApi, IssueDetails, PullRequest } from "./github-api";
+import type { GitHubApi, IssueDetails } from "./github-api";
 import { GitHubError, type GitHubErrorCode } from "./github-error";
 import { GitHubSource } from "./github-source";
 

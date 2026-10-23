@@ -32,6 +32,12 @@ const snapshot: GreenhouseState = {
       status: "needs_input",
       statusSince: "2026-10-08T09:15:00.000Z",
       startedAt: "2026-10-08T09:00:00.000Z",
+      pullRequest: {
+        number: 7,
+        url: "https://github.com/gitspore/gitspore/pull/7",
+        state: "open",
+      },
+      statusReason: null,
     },
     {
       id: "overview",
@@ -42,6 +48,8 @@ const snapshot: GreenhouseState = {
       status: "working",
       statusSince: "2026-10-08T09:01:00.000Z",
       startedAt: "2026-10-08T09:01:00.000Z",
+      pullRequest: null,
+      statusReason: null,
     },
   ],
   issues: [

@@ -1,7 +1,13 @@
-import type { Agent, Issue, ServerError, StatePatch } from "@gitspore/shared";
+import type {
+  Agent,
+  Issue,
+  PullRequest,
+  ServerError,
+  StatePatch,
+} from "@gitspore/shared";
 import { Logger } from "@nestjs/common";
 import { StateStore } from "../state/state.store";
-import type { GitHubApi, PullRequest } from "./github-api";
+import type { GitHubApi } from "./github-api";
 import { GitHubError } from "./github-error";
 import { GitHubConnection, GitHubSource } from "./github-source";
 import {
@@ -30,6 +36,8 @@ function agent(branch: string, overrides: Partial<Agent> = {}): Agent {
     status: "working",
     statusSince: "2026-10-15T10:00:00.000Z",
     startedAt: "2026-10-15T10:00:00.000Z",
+    pullRequest: null,
+    statusReason: null,
     ...overrides,
   };
 }
