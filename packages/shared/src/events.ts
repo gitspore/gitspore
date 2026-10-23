@@ -186,12 +186,17 @@ export interface ClientToServerEvents {
   /**
    * Client → Server. Start an agent on an issue in a free slot. The daemon
    * creates a worktree and a `spore/…` branch, pushes the branch to origin
-   * and starts Claude Code in the worktree.
+   * and starts Claude Code in the worktree. If an earlier agent left a
+   * `spore/<issue>-…` branch, the new one continues on it: in its worktree
+   * if that is still there, otherwise in a new one. Such a branch is pushed
+   * only if origin doesn't have it yet.
    *
    * The agent arrives as an `agent:upsert` patch with status `starting`
-   * before any git work begins, so the pot shows at once. The ack follows
-   * when Claude Code has started and carries the agent's id. If a step
-   * fails, the daemon undoes everything it did, removes the agent again with
+   * before any git work begins, so the pot shows at once. A second
+   * `agent:upsert` follows if the earlier branch has another name (the issue
+   * was renamed since). The ack follows when Claude Code has started and
+   * carries the agent's id. If a step fails, the daemon undoes everything it
+   * did (never a branch that existed before), removes the agent again with
    * `agent:remove` and answers the ack with `{ error }`. The slot and the
    * issue are then free for a new dispatch.
    */

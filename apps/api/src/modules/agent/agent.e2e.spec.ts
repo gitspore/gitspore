@@ -1,5 +1,6 @@
-// Acceptance tests of GS-66, GS-67 and GS-48: dispatch, stop, the status from
-// hooks and from the pull request, and the cleanup after a merge, with real
+// Acceptance tests of GS-66, GS-67, GS-48 and GS-102: dispatch, stop, the
+// status from hooks and from the pull request, the cleanup after a merge,
+// and worktrees and branches left from before, with real
 // git (a bare repo in a temp folder as origin), real PTYs, the fake claude,
 // and its hooks through the real script and endpoint. Only GitHub is a
 // stand-in; the tests fire its poll's events. The logic of each step has its
@@ -48,7 +49,10 @@ import type { RepoService } from "../repo/repo.service";
 import { PROMPT } from "./task-file";
 
 // No repo switch is running.
-const notSwitching = { isSwitching: () => false } as unknown as RepoService;
+const notSwitching = {
+  isSwitching: () => false,
+  onSwitched: () => {},
+} as unknown as RepoService;
 
 // Windows needs about a second per PTY, and every dispatch runs fetch,
 // ls-remote and push.
@@ -150,7 +154,7 @@ describe("Agent dispatch and stop, end to end", () => {
       hooks,
       notSwitching,
     );
-    service.onModuleInit();
+    await service.onModuleInit();
 
     for (const level of ["log", "warn", "error"] as const) {
       jest.spyOn(Logger.prototype, level).mockImplementation(() => {});
@@ -329,8 +333,10 @@ describe("Agent dispatch and stop, end to end", () => {
     TEST_TIMEOUT_MS,
   );
 
+  // --- branches and worktrees left from before (GS-102) ----------------
+
   it(
-    "refuses a branch that exists only on origin, and leaves it there",
+    "continues on a branch that exists only on origin",
     async () => {
       const branch = "spore/42-issue-42";
       await simpleGit(repo).raw([
@@ -339,12 +345,111 @@ describe("Agent dispatch and stop, end to end", () => {
         `main:refs/heads/${branch}`,
       ]);
 
-      expect(await dispatch()).toMatchObject({
-        error: { code: "git_failed", context: { reason: "branch_exists" } },
+      const agent = await dispatchOk();
+
+      expect(agent.branch).toBe(branch);
+      expect(await localBranches()).toContain(branch);
+      const upstream = await simpleGit(repo).revparse([
+        "--abbrev-ref",
+        `${branch}@{upstream}`,
+      ]);
+      expect(upstream).toBe(`origin/${branch}`);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "continues in the worktree a stop kept, with its commits",
+    async () => {
+      const first = await dispatchOk();
+      await simpleGit(first.worktreePath).raw([
+        "commit",
+        "--allow-empty",
+        "-m",
+        "work",
+      ]);
+      const work = await simpleGit(first.worktreePath).revparse(["HEAD"]);
+      await service.stop({ agentId: first.id, removeWorktree: false });
+
+      const second = await dispatchOk(42, 3);
+
+      expect(second.worktreePath).toBe(first.worktreePath);
+      expect(await simpleGit(second.worktreePath).revparse(["HEAD"])).toBe(
+        work,
+      );
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "continues on the branch after a stop that removed the worktree",
+    async () => {
+      const first = await dispatchOk();
+      await service.stop({ agentId: first.id, removeWorktree: true });
+      expect(existsSync(first.worktreePath)).toBe(false);
+
+      const second = await dispatchOk();
+
+      expect(second.branch).toBe(first.branch);
+      expect(existsSync(second.worktreePath)).toBe(true);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "leaves a branch that was there in place when the dispatch on it fails",
+    async () => {
+      const first = await dispatchOk();
+      await service.stop({ agentId: first.id, removeWorktree: true });
+      jest.spyOn(terminals, "spawn").mockImplementationOnce(() => {
+        throw new Error("posix_spawnp failed.");
       });
-      expect(await onOrigin(branch)).toBe(true);
-      expect(await localBranches()).not.toContain(branch);
+
+      expect(await dispatch()).toMatchObject({ error: expect.anything() });
+
+      expect(await localBranches()).toContain(first.branch);
+      expect(await onOrigin(first.branch)).toBe(true);
+      expect(existsSync(first.worktreePath)).toBe(false);
       expect(store.snapshot().agents).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "takes over a worktree after a restart, and a stop frees the slot",
+    async () => {
+      const before = await dispatchOk(42, 2);
+      await service.stop({ agentId: before.id, removeWorktree: false });
+
+      // The restart: a new state and a new service, the worktree on disk.
+      store = new StateStore();
+      service = new AgentService(
+        store,
+        github as unknown as GitHubService,
+        new WorktreeService(new RepoConfig(repo, "main")),
+        terminals,
+        new ClaudeLocator(systemDeps()),
+        new RepoConfig(repo, "main"),
+        hooks,
+        notSwitching,
+      );
+      await service.onModuleInit();
+
+      const [agent] = store.snapshot().agents;
+      expect(agent).toMatchObject({
+        slotIndex: 0,
+        issueNumber: 42,
+        branch: before.branch,
+        worktreePath: before.worktreePath,
+        status: "error",
+        statusReason: { code: "daemon_restarted" },
+      });
+
+      await service.stop({ agentId: agent.id, removeWorktree: true });
+
+      expect(store.snapshot().agents).toEqual([]);
+      expect(existsSync(before.worktreePath)).toBe(false);
+      expect(await localBranches()).toContain(before.branch);
     },
     TEST_TIMEOUT_MS,
   );

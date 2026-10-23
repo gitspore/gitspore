@@ -152,6 +152,21 @@ describe("RepoService", () => {
       });
     });
 
+    it("lets onSwitched listeners fill the new state before GitHub restarts", async () => {
+      await initRepo(dir);
+      const repos = service();
+      const seen: string[] = [];
+      repos.onSwitched(async () => {
+        seen.push(`state of ${store.snapshot().repo?.path}`);
+        expect(github.restart).not.toHaveBeenCalled();
+      });
+
+      await repos.choose(dir, "main");
+
+      expect(seen).toEqual([`state of ${await realpath(dir)}`]);
+      expect(github.restart).toHaveBeenCalled();
+    });
+
     it("works from no repo at all", async () => {
       await initRepo(dir);
       config = new RepoConfig(null, "main");

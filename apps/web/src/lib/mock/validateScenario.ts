@@ -30,7 +30,12 @@ const pullRequestSchema = z.object({
 }) satisfies z.ZodType<PullRequest>;
 
 const statusReasonSchema = z.object({
-  code: z.enum(["no_status", "pr_closed", "cleanup_blocked"]),
+  code: z.enum([
+    "no_status",
+    "pr_closed",
+    "cleanup_blocked",
+    "daemon_restarted",
+  ]),
   message: z.string(),
 }) satisfies z.ZodType<StatusReason>;
 

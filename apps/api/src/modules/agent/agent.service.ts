@@ -1,10 +1,13 @@
-import type {
-  Agent,
-  AgentDispatchAck,
-  AgentId,
-  AgentStatus,
-  PullRequest,
-  StatusReason,
+import {
+  issueNumberFromBranch,
+  MAX_SLOTS,
+  type Agent,
+  type AgentDispatchAck,
+  type AgentId,
+  type AgentStatus,
+  type GreenhouseState,
+  type PullRequest,
+  type StatusReason,
 } from "@gitspore/shared";
 import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { StateStore } from "../state/state.store";
@@ -12,7 +15,11 @@ import {
   GitHubService,
   type PullRequestChange,
 } from "../github/github.service";
-import { WorktreeService } from "../worktree/worktree.service";
+import {
+  WorktreeService,
+  type Leftover,
+  type Worktree,
+} from "../worktree/worktree.service";
 import { TerminalService } from "../terminal/terminal.service";
 import { ClaudeLocator } from "../terminal/claude-locator";
 import { HookService } from "../hooks/hook.service";
@@ -44,13 +51,25 @@ const WATCHDOG_REASON: StatusReason = {
     "every future agent. The status updates as soon as Claude Code reports.",
 };
 
+// A worktree from before a restart, taken over without its Claude Code.
+// The GitHub poll replaces it with done, merged or pr_closed if the branch
+// has a pull request.
+const RESTARTED_REASON: StatusReason = {
+  code: "daemon_restarted",
+  message:
+    "gitspore was restarted, so Claude Code no longer runs in this " +
+    "worktree. The worktree and the branch are kept. Stop the agent to free " +
+    "the slot; planting the issue again continues on its branch.",
+};
+
 // nest build copies it next to the compiled service (nest-cli.json assets).
 const HOOK_SCRIPT = join(__dirname, "hook-script.mjs");
 
 type Running = {
   worktreePath: string;
   branch: string;
-  sessionId: string;
+  // null for an agent taken over after a restart: no Claude Code runs.
+  sessionId: string | null;
   processRunning: boolean;
   stopping: boolean;
   // Counts status changes from hooks, the exit and the GitHub poll, so a
@@ -61,8 +80,11 @@ type Running = {
   cleanup?: NodeJS.Timeout;
 };
 
+// What this dispatch made, so the rollback removes that and nothing else.
+// A branch an earlier agent left is never deleted.
 type Progress = {
   worktree: boolean;
+  branch: boolean;
   pushed: boolean;
   spawned: boolean;
 };
@@ -93,7 +115,9 @@ export class AgentService implements OnModuleInit {
     private readonly repos: RepoService,
   ) {}
 
-  onModuleInit(): void {
+  // Nest awaits it before GitHub sync starts (RepoService's
+  // onApplicationBootstrap), so the first poll sees the adopted branches.
+  async onModuleInit(): Promise<void> {
     this.terminals.onExited((agentId, exitCode) => {
       void this.handleExit(agentId, exitCode);
     });
@@ -103,6 +127,8 @@ export class AgentService implements OnModuleInit {
     this.github.onPullRequest((change) => {
       this.handlePullRequest(change);
     });
+    this.repos.onSwitched(() => this.adoptWorktrees());
+    await this.adoptWorktrees();
   }
 
   async dispatch(payload: unknown): Promise<AgentDispatchAck> {
@@ -133,7 +159,8 @@ export class AgentService implements OnModuleInit {
     }
 
     const target = { issueNumber: issue.number, issueTitle: issue.title };
-    const { branch, path } = this.worktrees.planFor(target);
+    // A branch left from an earlier agent may change both below.
+    let { branch, path } = this.worktrees.planFor(target);
     const agentId = randomUUID();
     const now = new Date().toISOString();
     this.store.apply([
@@ -156,6 +183,7 @@ export class AgentService implements OnModuleInit {
 
     const progress: Progress = {
       worktree: false,
+      branch: false,
       pushed: false,
       spawned: false,
     };
@@ -164,14 +192,23 @@ export class AgentService implements OnModuleInit {
       const claude = await this.locator.resolve();
       const details = await this.github.getIssue(issue.number);
       await this.worktrees.fetch();
-      await this.worktrees.create({
-        ...target,
-        startPoint: `origin/${this.config.baseBranch()}`,
-      });
-      progress.worktree = true;
+      const leftover = await this.worktrees.leftoverFor(target);
+      if (leftover) {
+        ({ branch, path } = await this.reuse(leftover, progress));
+        this.moveAgent(agentId, branch, path);
+      } else {
+        await this.worktrees.create({
+          ...target,
+          startPoint: `origin/${this.config.baseBranch()}`,
+        });
+        progress.worktree = true;
+        progress.branch = true;
+      }
       await this.worktrees.ensureExcluded(`${TASK_DIR}/`);
-      await this.worktrees.publish(branch);
-      progress.pushed = true;
+      if (!leftover?.onOrigin) {
+        await this.worktrees.publish(branch);
+        progress.pushed = true;
+      }
 
       await mkdir(join(path, TASK_DIR), { recursive: true });
       await writeFile(join(path, TASK_DIR, "task.md"), taskFile(details));
@@ -198,6 +235,102 @@ export class AgentService implements OnModuleInit {
       return {
         error: this.report(error),
       };
+    }
+  }
+
+  // Continues on the branch an earlier agent left (#102): in its worktree,
+  // or in a new one. The rollback then leaves the branch alone, but deletes
+  // a local copy made from origin (origin still has it).
+  private async reuse(
+    leftover: Leftover,
+    progress: Progress,
+  ): Promise<Worktree> {
+    if (leftover.path !== null) {
+      return { branch: leftover.branch, path: leftover.path };
+    }
+    const worktree = await this.worktrees.open(leftover);
+    progress.worktree = true;
+    progress.branch = !leftover.local;
+    return worktree;
+  }
+
+  // The agent went into the state with the planned branch; the leftover one
+  // may have another name (the issue was renamed) or another folder.
+  private moveAgent(agentId: AgentId, branch: string, path: string): void {
+    const agent = this.store.snapshot().agents.find((a) => a.id === agentId);
+    if (!agent || (agent.branch === branch && agent.worktreePath === path)) {
+      return;
+    }
+    this.store.apply([
+      {
+        type: "agent:upsert",
+        agent: { ...agent, branch, worktreePath: path },
+      },
+    ]);
+  }
+
+  /**
+   * Takes over the worktrees an earlier daemon left (#102): after a restart,
+   * or a switch back to a repo. Their Claude Code is gone, but branch and
+   * pull request are not. Each becomes an agent without a process, so it
+   * can be stopped, and the GitHub poll hands it its pull request like any
+   * other agent: done, merged with bloom and cleanup, or pr_closed.
+   */
+  private async adoptWorktrees(): Promise<void> {
+    if (!this.config.isSet()) return;
+    let worktrees: Worktree[];
+    try {
+      worktrees = await this.worktrees.list();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`No worktrees taken over: ${message}`);
+      return;
+    }
+
+    for (const { branch, path } of worktrees) {
+      const state = this.store.snapshot();
+      const issueNumber = issueNumberFromBranch(branch);
+      const slotIndex = freeSlot(state);
+      if (issueNumber === null) continue;
+      if (state.agents.some((a) => a.issueNumber === issueNumber)) {
+        this.logger.warn(
+          `${path} not taken over: #${issueNumber} has an agent`,
+        );
+        continue;
+      }
+      if (slotIndex === null) {
+        this.logger.warn(`${path} not taken over: no free slot`);
+        continue;
+      }
+
+      const agentId = randomUUID();
+      const now = new Date().toISOString();
+      this.running.set(agentId, {
+        worktreePath: path,
+        branch,
+        sessionId: null,
+        processRunning: false,
+        stopping: false,
+        changes: 0,
+      });
+      this.store.apply([
+        {
+          type: "agent:upsert",
+          agent: {
+            id: agentId,
+            slotIndex,
+            issueNumber,
+            branch,
+            worktreePath: path,
+            status: "error",
+            statusSince: now,
+            startedAt: now,
+            pullRequest: null,
+            statusReason: RESTARTED_REASON,
+          },
+        },
+      ]);
+      this.logger.log(`Took over ${path} in slot ${slotIndex}`);
     }
   }
 
@@ -511,7 +644,11 @@ export class AgentService implements OnModuleInit {
     }
     if (progress.worktree) {
       await this.attempt("remove the worktree", () =>
-        this.worktrees.remove({ path, force: true, deleteBranch: true }),
+        this.worktrees.remove({
+          path,
+          force: true,
+          deleteBranch: progress.branch,
+        }),
       );
     }
     if (progress.pushed) {
@@ -577,6 +714,13 @@ export class AgentService implements OnModuleInit {
     if (serverError.code === "internal") this.logger.error(error);
     return serverError;
   }
+}
+
+function freeSlot(state: GreenhouseState): number | null {
+  for (let slot = 0; slot < MAX_SLOTS; slot++) {
+    if (!state.agents.some((a) => a.slotIndex === slot)) return slot;
+  }
+  return null;
 }
 
 // Field by field rather than a deep compare: the store hands out clones, and

@@ -1,5 +1,9 @@
 import { RepoConfig } from "@/config/repo-config";
-import { BRANCH_PREFIX, branchForIssue } from "@gitspore/shared";
+import {
+  BRANCH_PREFIX,
+  branchForIssue,
+  issueNumberFromBranch,
+} from "@gitspore/shared";
 import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { basename, dirname, join, resolve } from "node:path";
 import { simpleGit, SimpleGit } from "simple-git";
@@ -7,6 +11,15 @@ import { WorktreeError } from "./worktree-error";
 import { access, appendFile, mkdir, readFile } from "node:fs/promises";
 
 export type Worktree = { branch: string; path: string };
+
+/** A branch an earlier agent left for an issue, see leftoverFor(). */
+export type Leftover = {
+  branch: string;
+  /** Its worktree, if that is still there. */
+  path: string | null;
+  local: boolean;
+  onOrigin: boolean;
+};
 
 // Commands that talk to origin wait for the network. simple-git sets the
 // timeout per instance, and a second instance would have its own queue, so
@@ -30,6 +43,15 @@ function gitEnv(): NodeJS.ProcessEnv {
     // The same for Git Credential Manager on Windows; ignored elsewhere.
     GCM_INTERACTIVE: "never",
   };
+}
+
+// "refs/heads/<branch>" per line → the branch names.
+function branchNames(output: string): string[] {
+  return output
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("refs/heads/"))
+    .map((line) => line.slice("refs/heads/".length));
 }
 
 @Injectable()
@@ -198,6 +220,67 @@ export class WorktreeService implements OnModuleInit {
     return { branch, path };
   }
 
+  /**
+   * The branch an earlier agent left for this issue: local, on origin or
+   * both, found by the number so a renamed issue still finds it. Of several,
+   * the one planFor() would make, else the first by name. null if none.
+   */
+  async leftoverFor(issue: {
+    issueNumber: number;
+    issueTitle: string;
+  }): Promise<Leftover | null> {
+    const forIssue = (branch: string) =>
+      issueNumberFromBranch(branch) === issue.issueNumber;
+    const local = (await this.localBranches()).filter(forIssue);
+    const onOrigin = (await this.originBranches()).filter(forIssue);
+
+    const all = [...new Set([...local, ...onOrigin])].sort();
+    if (all.length === 0) return null;
+    const planned = this.planFor(issue).branch;
+    const branch = all.includes(planned) ? planned : all[0];
+
+    const worktree = (await this.list()).find((w) => w.branch === branch);
+    return {
+      branch,
+      path: worktree?.path ?? null,
+      local: local.includes(branch),
+      onOrigin: onOrigin.includes(branch),
+    };
+  }
+
+  /**
+   * A worktree for a branch that already exists, locally or only on origin.
+   * For the latter a local branch is made that tracks it. Nothing is pushed.
+   */
+  async open(leftover: Leftover): Promise<Worktree> {
+    const { branch } = leftover;
+    this.assertOurs(branch);
+    const path = join(this.worktreeRoot, branch.slice(BRANCH_PREFIX.length));
+    if (await this.pathExists(path)) {
+      throw new WorktreeError("path_exists", `Folder ${path} already exists.`);
+    }
+
+    if (leftover.local) {
+      await this.run(["worktree", "add", path, branch]);
+    } else {
+      await this.run([
+        "fetch",
+        "origin",
+        `refs/heads/${branch}:refs/remotes/origin/${branch}`,
+      ]);
+      await this.run([
+        "worktree",
+        "add",
+        "--track",
+        "-b",
+        branch,
+        path,
+        `origin/${branch}`,
+      ]);
+    }
+    return { branch, path };
+  }
+
   async list(): Promise<Worktree[]> {
     const output = await this.run(["worktree", "list", "--porcelain"]);
     const worktrees: Worktree[] = [];
@@ -322,6 +405,21 @@ export class WorktreeService implements OnModuleInit {
       `refs/heads/${branch}`,
     ]);
     return output.trim() !== "";
+  }
+
+  private async localBranches(): Promise<string[]> {
+    const output = await this.run([
+      "for-each-ref",
+      "--format=%(refname)",
+      "refs/heads/",
+    ]);
+    return branchNames(output);
+  }
+
+  private async originBranches(): Promise<string[]> {
+    const output = await this.run(["ls-remote", "--heads", "origin"]);
+    // "<sha>\trefs/heads/<branch>" per line.
+    return branchNames(output.replace(/^\S+\t/gm, ""));
   }
 
   private async pathExists(path: string): Promise<boolean> {
