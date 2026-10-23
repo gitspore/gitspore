@@ -2,97 +2,180 @@
 // Three.js needs the browser (WebGL, window), so anything using
 // React Three Fiber must be a Client Component.
 
-import { useRef, useState } from "react";
-import type * as THREE from "three";
-import { Canvas, useFrame, type ThreeElements } from "@react-three/fiber";
-import { OrbitControls, Float, Text, ContactShadows } from "@react-three/drei";
+import { useEffect, useRef, useState, type RefObject } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { StatsGl } from "@react-three/drei";
+import { useTheme } from "next-themes";
+import { tokens } from "@/theme/tokens";
 
-// A single 3D object. JSX tags like <mesh>, <boxGeometry> and
-// <meshStandardMaterial> map 1:1 to Three.js classes
-// (THREE.Mesh, THREE.BoxGeometry, THREE.MeshStandardMaterial).
-// ThreeElements['mesh'] is the prop type of the <mesh> tag, so this
-// component accepts everything a <mesh> does (position, rotation, ...).
-function SpinningBox(props: ThreeElements["mesh"]) {
-  // A ref gives direct access to the underlying THREE.Mesh object.
-  const meshRef = useRef<THREE.Mesh>(null);
-  const [hovered, setHovered] = useState(false);
-  const [clicked, setClicked] = useState(false);
+import { CameraRig } from "./scene/CameraRig";
+import { Pots } from "./scene/Pot";
+import { RoomLight } from "./scene/RoomLight";
+import { Table } from "./scene/Table";
+import { Book } from "./scene/Book";
+import { Effects } from "./scene/Effects";
+import { GitMap } from "./scene/GitMap";
 
-  // useFrame runs on every rendered frame (~60x per second).
-  // `delta` is the time since the last frame, so the speed is
-  // independent of the frame rate. Mutate the object directly here
-  // instead of using state, which would re-render React 60x a second.
-  useFrame((state, delta) => {
-    // The ref is typed as possibly null (it is unset before the first
-    // render commits), so narrow it before touching the object.
-    if (!meshRef.current) return;
-    meshRef.current.rotation.x += delta * 0.5;
-    meshRef.current.rotation.y += delta * 0.8;
+//
+//
+// Development only: the meters. Next writes NODE_ENV into the code when
+// it builds, so the production build never mounts them
+const DEV = process.env.NODE_ENV === "development";
+
+// Dev meter: draw calls, triangles and GPU geometries of the last frame,
+// in a small panel of our own. The panel goes into <body> like StatsGl's,
+// above the interface. useFrame runs before this frame is drawn, so
+// gl.info still holds the last frame. reset() clears the counters but not
+// memory.geometries, so a leak shows as a growing number
+function DrawCalls() {
+  const box = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = document.createElement("div");
+    el.className =
+      "fixed bottom-16 left-3 z-50 bg-black/70 px-2 py-1 font-mono text-xs text-white";
+    document.body.appendChild(el);
+    box.current = el;
+    return () => el.remove();
+  }, []);
+
+  useFrame(({ gl }) => {
+    const { calls, triangles } = gl.info.render;
+    const { geometries } = gl.info.memory;
+    gl.info.reset();
+    if (box.current) {
+      box.current.textContent = `${calls} calls · ${triangles} tris · ${geometries} geos`;
+    }
   });
+  return null;
+}
 
+export function Scene({
+  sceneArea,
+}: {
+  sceneArea: RefObject<HTMLDivElement | null>;
+}) {
+  // The mode: next-themes puts "light" (day) or "dark" (night) on <html>.
+  // URL flags, read once: ?shadows=off for weak GPUs, ?orbit=0 for a fixed
+  // camera (orbiting is on by default), ?testing=1 for the plant test keys
+  // (see Pots), ?fx=off without post-processing (no bloom)
+  const { resolvedTheme } = useTheme();
+  const t = resolvedTheme === "light" ? tokens.day : tokens.night;
+  const [flags] = useState(() => new URLSearchParams(window.location.search));
+  const shadowsOn = flags.get("shadows") !== "off";
+  const orbitOn = flags.get("orbit") !== "0";
+  const testingOn = flags.get("testing") === "1";
+  const fxOn = flags.get("fx") !== "off";
+
+  // The canvas is created once; a mode change only changes props.
+  // - shadows: "percentage" is PCFShadowMap; three 0.186 dropped the soft one
+  // - gl: R3F sets the exposure again on the same renderer, no remount
+  // - onCreated: bloom draws in several passes, so DrawCalls resets the
+  //   counter once per frame
   return (
-    <mesh
-      {...props}
-      ref={meshRef}
-      // Props become properties on the Three.js object:
-      // scale={1.5} is the same as mesh.scale.set(1.5, 1.5, 1.5)
-      scale={clicked ? 1.5 : 1}
-      // Pointer events work like DOM events, via raycasting.
-      onClick={() => setClicked(!clicked)}
-      onPointerOver={() => setHovered(true)}
-      onPointerOut={() => setHovered(false)}
+    <Canvas
+      dpr={[1, 2]}
+      shadows={shadowsOn ? "percentage" : false}
+      gl={{ toneMappingExposure: t.scene.exposure }}
+      onCreated={({ gl }) => {
+        if (DEV) {
+          gl.info.autoReset = false;
+        }
+      }}
     >
-      {/* args are passed to the constructor: new THREE.BoxGeometry(1, 1, 1) */}
-      <boxGeometry args={[1, 1, 1]} />
-      <meshStandardMaterial color={hovered ? "hotpink" : "orange"} />
-    </mesh>
-  );
-}
+      {/* Sky colour behind everything; distant things fade into the fog
+          colour between near and far. Fog's type wants a colour for
+          new Fog(), so args holds a dummy; the props set the real one */}
+      <color attach="background" args={[t.color.scene["sky-horizon"]]} />
+      <fog
+        attach="fog"
+        args={["#000000"]}
+        color={t.color.scene.fog}
+        near={t.scene.fog.near}
+        far={t.scene.fog.far}
+      />
 
-function Ground() {
-  return (
-    // rotation is in radians: -PI/2 lays the plane flat
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.5, 0]}>
-      <planeGeometry args={[20, 20]} />
-      <meshStandardMaterial color="#1e293b" />
-    </mesh>
-  );
-}
+      {/* Light, all from the tokens:
+          - RoomLight: soft environment light from all around
+          - hemisphere: sky colour from above, ground colour from below
+          - key: the strong light from the front left, the only one casting
+            shadows, with the prototype's shadow settings (makeLights)
+          - fill: weak, from the other side, softens the dark sides of the
+            pots. Mounted at night too (intensity 0): a changing light
+            count rebuilds every shader */}
+      <RoomLight intensity={t.scene.environment} />
+      <hemisphereLight
+        color={t.color.light["hemi-sky"]}
+        groundColor={t.color.light["hemi-ground"]}
+        intensity={t.scene.light.hemi}
+      />
+      <directionalLight
+        position={[-6, 10, 6]}
+        color={t.color.light.key}
+        intensity={t.scene.light.key}
+        castShadow
+        shadow-mapSize={[2048, 2048]}
+        shadow-bias={-0.0004}
+        shadow-normalBias={0.02}
+        shadow-radius={4}
+        shadow-camera-left={-7}
+        shadow-camera-right={7}
+        shadow-camera-top={7}
+        shadow-camera-bottom={-7}
+        shadow-camera-near={1}
+        shadow-camera-far={30}
+      />
+      <directionalLight
+        position={[7, 4, -3]}
+        color={t.color.light.fill}
+        intensity={t.scene.light.fill}
+      />
 
-export function Scene() {
-  return (
-    // <Canvas> sets up the renderer, a scene and a camera for you.
-    // Everything inside it is 3D, not HTML.
-    <Canvas camera={{ position: [0, 2, 6], fov: 50 }}>
-      <color attach="background" args={["#0f172a"]} />
+      <Pots
+        colors={t.color.scene}
+        art={t.color.art.plant}
+        testKeys={testingOn}
+        ringColors={t.color.status}
+        glow={t.scene.glow}
+      />
+      <Book
+        cover={t.color.plate}
+        pages={t.color.tag.paper}
+        outline={t.color.scene.heart}
+        logo={{
+          ink: t.color["plate-ink"],
+          leaf: t.color.art.logo.leaf,
+          seam: t.color.art.logo.seam,
+          glow: t.scene.bloom.strength > 0 ? t.scene.glow : 0,
+        }}
+      />
 
-      {/* Lights: without them, MeshStandardMaterial renders black */}
-      <ambientLight intensity={0.4} />
-      <directionalLight position={[5, 5, 5]} intensity={1.5} />
+      <GitMap
+        paper={t.color.tag.paper}
+        main={t.color["branch-main"]}
+        branches={[t.color.agent["1"], t.color.agent["4"]]}
+        outline={t.color.scene.heart}
+      />
 
-      <SpinningBox position={[-1.5, 0, 0]} />
+      <Table wood={t.color.wood} floor={t.color.scene.floor} />
 
-      {/* drei's <Float> makes its children bob up and down */}
-      <Float speed={2} floatIntensity={1.5}>
-        <mesh position={[1.5, 0, 0]}>
-          <sphereGeometry args={[0.7, 32, 32]} />
-          <meshStandardMaterial
-            color="#38bdf8"
-            roughness={0.2}
-            metalness={0.5}
-          />
-        </mesh>
-      </Float>
+      <CameraRig sceneArea={sceneArea} orbit={orbitOn} />
+      {/* Bloom only when it shows: by day its strength is 0, so the
+          composer would cost a full extra pass for nothing */}
+      {fxOn && t.scene.bloom.strength > 0 && (
+        <Effects
+          strength={t.scene.bloom.strength}
+          threshold={t.scene.bloom.threshold}
+        />
+      )}
 
-      <Text position={[0, 1.8, 0]} fontSize={0.35} color="white">
-        Hover and click the cube
-      </Text>
-
-      <Ground />
-      <ContactShadows position={[0, -1.49, 0]} opacity={0.6} blur={2} />
-
-      {/* drei helper: drag to rotate, scroll to zoom, right-drag to pan */}
-      <OrbitControls />
+      {/* Dev meters. StatsGl adds its own panel to <body>; the class
+          places it. No trackGPU: its timer queries pile up on the HD 530
+          and cost 18 ms CPU */}
+      {DEV && (
+        <StatsGl className="fixed bottom-3 left-3 z-50 origin-bottom-left scale-200" />
+      )}
+      {DEV && <DrawCalls />}
     </Canvas>
   );
 }
