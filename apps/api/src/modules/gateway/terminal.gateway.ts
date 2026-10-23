@@ -53,12 +53,14 @@ export class TerminalGateway implements OnGatewayDisconnect {
   }
 
   @SubscribeMessage("terminal:open")
-  handleOpen(
+  async handleOpen(
     @ConnectedSocket() client: GreenhouseSocket,
     @MessageBody() { agentId }: TerminalOpenPayload,
     @Ack() ack: (response: TerminalOpenAck) => void,
   ) {
     try {
+      // An agent whose Claude Code has ended gets it back first.
+      await this.terminals.revive(agentId);
       const { sessionId, scrollback } = this.terminals.attach(agentId, {
         ownerId: client.id,
         onData: (chunk) => client.emit("terminal:data", { sessionId, chunk }),

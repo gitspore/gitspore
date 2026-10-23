@@ -132,7 +132,7 @@ Hooks can't report an exit, so the exit code and the pull request decide:
 
 The PR is asked from GitHub directly (`GitHubService.findPullRequest`), not from the last poll: Claude may have opened it seconds ago. The exit revokes the agent's secret. The overview agent's exit is not handled here.
 
-After the exit the agent stays in the state with its worktree and branch until `agent:stop`.
+After the exit the agent stays in the state with its worktree and branch until `agent:stop`. Opening its terminal starts Claude Code again (see [Claude again](#claude-again)).
 
 ## After a restart
 
@@ -143,7 +143,19 @@ Agents are only in memory, so a restart of the daemon (or of the dev server) los
 3. The first poll treats its branch like any other: an open pull request makes it `done`, a merged one `merged` with bloom and cleanup, a closed one `pr_closed`. Without a pull request it stays `daemon_restarted`.
 4. It can be stopped, with or without its worktree. Planting the issue again afterwards continues on its branch.
 
-Skipped and logged: a second worktree for the same issue, and worktrees beyond the six slots. Their Claude Code session is not resumed. Opening the terminal gives `agent_not_found`, as for an agent whose Claude has exited.
+Skipped and logged: a second worktree for the same issue, and worktrees beyond the six slots. Opening the terminal of a taken-over agent starts its Claude Code again (next section).
+
+## Claude again
+
+An agent without a running Claude (it exited, or was taken over after a restart) gets it back when a tab opens its terminal: the gateway calls `TerminalService.revive`, which asks `AgentService.resume` (registered with `onMissing`).
+
+1. Nothing happens for an agent that runs, is being stopped, is `merged`, or isn't a slot agent of this service; the overview agent has its own.
+2. `.gitspore/hook.json` and `settings.json` are written again with a new secret: the old one was revoked at the exit or died with the daemon, and the port may have changed.
+3. `claude --settings .gitspore/settings.json --continue` in the worktree: Claude Code continues the newest conversation of that folder, which is the agent's own. No prompt is sent; Claude waits for the user.
+4. A `daemon_restarted` agent becomes `needs_input`, because Claude now runs and waits. Any other status stays until the hooks report.
+5. Two tabs at once start Claude once. If Claude can't start (not found), the agent stays as it is, the secret is revoked, and the tab gets `agent_not_found` as before.
+
+The exit of the new Claude is handled like any other.
 
 ## Stop
 
@@ -177,7 +189,7 @@ A spawn that throws although the locator found Claude is `claude_not_found`, and
 ## Not handled here
 
 - Showing `statusReason` in the web app.
-- `agent:restart` (`claude --resume <session id>`), also for agents taken over after a restart: their Claude Code session is not resumed.
+- An explicit restart button, or a choice between continuing and a fresh session. Opening the terminal always continues.
 - Skipping the trust dialog, a configurable permission mode.
 - Process trees and a clean shutdown of the daemon: GS-53. `kill` ends Claude, not programs Claude started.
 

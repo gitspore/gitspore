@@ -38,6 +38,7 @@ export type AttachRequest = Viewer & { ownerId: string };
 type Session = { agentId: AgentId; ownerId: string };
 
 type ExitListener = (agentId: AgentId, exitCode: number) => void;
+type Reviver = (agentId: AgentId) => Promise<void>;
 
 //
 //
@@ -47,6 +48,7 @@ export class TerminalService {
   private readonly terminals = new Map<AgentId, AgentTerminal>();
   private readonly sessions = new Map<SessionId, Session>();
   private readonly exitListeners: ExitListener[] = [];
+  private readonly revivers: Reviver[] = [];
   // stop() calls that wait for their agent's shell to exit.
   private readonly stopping = new Map<AgentId, (() => void)[]>();
 
@@ -150,6 +152,21 @@ export class TerminalService {
 
   onExited(listener: ExitListener): void {
     this.exitListeners.push(listener);
+  }
+
+  /**
+   * Asked when a terminal is opened for an agent that has none: the agent
+   * module starts its Claude Code again (#102). A reviver ignores agents
+   * that aren't its own; attach() then refuses them as before.
+   */
+  onMissing(reviver: Reviver): void {
+    this.revivers.push(reviver);
+  }
+
+  /** Gives the agent a terminal again if it has none and a reviver can. */
+  async revive(agentId: AgentId): Promise<void> {
+    if (this.terminals.has(agentId)) return;
+    for (const reviver of this.revivers) await reviver(agentId);
   }
 
   // -------------private helpers:-----------------------

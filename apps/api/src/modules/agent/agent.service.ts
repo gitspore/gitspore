@@ -78,6 +78,8 @@ type Running = {
   watchdog?: NodeJS.Timeout;
   // Runs the cleanup once the bloom has shown.
   cleanup?: NodeJS.Timeout;
+  // Set while resume() starts Claude Code again.
+  resuming?: Promise<void>;
 };
 
 // What this dispatch made, so the rollback removes that and nothing else.
@@ -127,6 +129,7 @@ export class AgentService implements OnModuleInit {
     this.github.onPullRequest((change) => {
       this.handlePullRequest(change);
     });
+    this.terminals.onMissing((agentId) => this.resume(agentId));
     this.repos.onSwitched(() => this.adoptWorktrees());
     await this.adoptWorktrees();
   }
@@ -215,7 +218,11 @@ export class AgentService implements OnModuleInit {
       await this.writeHookFiles(agentId, path);
 
       const sessionId = randomUUID();
-      this.spawnClaude(agentId, path, claude, sessionId);
+      this.spawnClaude(agentId, path, claude, [
+        "--session-id",
+        sessionId,
+        PROMPT,
+      ]);
       progress.spawned = true;
       const entry: Running = {
         worktreePath: path,
@@ -335,6 +342,47 @@ export class AgentService implements OnModuleInit {
   }
 
   /**
+   * Starts Claude Code again for an agent whose Claude has ended: it exited,
+   * or the agent was taken over after a restart (#102). `--continue` picks up
+   * the newest conversation in the worktree, which is the agent's own. Runs
+   * when its terminal is opened; does nothing for an agent that runs, is
+   * stopped or merged, or isn't one of ours.
+   */
+  async resume(agentId: AgentId): Promise<void> {
+    const entry = this.running.get(agentId);
+    if (!entry || entry.processRunning || entry.stopping) return;
+    if (this.isMerged(agentId)) return;
+    // Two tabs opening the terminal at once start it once.
+    entry.resuming ??= this.startAgain(agentId, entry).finally(() => {
+      entry.resuming = undefined;
+    });
+    return entry.resuming;
+  }
+
+  private async startAgain(agentId: AgentId, entry: Running): Promise<void> {
+    try {
+      const claude = await this.locator.resolve();
+      if (this.running.get(agentId) !== entry || entry.stopping) return;
+      // A new secret: the old one was revoked at the exit, or died with the
+      // daemon, and the port may have changed.
+      await mkdir(join(entry.worktreePath, TASK_DIR), { recursive: true });
+      await this.writeHookFiles(agentId, entry.worktreePath);
+      this.spawnClaude(agentId, entry.worktreePath, claude, ["--continue"]);
+      entry.processRunning = true;
+    } catch (error) {
+      this.hooks.revoke(agentId);
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Claude Code did not start again: ${message}`);
+      return;
+    }
+    // Claude runs again and waits for the user; the reason is outdated.
+    const agent = this.store.snapshot().agents.find((a) => a.id === agentId);
+    if (agent?.statusReason?.code === "daemon_restarted") {
+      this.setStatus(agentId, "needs_input");
+    }
+  }
+
+  /**
    * `agent:stop`. Stops Claude Code and frees the slot, optionally removing
    * the worktree (never the branch). Throws an AgentError; the gateway sends
    * it as an `error` event.
@@ -446,11 +494,13 @@ export class AgentService implements OnModuleInit {
     );
   }
 
+  // args come after the settings: a new session with the prompt, or
+  // --continue.
   private spawnClaude(
     agentId: AgentId,
     cwd: string,
     claude: string,
-    sessionId: string,
+    args: string[],
   ): void {
     try {
       this.terminals.spawn({
@@ -460,13 +510,7 @@ export class AgentService implements OnModuleInit {
         command: claude,
         // Relative to cwd: the worktree path may hold characters that
         // cmd.exe would read as syntax when claude.cmd passes it on.
-        args: [
-          "--settings",
-          `${TASK_DIR}/settings.json`,
-          "--session-id",
-          sessionId,
-          PROMPT,
-        ],
+        args: ["--settings", `${TASK_DIR}/settings.json`, ...args],
       });
     } catch (error) {
       // The locator found Claude, but it does not start: it may have been

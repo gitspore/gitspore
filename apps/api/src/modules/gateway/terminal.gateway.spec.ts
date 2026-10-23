@@ -142,6 +142,18 @@ describe("TerminalGateway", () => {
     });
   });
 
+  it("lets a reviver start the agent's terminal before it opens", async () => {
+    service.onMissing(async (agentId) => spawn(agentId));
+    const browserTab = await connect();
+
+    const ack = await browserTab.emitWithAck("terminal:open", {
+      agentId: "agent-1",
+    });
+
+    expect(ack).toEqual({ sessionId: expect.any(String) });
+    expect(ptys).toHaveLength(1);
+  });
+
   it("answers terminal:input for another tab's session with session_not_found", async () => {
     spawn("agent-1");
     const tabA = await connect();

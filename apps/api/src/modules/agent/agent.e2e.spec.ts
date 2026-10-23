@@ -445,6 +445,17 @@ describe("Agent dispatch and stop, end to end", () => {
         statusReason: { code: "daemon_restarted" },
       });
 
+      // Opening its terminal continues the conversation in the worktree.
+      const argsFile = join(claudeDir, "args.json");
+      process.env.FAKE_CLAUDE_ARGS_FILE = argsFile;
+      await terminals.revive(agent.id);
+      await waitForFile(argsFile);
+      expect(JSON.parse(await readFile(argsFile, "utf8"))).toEqual([
+        "--settings",
+        ".gitspore/settings.json",
+        "--continue",
+      ]);
+
       await service.stop({ agentId: agent.id, removeWorktree: true });
 
       expect(store.snapshot().agents).toEqual([]);

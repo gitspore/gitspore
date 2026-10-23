@@ -87,9 +87,20 @@ class FakeTerminals {
       this.exitListener = listener;
     },
   );
+  private reviver?: (agentId: string) => Promise<void>;
+  readonly onMissing = jest.fn(
+    (reviver: (agentId: string) => Promise<void>) => {
+      this.reviver = reviver;
+    },
+  );
 
   exit(agentId: string, exitCode: number) {
     this.exitListener?.(agentId, exitCode);
+  }
+
+  // A tab opens the agent's terminal while it has none.
+  async open(agentId: string) {
+    await this.reviver?.(agentId);
   }
 }
 
@@ -675,6 +686,128 @@ describe("AgentService.dispatch", () => {
       await service.onModuleInit();
 
       expect(worktrees.list).not.toHaveBeenCalled();
+    });
+  });
+
+  // --- Claude Code again when the terminal opens (#102) ---------------
+
+  describe("when the terminal of an agent without Claude opens", () => {
+    beforeEach(() => {
+      jest.spyOn(Logger.prototype, "log").mockImplementation(() => {});
+    });
+
+    async function takeOver() {
+      const path = join(root, "42-issue");
+      await mkdir(path, { recursive: true });
+      worktrees.list.mockResolvedValue([{ branch: "spore/42-issue", path }]);
+      await service.onModuleInit();
+      return store.snapshot().agents[0];
+    }
+
+    it("continues the conversation of an agent taken over after a restart", async () => {
+      const agent = await takeOver();
+
+      await terminals.open(agent.id);
+
+      expect(terminals.spawn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          agentId: agent.id,
+          cwd: agent.worktreePath,
+          args: ["--settings", ".gitspore/settings.json", "--continue"],
+        }),
+      );
+      const hook = JSON.parse(
+        await readFile(
+          join(agent.worktreePath, ".gitspore", "hook.json"),
+          "utf8",
+        ),
+      );
+      expect(hook).toMatchObject({ agentId: agent.id });
+      expect(hooks.issue).toHaveBeenCalledWith(agent.id);
+    });
+
+    it("drops daemon_restarted: Claude runs and waits for the user", async () => {
+      const agent = await takeOver();
+
+      await terminals.open(agent.id);
+
+      expect(store.snapshot().agents[0]).toMatchObject({
+        status: "needs_input",
+        statusReason: null,
+      });
+    });
+
+    it("keeps done when the branch has an open pull request", async () => {
+      const agent = await takeOver();
+      github.pullRequestChanged("spore/42-issue", {
+        number: 7,
+        url: "https://github.com/owner/repo/pull/7",
+        state: "open",
+      });
+
+      await terminals.open(agent.id);
+
+      expect(store.snapshot().agents[0].status).toBe("done");
+    });
+
+    it("starts Claude once for two tabs at the same time", async () => {
+      const agent = await takeOver();
+
+      await Promise.all([terminals.open(agent.id), terminals.open(agent.id)]);
+      await terminals.open(agent.id);
+
+      expect(terminals.spawn).toHaveBeenCalledTimes(1);
+    });
+
+    it("continues after Claude exited, and the exit is handled again", async () => {
+      await service.onModuleInit();
+      const ack = await dispatch();
+      if ("error" in ack) throw new Error("dispatch failed");
+      terminals.exit(ack.agentId, 0);
+      await settle();
+
+      await terminals.open(ack.agentId);
+      terminals.exit(ack.agentId, 1);
+
+      expect(terminals.spawn).toHaveBeenCalledTimes(2);
+      expect(terminals.spawn.mock.calls[1][0].args).toContain("--continue");
+      expect(store.snapshot().agents[0].status).toBe("error");
+    });
+
+    it("starts nothing for a running, stopped, merged or unknown agent", async () => {
+      await service.onModuleInit();
+      service.bloomMs = 60_000;
+      const ack = await dispatch();
+      if ("error" in ack) throw new Error("dispatch failed");
+
+      await terminals.open(ack.agentId);
+      await terminals.open("overview");
+      terminals.exit(ack.agentId, 0);
+      await settle();
+      github.pullRequestChanged("spore/42-issue", {
+        number: 7,
+        url: "https://github.com/owner/repo/pull/7",
+        state: "merged",
+      });
+      await terminals.open(ack.agentId);
+
+      expect(terminals.spawn).toHaveBeenCalledTimes(1);
+      await service.stop({ agentId: ack.agentId, removeWorktree: false });
+    });
+
+    it("leaves the agent as it is when Claude is gone", async () => {
+      const agent = await takeOver();
+      locator.resolve.mockRejectedValue(
+        new TerminalError("claude_not_found", "Install it"),
+      );
+
+      await terminals.open(agent.id);
+
+      expect(terminals.spawn).not.toHaveBeenCalled();
+      expect(store.snapshot().agents[0].statusReason?.code).toBe(
+        "daemon_restarted",
+      );
+      expect(hooks.revoke).toHaveBeenCalledWith(agent.id);
     });
   });
 
