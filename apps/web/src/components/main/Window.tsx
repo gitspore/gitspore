@@ -41,6 +41,11 @@ export function Window({
     null,
   );
   const theme = terminalTheme ?? (resolvedTheme === "dark" ? "dark" : "light");
+  // The overview agent has no issue
+  const name =
+    agent.issueNumber === null
+      ? "Overview"
+      : `#${agent.issueNumber} ${issueTitle}`;
 
   return (
     <div
@@ -54,9 +59,7 @@ export function Window({
         <span className="sr-only">{STATUS_WORD[agent.status]}</span>
 
         <p className="min-w-0 flex-1 truncate text-ui-meta">
-          <span className="font-bold">
-            #{agent.issueNumber} {issueTitle}
-          </span>
+          <span className="font-bold">{name}</span>
           <span className="text-muted-foreground"> · {agent.branch}</span>
         </p>
 
@@ -83,7 +86,7 @@ export function Window({
           variant="ghost"
           size="icon"
           className="rounded-lg [&_svg]:size-5"
-          aria-label={`Minimise #${agent.issueNumber}`}
+          aria-label={`Minimise ${name}`}
           onClick={onMinimise}
         >
           <Minus />
