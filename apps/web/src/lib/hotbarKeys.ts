@@ -2,8 +2,9 @@
 
 import { useEffect } from "react";
 
-// Keys 0–6 press the hotbar slots (#72). The one place that listens for them;
-// GS-14 (keys 1–6 in the scene) uses it too instead of a second listener.
+// Keys 0–6 press the hotbar slots (#72). Call the hook once (AppShell): each
+// call adds its own window listener. GS-14 (keys 1–6 in the scene) extends
+// pressSlot instead of calling this hook again.
 
 // What hotbarKey reads from a keydown event; plain objects in tests.
 export type KeyPress = {
@@ -40,9 +41,16 @@ function isTyping(target: TypingTarget | null): boolean {
   );
 }
 
-/** Calls onSlot with 0–6 for a hotbar key pressed anywhere on the page. */
-export function useHotbarKeys(onSlot: (key: number) => void): void {
+/**
+ * Calls onSlot with 0–6 for a hotbar key pressed anywhere on the page.
+ * Off while `enabled` is false, e.g. while the setup screen covers the page.
+ */
+export function useHotbarKeys(
+  onSlot: (key: number) => void,
+  enabled = true,
+): void {
   useEffect(() => {
+    if (!enabled) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.repeat) return;
       const key = hotbarKey({
@@ -58,5 +66,5 @@ export function useHotbarKeys(onSlot: (key: number) => void): void {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onSlot]);
+  }, [onSlot, enabled]);
 }

@@ -9,6 +9,7 @@ import { agent as baseAgent } from "../mock/scenarioFixtures";
 import { createGreenhouseStore } from "./greenhouseStore";
 import {
   agentByKey,
+  focusedAgent,
   agentBySlot,
   freeSlots,
   issueTitle,
@@ -101,6 +102,24 @@ describe("selectors", () => {
       const state = storeWith({ agents: [agent({ slotIndex: 0 })] });
 
       expect(agentBySlot(1)(state)).toBeNull();
+    });
+  });
+
+  describe("focusedAgent", () => {
+    it("is the agent of the focused window, or null", () => {
+      const a1 = agent({ id: "a1", slotIndex: 0 });
+      const client = {
+        getStatus: () => ({ kind: "connected" }) as const,
+      } as GreenhouseClient;
+      const store = createGreenhouseStore(client, "live");
+      store
+        .getState()
+        .applySnapshot({ version: 1, agents: [a1], issues: [], repo: null });
+      expect(focusedAgent(store.getState())).toBeNull();
+
+      store.getState().openWindow("a1");
+
+      expect(focusedAgent(store.getState())).toBe(a1);
     });
   });
 

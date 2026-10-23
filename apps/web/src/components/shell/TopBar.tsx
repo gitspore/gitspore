@@ -6,8 +6,9 @@ import {
   useMockClient,
 } from "@/lib/client/GreenhouseClientProvider";
 import type { ConnectionStatus as ClientStatus } from "@/lib/client/GreenhouseClient";
+import { agentName } from "@/lib/agentName";
 import {
-  agentBySlot,
+  focusedAgent,
   issueTitle,
   needsInputCount,
 } from "@/lib/store/selectors";
@@ -35,8 +36,8 @@ const CONNECTION: Record<ClientStatus["kind"], Connection> = {
 
 export function TopBar({ usage, children }: TopBarProps) {
   const waiting = useGreenhouseStore(needsInputCount);
-  const selectedSlot = useGreenhouseStore((s) => s.selectedSlot);
-  const focused = useGreenhouseStore(agentBySlot(selectedSlot ?? -1));
+  // The agent whose window the user works in (#72)
+  const focused = useGreenhouseStore(focusedAgent);
   const focusedTitle = useGreenhouseStore(
     issueTitle(focused?.issueNumber ?? null),
   );
@@ -52,9 +53,7 @@ export function TopBar({ usage, children }: TopBarProps) {
       {/* The focused agent's issue and branch */}
       {focused && (
         <p className="min-w-0 truncate text-ui-meta">
-          <span className="font-bold">
-            #{focused.issueNumber} {focusedTitle}
-          </span>
+          <span className="font-bold">{agentName(focused, focusedTitle)}</span>
           <span className="text-muted-foreground"> · {focused.branch}</span>
         </p>
       )}

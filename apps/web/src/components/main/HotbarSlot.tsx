@@ -61,6 +61,10 @@ export function HotbarSlot({
             aria-pressed={selected}
             // Not `disabled`: it stays focusable, so the tooltip says why
             aria-disabled={off || undefined}
+            // A click leaves the focus where it was: no focus ring that looks
+            // like the selected outline, and the opened terminal takes it.
+            // Tab still reaches the slot.
+            onMouseDown={(e) => e.preventDefault()}
             onClick={(e) => onPress(e.shiftKey)}
             className={cn(
               // The fill is a variable, so the slot beetle's cuts follow it on hover

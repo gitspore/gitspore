@@ -26,9 +26,13 @@ export function AppShell() {
   const setSidePanel = useGreenhouseStore((s) => s.setSidePanel);
   const setMode = useGreenhouseStore((s) => s.setMode);
   const toggleMinimised = useGreenhouseStore((s) => s.toggleMinimised);
-  // Keys 0–6 press the hotbar slots (#72)
+  const focusWindow = useGreenhouseStore((s) => s.focusWindow);
+  const focusedAgentId = useGreenhouseStore((s) => s.focusedAgentId);
+  // No repo chosen yet, or the user switches repos (#58)
+  const setupVisible = useGreenhouseStore(showSetup);
+  // Keys 0–6 press the hotbar slots (#72), not behind the setup screen
   const pressSlot = useGreenhouseStore((s) => s.pressSlot);
-  useHotbarKeys(pressSlot);
+  useHotbarKeys(pressSlot, !setupVisible);
 
   // No scene with ?scene=off or without WebGL; the interface works the same (#18)
   const showScene = useSceneEnabled();
@@ -48,8 +52,6 @@ export function AppShell() {
     ),
   );
   const waitingCount = useGreenhouseStore(needsInputCount);
-  // No repo chosen yet, or the user switches repos (#58)
-  const setupVisible = useGreenhouseStore(showSetup);
 
   return (
     <>
@@ -100,6 +102,8 @@ export function AppShell() {
                 <AgentWindow
                   key={agent.id}
                   agent={agent}
+                  focused={agent.id === focusedAgentId}
+                  onFocus={() => focusWindow(agent.id)}
                   onMinimise={() => toggleMinimised(agent.id)}
                 />
               ))}
@@ -139,9 +143,13 @@ export function AppShell() {
 // A window with its issue title from the store
 function AgentWindow({
   agent,
+  focused,
+  onFocus,
   onMinimise,
 }: {
   agent: Agent;
+  focused: boolean;
+  onFocus: () => void;
   onMinimise: () => void;
 }) {
   const title = useGreenhouseStore(issueTitle(agent.issueNumber));
@@ -150,6 +158,8 @@ function AgentWindow({
       agent={agent}
       issueTitle={title}
       context={mockContext[agent.id]}
+      focused={focused}
+      onFocus={onFocus}
       onMinimise={onMinimise}
     />
   );

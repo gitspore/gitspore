@@ -29,13 +29,13 @@ export function Hotbar() {
 function Slot({ hotkey }: { hotkey: number }) {
   const agent = useGreenhouseStore(agentByKey(hotkey)) ?? undefined;
   const title = useGreenhouseStore(issueTitle(agent?.issueNumber ?? null));
-  const openWindow = useGreenhouseStore((s) =>
-    s.layout.windows.find((w) => w.agentId === agent?.id),
+  const minimised = useGreenhouseStore(
+    (s) =>
+      s.layout.windows.find((w) => w.agentId === agent?.id)?.minimised ?? false,
   );
-  // The focused agent is the selected slot (as in the top bar); the overview
-  // has no slot, so its window is selected while it shows
-  const focused = useGreenhouseStore((s) =>
-    hotkey === 0 ? true : s.selectedSlot === hotkey - 1,
+  // Outlined: the window the user works in, so only one slot at a time
+  const focused = useGreenhouseStore(
+    (s) => !!agent && s.focusedAgentId === agent.id,
   );
   const pressSlot = useGreenhouseStore((s) => s.pressSlot);
 
@@ -44,8 +44,8 @@ function Slot({ hotkey }: { hotkey: number }) {
       hotkey={hotkey}
       agent={agent}
       issueTitle={title}
-      selected={!!openWindow && !openWindow.minimised && focused}
-      minimised={!!openWindow?.minimised}
+      selected={focused}
+      minimised={minimised}
       onPress={(beside) => pressSlot(hotkey, { beside })}
     />
   );
