@@ -1,6 +1,7 @@
 import {
   applyPatch,
   OVERVIEW_AGENT_ID,
+  type Agent,
   type AgentStatus,
   type GreenhouseState,
   type StatePatch,
@@ -16,6 +17,17 @@ import type { Scenario } from "./scenario";
 function patchVersions(scenario: Scenario): number[] {
   return scenario.events.flatMap((entry) =>
     entry.event === "state:patch" ? [entry.payload.version] : [],
+  );
+}
+
+// Every agent the scenario's patches upsert, in order.
+function upserts(scenario: Scenario): Agent[] {
+  return scenario.events.flatMap((entry) =>
+    entry.event === "state:patch"
+      ? entry.payload.ops.flatMap((op) =>
+          op.type === "agent:upsert" ? [op.agent] : [],
+        )
+      : [],
   );
 }
 
@@ -61,6 +73,15 @@ describe("the scenarios that ship", () => {
         snapshot.agents.some((agent) => agent.id === OVERVIEW_AGENT_ID),
       ).toBe(true);
     });
+
+    it("shows the pull request of the done and the merged agent", () => {
+      const { snapshot } = getScenario("all-states");
+      const agentWith = (status: AgentStatus) =>
+        snapshot.agents.find((agent) => agent.status === status);
+
+      expect(agentWith("done")?.pullRequest?.state).toBe("open");
+      expect(agentWith("merged")?.pullRequest?.state).toBe("merged");
+    });
   });
 
   describe("core-loop", () => {
@@ -95,6 +116,24 @@ describe("the scenarios that ship", () => {
       expect(all[start + 1].at - all[start].at).toBe(70_000);
     });
 
+    it("puts the pull request on the agent from done on", () => {
+      expect(
+        upserts(getScenario("core-loop")).map(
+          (agent) => agent.pullRequest?.state ?? null,
+        ),
+      ).toEqual([null, null, null, null, "open", "merged"]);
+    });
+
+    it("removes the agent 5 seconds after merged, like the daemon", () => {
+      const all = steps();
+      const merged = all.findIndex((step) => step.status === "merged");
+
+      expect(all[merged + 1]).toEqual({
+        at: all[merged].at + 5_000,
+        status: "removed",
+      });
+    });
+
     it("runs through everything in under 5 seconds at speed 60", () => {
       const clock = createFakeClock(
         Date.parse(getScenario("core-loop").anchor),
@@ -110,6 +149,32 @@ describe("the scenarios that ship", () => {
       expect(patches).toHaveLength(
         patchVersions(getScenario("core-loop")).length,
       );
+    });
+  });
+
+  describe("pr-closed", () => {
+    it("goes from start to error and keeps the agent", () => {
+      const scenario = getScenario("pr-closed");
+      const removed = scenario.events.some(
+        (entry) =>
+          entry.event === "state:patch" &&
+          entry.payload.ops.some((op) => op.type === "agent:remove"),
+      );
+
+      expect(upserts(scenario).map((agent) => agent.status)).toEqual([
+        "starting",
+        "working",
+        "done",
+        "error",
+      ]);
+      expect(removed).toBe(false);
+    });
+
+    it("ends with the closed pull request and pr_closed", () => {
+      const last = upserts(getScenario("pr-closed")).at(-1);
+
+      expect(last?.pullRequest?.state).toBe("closed");
+      expect(last?.statusReason?.code).toBe("pr_closed");
     });
   });
 

@@ -14,6 +14,8 @@ const agent: Agent = {
   status: "working",
   statusSince: "2026-10-09T09:00:00.000Z",
   startedAt: "2026-10-09T08:00:00.000Z",
+  pullRequest: null,
+  statusReason: null,
 };
 
 function scenario(events: Scenario["events"] = []): Scenario {

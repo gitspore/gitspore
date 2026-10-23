@@ -5,8 +5,10 @@ import type {
   GreenhouseState,
   Issue,
   PatchOp,
+  PullRequest,
   ServerError,
   StatePatch,
+  StatusReason,
   TerminalDataPayload,
   TerminalExitPayload,
 } from "@gitspore/shared";
@@ -21,6 +23,22 @@ const agentStatusSchema = z.enum([
   "merged",
 ]) satisfies z.ZodType<AgentStatus>;
 
+const pullRequestSchema = z.object({
+  number: z.number(),
+  url: z.string(),
+  state: z.enum(["open", "closed", "merged"]),
+}) satisfies z.ZodType<PullRequest>;
+
+const statusReasonSchema = z.object({
+  code: z.enum([
+    "no_status",
+    "pr_closed",
+    "cleanup_blocked",
+    "daemon_restarted",
+  ]),
+  message: z.string(),
+}) satisfies z.ZodType<StatusReason>;
+
 const agentSchema = z.object({
   id: z.string(),
   slotIndex: z.number().nullable(),
@@ -30,6 +48,8 @@ const agentSchema = z.object({
   statusSince: z.string(),
   startedAt: z.string(),
   worktreePath: z.string(),
+  pullRequest: pullRequestSchema.nullable(),
+  statusReason: statusReasonSchema.nullable(),
 }) satisfies z.ZodType<Agent>;
 
 const issueSchema = z.object({

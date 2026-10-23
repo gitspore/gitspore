@@ -61,7 +61,9 @@
               "worktreePath": "/home/dev/repo/.worktrees/301-login-umlauts",
               "status": "starting",
               "statusSince": "2026-10-09T09:30:01.000Z",
-              "startedAt": "2026-10-09T09:30:01.000Z"
+              "startedAt": "2026-10-09T09:30:01.000Z",
+              "pullRequest": null,
+              "statusReason": null
             }
           }
         ]
@@ -83,7 +85,9 @@
               "worktreePath": "/home/dev/repo/.worktrees/301-login-umlauts",
               "status": "working",
               "statusSince": "2026-10-09T09:30:03.000Z",
-              "startedAt": "2026-10-09T09:30:01.000Z"
+              "startedAt": "2026-10-09T09:30:01.000Z",
+              "pullRequest": null,
+              "statusReason": null
             }
           }
         ]
@@ -105,7 +109,9 @@
               "worktreePath": "/home/dev/repo/.worktrees/301-login-umlauts",
               "status": "needs_input",
               "statusSince": "2026-10-09T09:30:08.000Z",
-              "startedAt": "2026-10-09T09:30:01.000Z"
+              "startedAt": "2026-10-09T09:30:01.000Z",
+              "pullRequest": null,
+              "statusReason": null
             }
           }
         ]
@@ -127,7 +133,9 @@
               "worktreePath": "/home/dev/repo/.worktrees/301-login-umlauts",
               "status": "working",
               "statusSince": "2026-10-09T09:31:18.000Z",
-              "startedAt": "2026-10-09T09:30:01.000Z"
+              "startedAt": "2026-10-09T09:30:01.000Z",
+              "pullRequest": null,
+              "statusReason": null
             }
           }
         ]
@@ -149,7 +157,13 @@
               "worktreePath": "/home/dev/repo/.worktrees/301-login-umlauts",
               "status": "done",
               "statusSince": "2026-10-09T09:31:30.000Z",
-              "startedAt": "2026-10-09T09:30:01.000Z"
+              "startedAt": "2026-10-09T09:30:01.000Z",
+              "pullRequest": {
+                "number": 311,
+                "url": "https://github.com/gitspore/gitspore/pull/311",
+                "state": "open"
+              },
+              "statusReason": null
             }
           }
         ]
@@ -171,14 +185,20 @@
               "worktreePath": "/home/dev/repo/.worktrees/301-login-umlauts",
               "status": "merged",
               "statusSince": "2026-10-09T09:31:35.000Z",
-              "startedAt": "2026-10-09T09:30:01.000Z"
+              "startedAt": "2026-10-09T09:30:01.000Z",
+              "pullRequest": {
+                "number": 311,
+                "url": "https://github.com/gitspore/gitspore/pull/311",
+                "state": "merged"
+              },
+              "statusReason": null
             }
           }
         ]
       }
     },
     {
-      "at": 97000,
+      "at": 100000,
       "event": "state:patch",
       "payload": {
         "version": 8,

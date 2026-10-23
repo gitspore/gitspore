@@ -24,6 +24,8 @@ function agent(id: string, slotIndex: number | null): Agent {
     status: "working",
     statusSince: "2026-10-21T09:00:00.000Z",
     startedAt: "2026-10-21T09:00:00.000Z",
+    pullRequest: null,
+    statusReason: null,
   };
 }
 
@@ -148,6 +150,21 @@ describe("RepoService", () => {
         path: top,
         baseBranch: "develop",
       });
+    });
+
+    it("lets onSwitched listeners fill the new state before GitHub restarts", async () => {
+      await initRepo(dir);
+      const repos = service();
+      const seen: string[] = [];
+      repos.onSwitched(async () => {
+        seen.push(`state of ${store.snapshot().repo?.path}`);
+        expect(github.restart).not.toHaveBeenCalled();
+      });
+
+      await repos.choose(dir, "main");
+
+      expect(seen).toEqual([`state of ${await realpath(dir)}`]);
+      expect(github.restart).toHaveBeenCalled();
     });
 
     it("works from no repo at all", async () => {

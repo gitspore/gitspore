@@ -13,7 +13,9 @@
         "worktreePath": "/home/dev/repo/.worktrees/401-login",
         "status": "starting",
         "statusSince": "2026-10-09T09:30:00.000Z",
-        "startedAt": "2026-10-09T09:30:00.000Z"
+        "startedAt": "2026-10-09T09:30:00.000Z",
+        "pullRequest": null,
+        "statusReason": null
       },
       {
         "id": "agent-2",
@@ -23,7 +25,9 @@
         "worktreePath": "/home/dev/repo/.worktrees/402-dark-mode",
         "status": "starting",
         "statusSince": "2026-10-09T09:30:00.000Z",
-        "startedAt": "2026-10-09T09:30:00.000Z"
+        "startedAt": "2026-10-09T09:30:00.000Z",
+        "pullRequest": null,
+        "statusReason": null
       },
       {
         "id": "agent-3",
@@ -33,7 +37,9 @@
         "worktreePath": "/home/dev/repo/.worktrees/403-csv-export",
         "status": "starting",
         "statusSince": "2026-10-09T09:30:00.000Z",
-        "startedAt": "2026-10-09T09:30:00.000Z"
+        "startedAt": "2026-10-09T09:30:00.000Z",
+        "pullRequest": null,
+        "statusReason": null
       },
       {
         "id": "agent-4",
@@ -43,7 +49,9 @@
         "worktreePath": "/home/dev/repo/.worktrees/404-readme",
         "status": "starting",
         "statusSince": "2026-10-09T09:30:00.000Z",
-        "startedAt": "2026-10-09T09:30:00.000Z"
+        "startedAt": "2026-10-09T09:30:00.000Z",
+        "pullRequest": null,
+        "statusReason": null
       },
       {
         "id": "agent-5",
@@ -53,7 +61,9 @@
         "worktreePath": "/home/dev/repo/.worktrees/405-settings",
         "status": "starting",
         "statusSince": "2026-10-09T09:30:00.000Z",
-        "startedAt": "2026-10-09T09:30:00.000Z"
+        "startedAt": "2026-10-09T09:30:00.000Z",
+        "pullRequest": null,
+        "statusReason": null
       },
       {
         "id": "agent-6",
@@ -63,7 +73,9 @@
         "worktreePath": "/home/dev/repo/.worktrees/406-cache",
         "status": "starting",
         "statusSince": "2026-10-09T09:30:00.000Z",
-        "startedAt": "2026-10-09T09:30:00.000Z"
+        "startedAt": "2026-10-09T09:30:00.000Z",
+        "pullRequest": null,
+        "statusReason": null
       }
     ],
     "issues": [
@@ -122,7 +134,9 @@
               "worktreePath": "/home/dev/repo/.worktrees/401-login",
               "status": "working",
               "statusSince": "2026-10-09T09:30:00.400Z",
-              "startedAt": "2026-10-09T09:30:00.000Z"
+              "startedAt": "2026-10-09T09:30:00.000Z",
+              "pullRequest": null,
+              "statusReason": null
             }
           }
         ]
@@ -144,7 +158,9 @@
               "worktreePath": "/home/dev/repo/.worktrees/402-dark-mode",
               "status": "working",
               "statusSince": "2026-10-09T09:30:00.650Z",
-              "startedAt": "2026-10-09T09:30:00.000Z"
+              "startedAt": "2026-10-09T09:30:00.000Z",
+              "pullRequest": null,
+              "statusReason": null
             }
           }
         ]
@@ -166,7 +182,9 @@
               "worktreePath": "/home/dev/repo/.worktrees/403-csv-export",
               "status": "working",
               "statusSince": "2026-10-09T09:30:00.900Z",
-              "startedAt": "2026-10-09T09:30:00.000Z"
+              "startedAt": "2026-10-09T09:30:00.000Z",
+              "pullRequest": null,
+              "statusReason": null
             }
           }
         ]
@@ -188,7 +206,9 @@
               "worktreePath": "/home/dev/repo/.worktrees/404-readme",
               "status": "working",
               "statusSince": "2026-10-09T09:30:01.150Z",
-              "startedAt": "2026-10-09T09:30:00.000Z"
+              "startedAt": "2026-10-09T09:30:00.000Z",
+              "pullRequest": null,
+              "statusReason": null
             }
           }
         ]
@@ -210,7 +230,9 @@
               "worktreePath": "/home/dev/repo/.worktrees/405-settings",
               "status": "working",
               "statusSince": "2026-10-09T09:30:01.400Z",
-              "startedAt": "2026-10-09T09:30:00.000Z"
+              "startedAt": "2026-10-09T09:30:00.000Z",
+              "pullRequest": null,
+              "statusReason": null
             }
           }
         ]
@@ -232,7 +254,9 @@
               "worktreePath": "/home/dev/repo/.worktrees/406-cache",
               "status": "working",
               "statusSince": "2026-10-09T09:30:01.650Z",
-              "startedAt": "2026-10-09T09:30:00.000Z"
+              "startedAt": "2026-10-09T09:30:00.000Z",
+              "pullRequest": null,
+              "statusReason": null
             }
           }
         ]
@@ -254,7 +278,9 @@
               "worktreePath": "/home/dev/repo/.worktrees/401-login",
               "status": "needs_input",
               "statusSince": "2026-10-09T09:30:01.900Z",
-              "startedAt": "2026-10-09T09:30:00.000Z"
+              "startedAt": "2026-10-09T09:30:00.000Z",
+              "pullRequest": null,
+              "statusReason": null
             }
           }
         ]
@@ -276,7 +302,9 @@
               "worktreePath": "/home/dev/repo/.worktrees/402-dark-mode",
               "status": "error",
               "statusSince": "2026-10-09T09:30:02.150Z",
-              "startedAt": "2026-10-09T09:30:00.000Z"
+              "startedAt": "2026-10-09T09:30:00.000Z",
+              "pullRequest": null,
+              "statusReason": null
             }
           }
         ]
@@ -298,7 +326,9 @@
               "worktreePath": "/home/dev/repo/.worktrees/403-csv-export",
               "status": "needs_input",
               "statusSince": "2026-10-09T09:30:02.400Z",
-              "startedAt": "2026-10-09T09:30:00.000Z"
+              "startedAt": "2026-10-09T09:30:00.000Z",
+              "pullRequest": null,
+              "statusReason": null
             }
           }
         ]
@@ -320,7 +350,9 @@
               "worktreePath": "/home/dev/repo/.worktrees/404-readme",
               "status": "done",
               "statusSince": "2026-10-09T09:30:02.650Z",
-              "startedAt": "2026-10-09T09:30:00.000Z"
+              "startedAt": "2026-10-09T09:30:00.000Z",
+              "pullRequest": null,
+              "statusReason": null
             }
           }
         ]
@@ -342,7 +374,9 @@
               "worktreePath": "/home/dev/repo/.worktrees/405-settings",
               "status": "error",
               "statusSince": "2026-10-09T09:30:02.900Z",
-              "startedAt": "2026-10-09T09:30:00.000Z"
+              "startedAt": "2026-10-09T09:30:00.000Z",
+              "pullRequest": null,
+              "statusReason": null
             }
           }
         ]
@@ -364,7 +398,9 @@
               "worktreePath": "/home/dev/repo/.worktrees/406-cache",
               "status": "needs_input",
               "statusSince": "2026-10-09T09:30:03.150Z",
-              "startedAt": "2026-10-09T09:30:00.000Z"
+              "startedAt": "2026-10-09T09:30:00.000Z",
+              "pullRequest": null,
+              "statusReason": null
             }
           }
         ]
@@ -386,7 +422,9 @@
               "worktreePath": "/home/dev/repo/.worktrees/401-login",
               "status": "working",
               "statusSince": "2026-10-09T09:30:03.400Z",
-              "startedAt": "2026-10-09T09:30:00.000Z"
+              "startedAt": "2026-10-09T09:30:00.000Z",
+              "pullRequest": null,
+              "statusReason": null
             }
           }
         ]
@@ -408,7 +446,9 @@
               "worktreePath": "/home/dev/repo/.worktrees/402-dark-mode",
               "status": "working",
               "statusSince": "2026-10-09T09:30:03.650Z",
-              "startedAt": "2026-10-09T09:30:00.000Z"
+              "startedAt": "2026-10-09T09:30:00.000Z",
+              "pullRequest": null,
+              "statusReason": null
             }
           }
         ]
@@ -430,7 +470,9 @@
               "worktreePath": "/home/dev/repo/.worktrees/403-csv-export",
               "status": "done",
               "statusSince": "2026-10-09T09:30:03.900Z",
-              "startedAt": "2026-10-09T09:30:00.000Z"
+              "startedAt": "2026-10-09T09:30:00.000Z",
+              "pullRequest": null,
+              "statusReason": null
             }
           }
         ]
@@ -452,7 +494,9 @@
               "worktreePath": "/home/dev/repo/.worktrees/404-readme",
               "status": "merged",
               "statusSince": "2026-10-09T09:30:04.150Z",
-              "startedAt": "2026-10-09T09:30:00.000Z"
+              "startedAt": "2026-10-09T09:30:00.000Z",
+              "pullRequest": null,
+              "statusReason": null
             }
           }
         ]
@@ -474,7 +518,9 @@
               "worktreePath": "/home/dev/repo/.worktrees/405-settings",
               "status": "working",
               "statusSince": "2026-10-09T09:30:04.400Z",
-              "startedAt": "2026-10-09T09:30:00.000Z"
+              "startedAt": "2026-10-09T09:30:00.000Z",
+              "pullRequest": null,
+              "statusReason": null
             }
           }
         ]
@@ -496,7 +542,9 @@
               "worktreePath": "/home/dev/repo/.worktrees/406-cache",
               "status": "working",
               "statusSince": "2026-10-09T09:30:04.650Z",
-              "startedAt": "2026-10-09T09:30:00.000Z"
+              "startedAt": "2026-10-09T09:30:00.000Z",
+              "pullRequest": null,
+              "statusReason": null
             }
           }
         ]
@@ -518,7 +566,9 @@
               "worktreePath": "/home/dev/repo/.worktrees/401-login",
               "status": "done",
               "statusSince": "2026-10-09T09:30:04.900Z",
-              "startedAt": "2026-10-09T09:30:00.000Z"
+              "startedAt": "2026-10-09T09:30:00.000Z",
+              "pullRequest": null,
+              "statusReason": null
             }
           }
         ]
@@ -540,7 +590,9 @@
               "worktreePath": "/home/dev/repo/.worktrees/402-dark-mode",
               "status": "needs_input",
               "statusSince": "2026-10-09T09:30:05.150Z",
-              "startedAt": "2026-10-09T09:30:00.000Z"
+              "startedAt": "2026-10-09T09:30:00.000Z",
+              "pullRequest": null,
+              "statusReason": null
             }
           }
         ]
@@ -562,7 +614,9 @@
               "worktreePath": "/home/dev/repo/.worktrees/403-csv-export",
               "status": "merged",
               "statusSince": "2026-10-09T09:30:05.400Z",
-              "startedAt": "2026-10-09T09:30:00.000Z"
+              "startedAt": "2026-10-09T09:30:00.000Z",
+              "pullRequest": null,
+              "statusReason": null
             }
           }
         ]
@@ -584,7 +638,9 @@
               "worktreePath": "/home/dev/repo/.worktrees/405-settings",
               "status": "done",
               "statusSince": "2026-10-09T09:30:05.650Z",
-              "startedAt": "2026-10-09T09:30:00.000Z"
+              "startedAt": "2026-10-09T09:30:00.000Z",
+              "pullRequest": null,
+              "statusReason": null
             }
           }
         ]
@@ -606,7 +662,9 @@
               "worktreePath": "/home/dev/repo/.worktrees/406-cache",
               "status": "needs_input",
               "statusSince": "2026-10-09T09:30:05.900Z",
-              "startedAt": "2026-10-09T09:30:00.000Z"
+              "startedAt": "2026-10-09T09:30:00.000Z",
+              "pullRequest": null,
+              "statusReason": null
             }
           }
         ]
@@ -628,7 +686,9 @@
               "worktreePath": "/home/dev/repo/.worktrees/401-login",
               "status": "merged",
               "statusSince": "2026-10-09T09:30:06.150Z",
-              "startedAt": "2026-10-09T09:30:00.000Z"
+              "startedAt": "2026-10-09T09:30:00.000Z",
+              "pullRequest": null,
+              "statusReason": null
             }
           }
         ]
@@ -650,7 +710,9 @@
               "worktreePath": "/home/dev/repo/.worktrees/402-dark-mode",
               "status": "working",
               "statusSince": "2026-10-09T09:30:06.400Z",
-              "startedAt": "2026-10-09T09:30:00.000Z"
+              "startedAt": "2026-10-09T09:30:00.000Z",
+              "pullRequest": null,
+              "statusReason": null
             }
           }
         ]
@@ -672,7 +734,9 @@
               "worktreePath": "/home/dev/repo/.worktrees/406-cache",
               "status": "working",
               "statusSince": "2026-10-09T09:30:06.650Z",
-              "startedAt": "2026-10-09T09:30:00.000Z"
+              "startedAt": "2026-10-09T09:30:00.000Z",
+              "pullRequest": null,
+              "statusReason": null
             }
           }
         ]
@@ -694,7 +758,9 @@
               "worktreePath": "/home/dev/repo/.worktrees/406-cache",
               "status": "done",
               "statusSince": "2026-10-09T09:30:06.900Z",
-              "startedAt": "2026-10-09T09:30:00.000Z"
+              "startedAt": "2026-10-09T09:30:00.000Z",
+              "pullRequest": null,
+              "statusReason": null
             }
           }
         ]

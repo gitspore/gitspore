@@ -17,6 +17,8 @@ const agent = (overrides: Partial<Agent>): Agent => ({
   status: "working",
   statusSince: "2026-10-21T10:00:00.000Z",
   startedAt: "2026-10-21T10:00:00.000Z",
+  pullRequest: null,
+  statusReason: null,
   ...overrides,
 });
 

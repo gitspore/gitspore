@@ -23,6 +23,36 @@ export type IsoTimestamp = string;
 export type AgentId = string;
 export type SessionId = string;
 
+/** The pull request of an agent's branch. If there are several, the newest. */
+export type PullRequest = {
+  number: number;
+  /** The pull request's page on github.com. */
+  url: string;
+  /** `merged` is a closed pull request whose branch was merged. */
+  state: "open" | "closed" | "merged";
+};
+
+/**
+ * Why an agent is in its status, where the status alone doesn't say it.
+ *
+ * - `no_status`: Claude Code has sent no status since its start; it most
+ *   likely waits for the trust question in its terminal (`error`).
+ * - `pr_closed`: the pull request was closed without merging. Nothing was
+ *   deleted (`error`).
+ * - `cleanup_blocked`: the branch is merged, but the worktree has uncommitted
+ *   changes, so it was kept (`merged`).
+ * - `daemon_restarted`: the worktree is from before a daemon restart, so
+ *   Claude Code no longer runs in it. Worktree and branch are kept (`error`).
+ */
+export type StatusReasonCode =
+  "no_status" | "pr_closed" | "cleanup_blocked" | "daemon_restarted";
+
+export type StatusReason = {
+  code: StatusReasonCode;
+  /** For people: what happened and what to do. */
+  message: string;
+};
+
 /**
  * Where an agent is in its life. The daemon is the only one that changes it.
  *
@@ -32,12 +62,17 @@ export type SessionId = string;
  * - `working`: Claude Code runs and does not need the user.
  * - `needs_input`: Claude Code stopped and waits for the user.
  * - `error`: Claude Code exited with an error or reported an API failure,
- *   sent no status at all after its start (see `statusMessage`), or the
- *   worktree of a stopped agent could not be removed. The worktree is kept.
+ *   sent no status at all after its start (`no_status`), its pull request
+ *   was closed without merging (`pr_closed`), the worktree of a stopped
+ *   agent could not be removed, or the agent was taken over from before a
+ *   daemon restart and its branch has no pull request (`daemon_restarted`).
+ *   The worktree is kept.
  *   A failed git setup is not an `error`: the agent is removed again (see
  *   `agent:dispatch`).
- * - `done`: Claude Code finished; the branch waits for review and merge.
- * - `merged`: the branch is merged into main. The agent is removed after cleanup.
+ * - `done`: the branch has an open pull request and waits for review and
+ *   merge.
+ * - `merged`: the pull request is merged. The agent is removed shortly after,
+ *   unless its worktree has uncommitted changes (`cleanup_blocked`).
  */
 
 export type AgentStatus =
@@ -60,8 +95,14 @@ export type Agent = {
   status: AgentStatus;
   /** When `status` last changed. The client derives waiting times from it. */
   statusSince: IsoTimestamp;
-  statusMessage?: string;
   startedAt: IsoTimestamp;
+  /** The pull request of the branch; `null` until there is one. */
+  pullRequest: PullRequest | null;
+  /**
+   * Why the agent is in `status`, if the status alone doesn't say it. A
+   * reason belongs to its status: the next status change clears it.
+   */
+  statusReason: StatusReason | null;
 };
 
 /** An open GitHub issue in the repo. */

@@ -1,25 +1,40 @@
 import { RepoConfig } from "@/config/repo-config";
-import type { AgentStatus, Issue, StatePatch } from "@gitspore/shared";
+import {
+  issueNumberFromBranch,
+  type AgentStatus,
+  type Issue,
+  type PullRequest,
+  type StatePatch,
+} from "@gitspore/shared";
 import { Logger } from "@nestjs/common";
 import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { GitHubError } from "../github/github-error";
-import type { GitHubService } from "../github/github.service";
+import type {
+  GitHubService,
+  PullRequestChange,
+} from "../github/github.service";
 import { StateStore } from "../state/state.store";
 import type { ClaudeLocator } from "../terminal/claude-locator";
 import { TerminalError } from "../terminal/terminal-error";
 import type { TerminalService } from "../terminal/terminal.service";
 import { WorktreeError } from "../worktree/worktree-error";
-import type { WorktreeService } from "../worktree/worktree.service";
+import type {
+  Leftover,
+  Worktree,
+  WorktreeService,
+} from "../worktree/worktree.service";
 import { AgentService } from "./agent.service";
 import type { RepoService } from "../repo/repo.service";
 import { PROMPT, taskFile } from "./task-file";
-import type { PullRequest } from "../github/github-api";
 import type { HookService } from "../hooks/hook.service";
 
 // No repo switch is running.
-const notSwitching = { isSwitching: () => false } as unknown as RepoService;
+const notSwitching = {
+  isSwitching: () => false,
+  onSwitched: () => {},
+} as unknown as RepoService;
 
 const issue = (number: number): Issue => ({
   number,
@@ -51,6 +66,16 @@ class FakeWorktrees {
   readonly publish = jest.fn(async () => {});
   readonly remove = jest.fn(async () => {});
   readonly deleteRemoteBranch = jest.fn(async () => {});
+  // No worktrees and no branches from earlier agents, unless a test says so.
+  readonly list = jest.fn<Promise<Worktree[]>, []>(async () => []);
+  readonly leftoverFor = jest.fn<Promise<Leftover | null>, [unknown]>(
+    async () => null,
+  );
+  readonly open = jest.fn(async (leftover: Leftover) => {
+    const path = join(this.root, leftover.branch.slice("spore/".length));
+    await mkdir(path, { recursive: true });
+    return { branch: leftover.branch, path };
+  });
 }
 
 class FakeTerminals {
@@ -62,9 +87,20 @@ class FakeTerminals {
       this.exitListener = listener;
     },
   );
+  private reviver?: (agentId: string) => Promise<void>;
+  readonly onMissing = jest.fn(
+    (reviver: (agentId: string) => Promise<void>) => {
+      this.reviver = reviver;
+    },
+  );
 
   exit(agentId: string, exitCode: number) {
     this.exitListener?.(agentId, exitCode);
+  }
+
+  // A tab opens the agent's terminal while it has none.
+  async open(agentId: string) {
+    await this.reviver?.(agentId);
   }
 }
 
@@ -81,6 +117,20 @@ class FakeGitHub {
   readonly findPullRequest = jest.fn<Promise<PullRequest | null>, [string]>(
     async () => null,
   );
+  private pullRequestListener?: (change: PullRequestChange) => void;
+  readonly onPullRequest = jest.fn(
+    (listener: (change: PullRequestChange) => void) => {
+      this.pullRequestListener = listener;
+    },
+  );
+
+  pullRequestChanged(branch: string, pullRequest: PullRequest) {
+    this.pullRequestListener?.({
+      branch,
+      issueNumber: issueNumberFromBranch(branch) ?? 0,
+      pullRequest,
+    });
+  }
 }
 
 class FakeHooks {
@@ -367,6 +417,400 @@ describe("AgentService.dispatch", () => {
     expect(store.snapshot().agents).toEqual([]);
   });
 
+  // --- a branch an earlier agent left (#102) ---------------------------
+
+  describe("on a branch an earlier agent left", () => {
+    const leftover = (change: Partial<Leftover> = {}): Leftover => ({
+      branch: "spore/42-issue",
+      path: null,
+      local: true,
+      onOrigin: true,
+      ...change,
+    });
+
+    it("starts in the worktree that is still there and creates nothing", async () => {
+      const path = join(root, "42-issue");
+      await mkdir(path, { recursive: true });
+      worktrees.leftoverFor.mockResolvedValue(leftover({ path }));
+
+      expect(await dispatch()).toEqual({ agentId: expect.any(String) });
+      expect(worktrees.create).not.toHaveBeenCalled();
+      expect(worktrees.open).not.toHaveBeenCalled();
+      expect(worktrees.publish).not.toHaveBeenCalled();
+      expect(terminals.spawn).toHaveBeenCalledWith(
+        expect.objectContaining({ cwd: path }),
+      );
+      expect(await readFile(join(path, ".gitspore", "task.md"), "utf8")).toBe(
+        taskFile({ ...issue(42), body: "Fix it." }),
+      );
+    });
+
+    it("makes a worktree on the branch when only the branch is left", async () => {
+      worktrees.leftoverFor.mockResolvedValue(leftover());
+
+      expect(await dispatch()).toEqual({ agentId: expect.any(String) });
+      expect(worktrees.open).toHaveBeenCalledWith(leftover());
+      expect(worktrees.create).not.toHaveBeenCalled();
+      expect(worktrees.publish).not.toHaveBeenCalled();
+    });
+
+    it("pushes a branch that origin doesn't have yet", async () => {
+      worktrees.leftoverFor.mockResolvedValue(leftover({ onOrigin: false }));
+
+      await dispatch();
+
+      expect(worktrees.publish).toHaveBeenCalledWith("spore/42-issue");
+    });
+
+    it("moves the agent to the branch of the renamed issue", async () => {
+      worktrees.leftoverFor.mockResolvedValue(
+        leftover({ branch: "spore/42-old-title" }),
+      );
+
+      await dispatch();
+
+      expect(store.snapshot().agents[0]).toMatchObject({
+        branch: "spore/42-old-title",
+        worktreePath: join(root, "42-old-title"),
+      });
+      expect(statuses).toEqual(["starting", "starting"]);
+    });
+
+    it("leaves branch and worktree alone when it fails in a worktree that was there", async () => {
+      const path = join(root, "42-issue");
+      await mkdir(path, { recursive: true });
+      worktrees.leftoverFor.mockResolvedValue(leftover({ path }));
+      terminals.spawn.mockImplementationOnce(() => {
+        throw new Error("File not found: ");
+      });
+
+      expect(await dispatch()).toMatchObject({ error: expect.anything() });
+      expect(worktrees.remove).not.toHaveBeenCalled();
+      expect(worktrees.deleteRemoteBranch).not.toHaveBeenCalled();
+      expect(store.snapshot().agents).toEqual([]);
+    });
+
+    it("removes only the new worktree when it fails on a local branch", async () => {
+      worktrees.leftoverFor.mockResolvedValue(leftover());
+      terminals.spawn.mockImplementationOnce(() => {
+        throw new Error("File not found: ");
+      });
+
+      await dispatch();
+
+      expect(worktrees.remove).toHaveBeenCalledWith({
+        path: join(root, "42-issue"),
+        force: true,
+        deleteBranch: false,
+      });
+      expect(worktrees.deleteRemoteBranch).not.toHaveBeenCalled();
+    });
+
+    it("deletes the local copy, not the branch on origin, when it fails on a branch only origin had", async () => {
+      worktrees.leftoverFor.mockResolvedValue(leftover({ local: false }));
+      terminals.spawn.mockImplementationOnce(() => {
+        throw new Error("File not found: ");
+      });
+
+      await dispatch();
+
+      expect(worktrees.remove).toHaveBeenCalledWith({
+        path: join(root, "42-issue"),
+        force: true,
+        deleteBranch: true,
+      });
+      expect(worktrees.deleteRemoteBranch).not.toHaveBeenCalled();
+    });
+  });
+
+  // --- worktrees from before a restart (#102) -------------------------
+
+  describe("at startup", () => {
+    const worktree = (n: number): Worktree => ({
+      branch: `spore/${n}-issue`,
+      path: join(root, `${n}-issue`),
+    });
+    const merged: PullRequest = {
+      number: 7,
+      url: "https://github.com/owner/repo/pull/7",
+      state: "merged",
+    };
+    const agentOn = (n: number) =>
+      store.snapshot().agents.find((a) => a.issueNumber === n);
+
+    beforeEach(() => {
+      jest.spyOn(Logger.prototype, "log").mockImplementation(() => {});
+    });
+
+    it("takes over each worktree as an agent without Claude, in the free slots", async () => {
+      worktrees.list.mockResolvedValue([worktree(42), worktree(43)]);
+
+      await service.onModuleInit();
+
+      expect(store.snapshot().agents).toEqual([
+        expect.objectContaining({
+          slotIndex: 0,
+          issueNumber: 42,
+          branch: "spore/42-issue",
+          worktreePath: join(root, "42-issue"),
+          status: "error",
+          pullRequest: null,
+          statusReason: {
+            code: "daemon_restarted",
+            message: expect.stringMatching(/restarted/),
+          },
+        }),
+        expect.objectContaining({ slotIndex: 1, issueNumber: 43 }),
+      ]);
+      expect(terminals.spawn).not.toHaveBeenCalled();
+    });
+
+    it("takes over no more worktrees than there are slots", async () => {
+      worktrees.list.mockResolvedValue(
+        [40, 41, 42, 43, 44, 45, 46].map(worktree),
+      );
+
+      await service.onModuleInit();
+
+      expect(store.snapshot().agents.map((a) => a.slotIndex)).toEqual([
+        0, 1, 2, 3, 4, 5,
+      ]);
+    });
+
+    it("takes over only one worktree per issue", async () => {
+      worktrees.list.mockResolvedValue([
+        worktree(42),
+        { branch: "spore/42-old-title", path: join(root, "42-old-title") },
+      ]);
+
+      await service.onModuleInit();
+
+      expect(store.snapshot().agents).toHaveLength(1);
+    });
+
+    it("starts without agents when git fails", async () => {
+      worktrees.list.mockRejectedValue(new Error("git is gone"));
+
+      await service.onModuleInit();
+
+      expect(store.snapshot().agents).toEqual([]);
+    });
+
+    it("refuses a dispatch for an issue it took over", async () => {
+      worktrees.list.mockResolvedValue([worktree(42)]);
+      await service.onModuleInit();
+
+      expect(await dispatch(42, 1)).toMatchObject({
+        error: { code: "issue_taken" },
+      });
+    });
+
+    it("is done once the poll finds an open pull request", async () => {
+      worktrees.list.mockResolvedValue([worktree(42)]);
+      await service.onModuleInit();
+
+      github.pullRequestChanged("spore/42-issue", { ...merged, state: "open" });
+
+      expect(agentOn(42)).toMatchObject({ status: "done", statusReason: null });
+    });
+
+    it("blooms and cleans up once the poll finds the merge, without a kill", async () => {
+      service.bloomMs = 20;
+      worktrees.list.mockResolvedValue([worktree(42)]);
+      await service.onModuleInit();
+
+      github.pullRequestChanged("spore/42-issue", merged);
+      expect(agentOn(42)?.status).toBe("merged");
+      await sleep(60);
+
+      expect(terminals.kill).not.toHaveBeenCalled();
+      expect(worktrees.remove).toHaveBeenCalledWith({
+        path: join(root, "42-issue"),
+        force: true,
+        deleteBranch: true,
+      });
+      expect(store.snapshot().agents).toEqual([]);
+    });
+
+    it("can be stopped, with and without the worktree, without a kill", async () => {
+      worktrees.list.mockResolvedValue([worktree(42), worktree(43)]);
+      await service.onModuleInit();
+
+      await service.stop({ agentId: agentOn(42)!.id, removeWorktree: false });
+      await service.stop({ agentId: agentOn(43)!.id, removeWorktree: true });
+
+      expect(terminals.kill).not.toHaveBeenCalled();
+      expect(worktrees.remove).toHaveBeenCalledTimes(1);
+      expect(worktrees.remove).toHaveBeenCalledWith({
+        path: join(root, "43-issue"),
+      });
+      expect(store.snapshot().agents).toEqual([]);
+    });
+
+    it("takes over again after a repo switch", async () => {
+      let switched: (() => Promise<void>) | undefined;
+      const repos = {
+        isSwitching: () => false,
+        onSwitched: (listener: () => Promise<void>) => (switched = listener),
+      };
+      service = new AgentService(
+        store,
+        github as unknown as GitHubService,
+        worktrees as unknown as WorktreeService,
+        terminals as unknown as TerminalService,
+        locator as unknown as ClaudeLocator,
+        new RepoConfig("/repo", "main"),
+        hooks as unknown as HookService,
+        repos as unknown as RepoService,
+      );
+      await service.onModuleInit();
+      worktrees.list.mockResolvedValue([worktree(42)]);
+
+      await switched?.();
+
+      expect(agentOn(42)?.statusReason?.code).toBe("daemon_restarted");
+    });
+
+    it("takes over nothing without a repo", async () => {
+      service = new AgentService(
+        store,
+        github as unknown as GitHubService,
+        worktrees as unknown as WorktreeService,
+        terminals as unknown as TerminalService,
+        locator as unknown as ClaudeLocator,
+        new RepoConfig(null, "main"),
+        hooks as unknown as HookService,
+        notSwitching,
+      );
+
+      await service.onModuleInit();
+
+      expect(worktrees.list).not.toHaveBeenCalled();
+    });
+  });
+
+  // --- Claude Code again when the terminal opens (#102) ---------------
+
+  describe("when the terminal of an agent without Claude opens", () => {
+    beforeEach(() => {
+      jest.spyOn(Logger.prototype, "log").mockImplementation(() => {});
+    });
+
+    async function takeOver() {
+      const path = join(root, "42-issue");
+      await mkdir(path, { recursive: true });
+      worktrees.list.mockResolvedValue([{ branch: "spore/42-issue", path }]);
+      await service.onModuleInit();
+      return store.snapshot().agents[0];
+    }
+
+    it("continues the conversation of an agent taken over after a restart", async () => {
+      const agent = await takeOver();
+
+      await terminals.open(agent.id);
+
+      expect(terminals.spawn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          agentId: agent.id,
+          cwd: agent.worktreePath,
+          args: ["--settings", ".gitspore/settings.json", "--continue"],
+        }),
+      );
+      const hook = JSON.parse(
+        await readFile(
+          join(agent.worktreePath, ".gitspore", "hook.json"),
+          "utf8",
+        ),
+      );
+      expect(hook).toMatchObject({ agentId: agent.id });
+      expect(hooks.issue).toHaveBeenCalledWith(agent.id);
+    });
+
+    it("drops daemon_restarted: Claude runs and waits for the user", async () => {
+      const agent = await takeOver();
+
+      await terminals.open(agent.id);
+
+      expect(store.snapshot().agents[0]).toMatchObject({
+        status: "needs_input",
+        statusReason: null,
+      });
+    });
+
+    it("keeps done when the branch has an open pull request", async () => {
+      const agent = await takeOver();
+      github.pullRequestChanged("spore/42-issue", {
+        number: 7,
+        url: "https://github.com/owner/repo/pull/7",
+        state: "open",
+      });
+
+      await terminals.open(agent.id);
+
+      expect(store.snapshot().agents[0].status).toBe("done");
+    });
+
+    it("starts Claude once for two tabs at the same time", async () => {
+      const agent = await takeOver();
+
+      await Promise.all([terminals.open(agent.id), terminals.open(agent.id)]);
+      await terminals.open(agent.id);
+
+      expect(terminals.spawn).toHaveBeenCalledTimes(1);
+    });
+
+    it("continues after Claude exited, and the exit is handled again", async () => {
+      await service.onModuleInit();
+      const ack = await dispatch();
+      if ("error" in ack) throw new Error("dispatch failed");
+      terminals.exit(ack.agentId, 0);
+      await settle();
+
+      await terminals.open(ack.agentId);
+      terminals.exit(ack.agentId, 1);
+
+      expect(terminals.spawn).toHaveBeenCalledTimes(2);
+      expect(terminals.spawn.mock.calls[1][0].args).toContain("--continue");
+      expect(store.snapshot().agents[0].status).toBe("error");
+    });
+
+    it("starts nothing for a running, stopped, merged or unknown agent", async () => {
+      await service.onModuleInit();
+      service.bloomMs = 60_000;
+      const ack = await dispatch();
+      if ("error" in ack) throw new Error("dispatch failed");
+
+      await terminals.open(ack.agentId);
+      await terminals.open("overview");
+      terminals.exit(ack.agentId, 0);
+      await settle();
+      github.pullRequestChanged("spore/42-issue", {
+        number: 7,
+        url: "https://github.com/owner/repo/pull/7",
+        state: "merged",
+      });
+      await terminals.open(ack.agentId);
+
+      expect(terminals.spawn).toHaveBeenCalledTimes(1);
+      await service.stop({ agentId: ack.agentId, removeWorktree: false });
+    });
+
+    it("leaves the agent as it is when Claude is gone", async () => {
+      const agent = await takeOver();
+      locator.resolve.mockRejectedValue(
+        new TerminalError("claude_not_found", "Install it"),
+      );
+
+      await terminals.open(agent.id);
+
+      expect(terminals.spawn).not.toHaveBeenCalled();
+      expect(store.snapshot().agents[0].statusReason?.code).toBe(
+        "daemon_restarted",
+      );
+      expect(hooks.revoke).toHaveBeenCalledWith(agent.id);
+    });
+  });
+
   describe("when Claude Code exits", () => {
     let agentId: string;
 
@@ -378,8 +822,8 @@ describe("AgentService.dispatch", () => {
       statuses = [];
     });
 
-    const statusOf = () =>
-      store.snapshot().agents.find((a) => a.id === agentId)?.status;
+    const agentOf = () => store.snapshot().agents.find((a) => a.id === agentId);
+    const statusOf = () => agentOf()?.status;
 
     it("is error after a non-zero exit code", async () => {
       terminals.exit(agentId, 1);
@@ -401,6 +845,7 @@ describe("AgentService.dispatch", () => {
 
       expect(statusOf()).toBe("done");
       expect(github.findPullRequest).toHaveBeenCalledWith("spore/42-issue");
+      expect(agentOf()?.pullRequest?.number).toBe(7);
     });
 
     it("is needs_input after a clean exit without a pull request", async () => {
@@ -423,7 +868,12 @@ describe("AgentService.dispatch", () => {
       expect(statusOf()).toBe("needs_input");
     });
 
-    it("is needs_input when GitHub cannot be asked", async () => {
+    it("is needs_input when GitHub cannot be asked, and keeps the pull request it has", async () => {
+      github.pullRequestChanged("spore/42-issue", {
+        number: 7,
+        url: "https://github.com/owner/repo/pull/7",
+        state: "open",
+      });
       github.findPullRequest.mockRejectedValue(
         new GitHubError("github_unreachable", "Offline"),
       );
@@ -432,6 +882,7 @@ describe("AgentService.dispatch", () => {
       await settle();
 
       expect(statusOf()).toBe("needs_input");
+      expect(agentOf()?.pullRequest?.number).toBe(7);
       expect(Logger.prototype.warn).toHaveBeenCalled();
     });
 
@@ -564,6 +1015,8 @@ describe("AgentService.dispatch", () => {
             status: "working",
             statusSince: "2026-10-21T10:00:00.000Z",
             startedAt: "2026-10-21T10:00:00.000Z",
+            pullRequest: null,
+            statusReason: null,
           },
         },
       ]);
@@ -594,7 +1047,7 @@ describe("AgentService.dispatch", () => {
       await sleep(60);
 
       expect(agentOf()?.status).toBe("error");
-      expect(agentOf()?.statusMessage).toMatch(/trust the folder/);
+      expect(agentOf()?.statusReason?.code).toBe("no_status");
     });
 
     it("is satisfied by the first hook, even SessionStart", async () => {
@@ -611,7 +1064,7 @@ describe("AgentService.dispatch", () => {
       await settle();
 
       expect(agentOf()?.status).toBe("working");
-      expect(agentOf()?.statusMessage).toBeUndefined();
+      expect(agentOf()?.statusReason).toBeNull();
     });
 
     it("is cleared when Claude Code exits", async () => {
@@ -749,6 +1202,228 @@ describe("AgentService.dispatch", () => {
       await settle();
 
       expect(hooks.revoke).toHaveBeenCalledWith(agentId);
+    });
+  });
+
+  describe("when the pull request changes", () => {
+    let agentId: string;
+    const branch = "spore/42-issue";
+    const pr = (state: PullRequest["state"]): PullRequest => ({
+      number: 7,
+      url: "https://github.com/owner/repo/pull/7",
+      state,
+    });
+
+    beforeEach(async () => {
+      service.onModuleInit();
+      const ack = await dispatch();
+      if ("error" in ack) throw new Error("dispatch failed");
+      agentId = ack.agentId;
+      statuses = [];
+    });
+
+    const agentOf = () => store.snapshot().agents.find((a) => a.id === agentId);
+    const send = async (payload: unknown) => {
+      hooks.send(agentId, payload);
+      await settle();
+    };
+
+    it("puts an open pull request on the agent and makes it done, in one patch", () => {
+      github.pullRequestChanged(branch, pr("open"));
+
+      expect(agentOf()).toMatchObject({
+        status: "done",
+        pullRequest: pr("open"),
+      });
+      expect(statuses).toEqual(["done"]);
+    });
+
+    it("keeps a working agent working, but shows the pull request", async () => {
+      await send({ hook_event_name: "UserPromptSubmit" });
+
+      github.pullRequestChanged(branch, pr("open"));
+
+      expect(agentOf()).toMatchObject({
+        status: "working",
+        pullRequest: pr("open"),
+      });
+    });
+
+    it("makes the agent merged", () => {
+      github.pullRequestChanged(branch, pr("merged"));
+
+      expect(agentOf()).toMatchObject({
+        status: "merged",
+        pullRequest: pr("merged"),
+      });
+    });
+
+    it("is error with pr_closed when closed without merging, and done when reopened", () => {
+      github.pullRequestChanged(branch, pr("closed"));
+      expect(agentOf()?.status).toBe("error");
+      expect(agentOf()?.statusReason?.code).toBe("pr_closed");
+
+      github.pullRequestChanged(branch, pr("open"));
+      expect(agentOf()?.status).toBe("done");
+      expect(agentOf()?.statusReason).toBeNull();
+    });
+
+    it("adds pr_closed to an agent that is already error", async () => {
+      await send({ hook_event_name: "StopFailure" });
+
+      github.pullRequestChanged(branch, pr("closed"));
+
+      expect(agentOf()?.statusReason?.code).toBe("pr_closed");
+    });
+
+    it("lets hooks move the agent on after pr_closed", async () => {
+      github.pullRequestChanged(branch, pr("closed"));
+
+      await send({ hook_event_name: "UserPromptSubmit" });
+
+      expect(agentOf()?.status).toBe("working");
+      expect(agentOf()?.statusReason).toBeNull();
+    });
+
+    it("ignores hooks and the exit once merged", async () => {
+      github.pullRequestChanged(branch, pr("merged"));
+
+      await send({ hook_event_name: "Stop" });
+      terminals.exit(agentId, 1);
+      await settle();
+
+      expect(agentOf()?.status).toBe("merged");
+      expect(github.findPullRequest).not.toHaveBeenCalled();
+    });
+
+    it("wins over a pull request check still under way", async () => {
+      const answer = deferred<PullRequest | null>();
+      github.findPullRequest.mockReturnValue(answer.promise);
+
+      await send({ hook_event_name: "Stop" });
+      github.pullRequestChanged(branch, pr("merged"));
+      answer.resolve(pr("open"));
+      await settle();
+
+      expect(agentOf()?.status).toBe("merged");
+    });
+
+    it("ignores branches without an agent", () => {
+      github.pullRequestChanged("spore/99-other", pr("open"));
+
+      expect(statuses).toEqual([]);
+    });
+  });
+
+  describe("after a merge", () => {
+    let agentId: string;
+    const branch = "spore/42-issue";
+    const path = () => join(root, "42-issue");
+    const merged: PullRequest = {
+      number: 7,
+      url: "https://github.com/owner/repo/pull/7",
+      state: "merged",
+    };
+
+    beforeEach(async () => {
+      service.onModuleInit();
+      service.bloomMs = 20;
+      service.watchdogMs = 40;
+      // Like the real TerminalService: kill() ends the process.
+      terminals.kill.mockImplementation((id: string) => terminals.exit(id, 1));
+      const ack = await dispatch();
+      if ("error" in ack) throw new Error("dispatch failed");
+      agentId = ack.agentId;
+      statuses = [];
+    });
+
+    const agentOf = () => store.snapshot().agents.find((a) => a.id === agentId);
+
+    it("shows merged first and touches nothing during the bloom", () => {
+      github.pullRequestChanged(branch, merged);
+
+      expect(agentOf()?.status).toBe("merged");
+      expect(terminals.kill).not.toHaveBeenCalled();
+      expect(worktrees.remove).not.toHaveBeenCalled();
+    });
+
+    it("then ends Claude, removes worktree and local branch, and frees the slot", async () => {
+      github.pullRequestChanged(branch, merged);
+      await sleep(60);
+
+      expect(terminals.kill).toHaveBeenCalledWith(agentId);
+      expect(hooks.revoke).toHaveBeenCalledWith(agentId);
+      expect(worktrees.remove).toHaveBeenCalledWith({
+        path: path(),
+        force: true,
+        deleteBranch: true,
+      });
+      expect(worktrees.deleteRemoteBranch).not.toHaveBeenCalled();
+      expect(store.snapshot().agents).toEqual([]);
+      expect(statuses).toEqual(["merged", "removed"]);
+    });
+
+    it("doesn't kill a Claude that has already ended", async () => {
+      github.pullRequestChanged(branch, merged);
+      terminals.exit(agentId, 0);
+      await sleep(60);
+
+      expect(terminals.kill).not.toHaveBeenCalled();
+      expect(store.snapshot().agents).toEqual([]);
+    });
+
+    it("keeps a worktree with uncommitted changes, with cleanup_blocked", async () => {
+      worktrees.isClean.mockResolvedValue(false);
+
+      github.pullRequestChanged(branch, merged);
+      await sleep(60);
+
+      expect(worktrees.remove).not.toHaveBeenCalled();
+      expect(agentOf()?.status).toBe("merged");
+      expect(agentOf()?.statusReason).toEqual({
+        code: "cleanup_blocked",
+        message: expect.stringMatching(/uncommitted changes/),
+      });
+    });
+
+    it("keeps the agent with cleanup_blocked when the removal fails", async () => {
+      worktrees.remove.mockRejectedValue(new Error("file is locked"));
+
+      github.pullRequestChanged(branch, merged);
+      await sleep(60);
+
+      expect(agentOf()?.statusReason?.code).toBe("cleanup_blocked");
+      expect(agentOf()?.statusReason?.message).toMatch(/file is locked/);
+    });
+
+    it("can be stopped after cleanup_blocked", async () => {
+      worktrees.isClean.mockResolvedValue(false);
+      github.pullRequestChanged(branch, merged);
+      await sleep(60);
+
+      await service.stop({ agentId, removeWorktree: false });
+
+      expect(store.snapshot().agents).toEqual([]);
+    });
+
+    it("lets a stop during the bloom win over the cleanup", async () => {
+      github.pullRequestChanged(branch, merged);
+
+      await service.stop({ agentId, removeWorktree: false });
+      await sleep(60);
+
+      expect(worktrees.remove).not.toHaveBeenCalled();
+      expect(terminals.kill).toHaveBeenCalledTimes(1);
+      expect(store.snapshot().agents).toEqual([]);
+    });
+
+    it("isn't turned into error by the watchdog", async () => {
+      worktrees.isClean.mockResolvedValue(false);
+
+      github.pullRequestChanged(branch, merged);
+      await sleep(100);
+
+      expect(agentOf()?.status).toBe("merged");
     });
   });
 });

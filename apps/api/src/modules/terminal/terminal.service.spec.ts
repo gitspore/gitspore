@@ -192,6 +192,38 @@ describe("TerminalService", () => {
     expect(listener).toHaveBeenCalledWith("agent-2", 3);
   });
 
+  describe("revive", () => {
+    it("asks the revivers for an agent without a terminal", async () => {
+      const reviver = jest.fn(async (agentId: string) => spawn(agentId));
+      service.onMissing(reviver);
+
+      await service.revive("agent-1");
+
+      expect(reviver).toHaveBeenCalledWith("agent-1");
+      expect(service.attach("agent-1", viewer()).sessionId).toEqual(
+        expect.any(String),
+      );
+    });
+
+    it("asks nobody for an agent whose terminal runs", async () => {
+      const reviver = jest.fn(async () => {});
+      service.onMissing(reviver);
+      spawn("agent-1");
+
+      await service.revive("agent-1");
+
+      expect(reviver).not.toHaveBeenCalled();
+    });
+
+    it("does nothing without revivers", async () => {
+      await service.revive("agent-1");
+
+      expect(errorCode(() => service.attach("agent-1", viewer()))).toBe(
+        "agent_not_found",
+      );
+    });
+  });
+
   describe("stop", () => {
     it("kills the shell and resolves only after its exit and the exit listeners", async () => {
       spawn("overview");

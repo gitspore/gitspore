@@ -1,11 +1,19 @@
-// Acceptance tests of GS-66 and GS-67: dispatch, stop and the status from
-// hooks, with real git (a bare repo in a temp folder as origin), real PTYs,
-// the fake claude, and its hooks through the real script and endpoint. Only
-// GitHub is a stand-in. The logic of each step has its unit tests in
-// agent.service.spec.ts; these check that the parts work together on every
-// OS in CI.
+// Acceptance tests of GS-66, GS-67, GS-48 and GS-102: dispatch, stop, the
+// status from hooks and from the pull request, the cleanup after a merge,
+// and worktrees and branches left from before, with real
+// git (a bare repo in a temp folder as origin), real PTYs, the fake claude,
+// and its hooks through the real script and endpoint. Only GitHub is a
+// stand-in; the tests fire its poll's events. The logic of each step has its
+// unit tests in agent.service.spec.ts; these check that the parts work
+// together on every OS in CI.
 import { RepoConfig } from "@/config/repo-config";
-import type { AgentId, AgentStatus, Issue } from "@gitspore/shared";
+import type {
+  Agent,
+  AgentId,
+  AgentStatus,
+  Issue,
+  PullRequest,
+} from "@gitspore/shared";
 import { Logger, type INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { existsSync } from "node:fs";
@@ -27,9 +35,11 @@ import { spawn } from "node-pty";
 import { simpleGit } from "simple-git";
 import { createFakeClaude } from "../../../test/fake-claude";
 import { initOrigin, initRepo } from "../../../test/git-repo";
-import type { PullRequest } from "../github/github-api";
 import { GitHubError } from "../github/github-error";
-import type { GitHubService } from "../github/github.service";
+import type {
+  GitHubService,
+  PullRequestChange,
+} from "../github/github.service";
 import { StateStore } from "../state/state.store";
 import { ClaudeLocator, systemDeps } from "../terminal/claude-locator";
 import { TerminalService } from "../terminal/terminal.service";
@@ -39,7 +49,10 @@ import type { RepoService } from "../repo/repo.service";
 import { PROMPT } from "./task-file";
 
 // No repo switch is running.
-const notSwitching = { isSwitching: () => false } as unknown as RepoService;
+const notSwitching = {
+  isSwitching: () => false,
+  onSwitched: () => {},
+} as unknown as RepoService;
 
 // Windows needs about a second per PTY, and every dispatch runs fetch,
 // ls-remote and push.
@@ -71,6 +84,7 @@ describe("Agent dispatch and stop, end to end", () => {
   let github: {
     getIssue: jest.Mock<Promise<Issue & { body: string }>, [number]>;
     findPullRequest: jest.Mock<Promise<PullRequest | null>, [string]>;
+    onPullRequest: jest.Mock<void, [(change: PullRequestChange) => void]>;
   };
   const exited = new Set<AgentId>();
 
@@ -125,6 +139,7 @@ describe("Agent dispatch and stop, end to end", () => {
       findPullRequest: jest.fn<Promise<PullRequest | null>, [string]>(
         async () => null,
       ),
+      onPullRequest: jest.fn<void, [(change: PullRequestChange) => void]>(),
     };
     terminals = new TerminalService(spawn);
     exited.clear();
@@ -139,7 +154,7 @@ describe("Agent dispatch and stop, end to end", () => {
       hooks,
       notSwitching,
     );
-    service.onModuleInit();
+    await service.onModuleInit();
 
     for (const level of ["log", "warn", "error"] as const) {
       jest.spyOn(Logger.prototype, level).mockImplementation(() => {});
@@ -183,15 +198,19 @@ describe("Agent dispatch and stop, end to end", () => {
     return agent;
   };
 
-  // Resolves once the agent has the status; fails after WAIT_MS.
-  function waitForStatus(agentId: AgentId, status: AgentStatus) {
+  // Resolves once `found` holds for the agent (undefined once it is gone);
+  // fails after WAIT_MS.
+  function waitForAgent(
+    agentId: AgentId,
+    found: (agent: Agent | undefined) => boolean,
+    what: string,
+  ) {
     return new Promise<void>((resolve, reject) => {
       const has = () =>
-        store.snapshot().agents.find((a) => a.id === agentId)?.status ===
-        status;
+        found(store.snapshot().agents.find((a) => a.id === agentId));
       if (has()) return resolve();
       const timer = setTimeout(
-        () => reject(new Error(`${agentId} did not become ${status}`)),
+        () => reject(new Error(`${agentId} did not ${what}`)),
         WAIT_MS,
       );
       store.onPatch(() => {
@@ -202,6 +221,13 @@ describe("Agent dispatch and stop, end to end", () => {
       });
     });
   }
+
+  const waitForStatus = (agentId: AgentId, status: AgentStatus) =>
+    waitForAgent(
+      agentId,
+      (agent) => agent?.status === status,
+      `become ${status}`,
+    );
 
   const onOrigin = async (branch: string) =>
     (
@@ -307,8 +333,10 @@ describe("Agent dispatch and stop, end to end", () => {
     TEST_TIMEOUT_MS,
   );
 
+  // --- branches and worktrees left from before (GS-102) ----------------
+
   it(
-    "refuses a branch that exists only on origin, and leaves it there",
+    "continues on a branch that exists only on origin",
     async () => {
       const branch = "spore/42-issue-42";
       await simpleGit(repo).raw([
@@ -317,12 +345,122 @@ describe("Agent dispatch and stop, end to end", () => {
         `main:refs/heads/${branch}`,
       ]);
 
-      expect(await dispatch()).toMatchObject({
-        error: { code: "git_failed", context: { reason: "branch_exists" } },
+      const agent = await dispatchOk();
+
+      expect(agent.branch).toBe(branch);
+      expect(await localBranches()).toContain(branch);
+      const upstream = await simpleGit(repo).revparse([
+        "--abbrev-ref",
+        `${branch}@{upstream}`,
+      ]);
+      expect(upstream).toBe(`origin/${branch}`);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "continues in the worktree a stop kept, with its commits",
+    async () => {
+      const first = await dispatchOk();
+      await simpleGit(first.worktreePath).raw([
+        "commit",
+        "--allow-empty",
+        "-m",
+        "work",
+      ]);
+      const work = await simpleGit(first.worktreePath).revparse(["HEAD"]);
+      await service.stop({ agentId: first.id, removeWorktree: false });
+
+      const second = await dispatchOk(42, 3);
+
+      expect(second.worktreePath).toBe(first.worktreePath);
+      expect(await simpleGit(second.worktreePath).revparse(["HEAD"])).toBe(
+        work,
+      );
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "continues on the branch after a stop that removed the worktree",
+    async () => {
+      const first = await dispatchOk();
+      await service.stop({ agentId: first.id, removeWorktree: true });
+      expect(existsSync(first.worktreePath)).toBe(false);
+
+      const second = await dispatchOk();
+
+      expect(second.branch).toBe(first.branch);
+      expect(existsSync(second.worktreePath)).toBe(true);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "leaves a branch that was there in place when the dispatch on it fails",
+    async () => {
+      const first = await dispatchOk();
+      await service.stop({ agentId: first.id, removeWorktree: true });
+      jest.spyOn(terminals, "spawn").mockImplementationOnce(() => {
+        throw new Error("posix_spawnp failed.");
       });
-      expect(await onOrigin(branch)).toBe(true);
-      expect(await localBranches()).not.toContain(branch);
+
+      expect(await dispatch()).toMatchObject({ error: expect.anything() });
+
+      expect(await localBranches()).toContain(first.branch);
+      expect(await onOrigin(first.branch)).toBe(true);
+      expect(existsSync(first.worktreePath)).toBe(false);
       expect(store.snapshot().agents).toEqual([]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "takes over a worktree after a restart, and a stop frees the slot",
+    async () => {
+      const before = await dispatchOk(42, 2);
+      await service.stop({ agentId: before.id, removeWorktree: false });
+
+      // The restart: a new state and a new service, the worktree on disk.
+      store = new StateStore();
+      service = new AgentService(
+        store,
+        github as unknown as GitHubService,
+        new WorktreeService(new RepoConfig(repo, "main")),
+        terminals,
+        new ClaudeLocator(systemDeps()),
+        new RepoConfig(repo, "main"),
+        hooks,
+        notSwitching,
+      );
+      await service.onModuleInit();
+
+      const [agent] = store.snapshot().agents;
+      expect(agent).toMatchObject({
+        slotIndex: 0,
+        issueNumber: 42,
+        branch: before.branch,
+        worktreePath: before.worktreePath,
+        status: "error",
+        statusReason: { code: "daemon_restarted" },
+      });
+
+      // Opening its terminal continues the conversation in the worktree.
+      const argsFile = join(claudeDir, "args.json");
+      process.env.FAKE_CLAUDE_ARGS_FILE = argsFile;
+      await terminals.revive(agent.id);
+      await waitForFile(argsFile);
+      expect(JSON.parse(await readFile(argsFile, "utf8"))).toEqual([
+        "--settings",
+        ".gitspore/settings.json",
+        "--continue",
+      ]);
+
+      await service.stop({ agentId: agent.id, removeWorktree: true });
+
+      expect(store.snapshot().agents).toEqual([]);
+      expect(existsSync(before.worktreePath)).toBe(false);
+      expect(await localBranches()).toContain(before.branch);
     },
     TEST_TIMEOUT_MS,
   );
@@ -549,8 +687,8 @@ describe("Agent dispatch and stop, end to end", () => {
       const agent = await dispatchOk();
       await waitForStatus(agent.id, "error");
 
-      // Not the watchdog's error: that one comes with a message.
-      expect(agentOf(agent.id).statusMessage).toBeUndefined();
+      // Not the watchdog's error: that one comes with a reason.
+      expect(agentOf(agent.id).statusReason).toBeNull();
     },
     TEST_TIMEOUT_MS,
   );
@@ -563,7 +701,10 @@ describe("Agent dispatch and stop, end to end", () => {
       const agent = await dispatchOk();
       await waitForStatus(agent.id, "error");
 
-      expect(agentOf(agent.id).statusMessage).toMatch(/trust the folder/);
+      expect(agentOf(agent.id).statusReason).toEqual({
+        code: "no_status",
+        message: expect.stringMatching(/trust the folder/),
+      });
     },
     TEST_TIMEOUT_MS,
   );
@@ -584,6 +725,121 @@ describe("Agent dispatch and stop, end to end", () => {
       expect((await simpleGit(agent.worktreePath).status()).isClean()).toBe(
         true,
       );
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  // --- pull requests and the cleanup after a merge (GS-48) ----------------
+
+  // What the GitHub poll reports for the agent's branch.
+  function pullRequestChanged(agent: Agent, state: PullRequest["state"]) {
+    const [[listener]] = github.onPullRequest.mock.calls;
+    listener({
+      branch: agent.branch,
+      issueNumber: agent.issueNumber ?? 0,
+      pullRequest: {
+        number: 7,
+        url: "https://github.com/owner/repo/pull/7",
+        state,
+      },
+    });
+  }
+
+  it(
+    "is done with the link when the pull request is opened",
+    async () => {
+      const agent = await dispatchOk();
+
+      pullRequestChanged(agent, "open");
+
+      expect(agentOf(agent.id)).toMatchObject({
+        status: "done",
+        pullRequest: { url: "https://github.com/owner/repo/pull/7" },
+      });
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "cleans up a squash-merged branch: worktree and local branch go, the slot is free",
+    async () => {
+      service.bloomMs = 500;
+      const agent = await dispatchOk();
+      // A commit that is on the branch only: after a squash merge on GitHub,
+      // local git still sees the branch as unmerged.
+      const worktree = simpleGit(agent.worktreePath);
+      await writeFile(join(agent.worktreePath, "fix.txt"), "fixed\n");
+      await worktree.add("fix.txt");
+      await worktree.commit("Fix it");
+
+      pullRequestChanged(agent, "merged");
+      expect(agentOf(agent.id).status).toBe("merged");
+      await waitForAgent(agent.id, (a) => a === undefined, "go away");
+
+      expect(existsSync(agent.worktreePath)).toBe(false);
+      expect(await localBranches()).not.toContain(agent.branch);
+      // The branch on origin is left to GitHub.
+      expect(await onOrigin(agent.branch)).toBe(true);
+      await dispatchOk(43, 0);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "keeps a worktree with uncommitted changes after a merge",
+    async () => {
+      service.bloomMs = 500;
+      const agent = await dispatchOk();
+      await writeFile(join(agent.worktreePath, "draft.txt"), "not saved\n");
+
+      pullRequestChanged(agent, "merged");
+      await waitForAgent(
+        agent.id,
+        (a) => a?.statusReason?.code === "cleanup_blocked",
+        "get cleanup_blocked",
+      );
+
+      expect(agentOf(agent.id).status).toBe("merged");
+      expect(existsSync(join(agent.worktreePath, "draft.txt"))).toBe(true);
+      expect(await localBranches()).toContain(agent.branch);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "is error with pr_closed for a pull request closed without merging, and deletes nothing",
+    async () => {
+      service.bloomMs = 500;
+      const agent = await dispatchOk();
+
+      pullRequestChanged(agent, "closed");
+      // Longer than a bloom, so a cleanup would have run by now.
+      await new Promise((resolve) => setTimeout(resolve, 1_000));
+
+      expect(agentOf(agent.id)).toMatchObject({
+        status: "error",
+        statusReason: { code: "pr_closed" },
+      });
+      expect(existsSync(agent.worktreePath)).toBe(true);
+      expect(await localBranches()).toContain(agent.branch);
+      expect(await onOrigin(agent.branch)).toBe(true);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "stays as it is when GitHub can't be asked",
+    async () => {
+      github.findPullRequest.mockRejectedValue(
+        new GitHubError("github_unreachable", "Offline"),
+      );
+      process.env.FAKE_CLAUDE_HOOKS = "SessionStart,UserPromptSubmit,Stop";
+
+      const agent = await dispatchOk();
+      await waitForStatus(agent.id, "needs_input");
+
+      expect(agentOf(agent.id).pullRequest).toBeNull();
+      expect(existsSync(agent.worktreePath)).toBe(true);
     },
     TEST_TIMEOUT_MS,
   );
