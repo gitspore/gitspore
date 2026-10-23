@@ -32,6 +32,14 @@ export type GreenhouseStoreState = {
   // Layout slice: side panel, main mode, open windows.
   // Snapshots and patches only close the windows of agents that are gone.
   layout: LayoutSettings;
+  /**
+   * The window the user works in (#72): outlined in the hotbar, named in the
+   * top bar, its terminal takes the keys. Always a visible window, or null
+   * when none shows. Opening or showing a window focuses it; when the focused
+   * one is minimised, closed or its agent goes, the last visible window
+   * takes over. A pot agent's focus also selects its slot.
+   */
+  focusedAgentId: AgentId | null;
 
   // The user opened the setup screen to switch repos. Without a repo the
   // screen shows anyway, see showSetup in selectors.ts.
@@ -53,6 +61,8 @@ export type GreenhouseStoreState = {
   openWindow: (agentId: AgentId, options?: { alone?: boolean }) => void;
   closeWindow: (agentId: AgentId) => void;
   toggleMinimised: (agentId: AgentId) => void;
+  /** Focus moved into the agent's window (a click into its terminal). */
+  focusWindow: (agentId: AgentId) => void;
   /**
    * A hotbar slot was pressed, by click or key (#72): 1–6 are the pots, 0 the
    * overview agent. A visible window is minimised; otherwise the agent's
@@ -97,6 +107,7 @@ export function createGreenhouseStore(
     mode,
     lastError: null,
     layout: { sidePanel: "agents", mode: "scene", windows: [] },
+    focusedAgentId: null,
     setupOpen: false,
     selectSlot: (slot) => set({ selectedSlot: slot }),
     setConnection: (status) => set({ connection: status }),
@@ -117,7 +128,9 @@ export function createGreenhouseStore(
       });
     },
     openWindow: (agentId, { alone = false } = {}) =>
-      set((s) => withWindows(s, showWindow(s.layout.windows, agentId, alone))),
+      set((s) =>
+        withWindows(s, showWindow(s.layout.windows, agentId, alone), agentId),
+      ),
     closeWindow: (agentId) =>
       set((s) =>
         withWindows(
@@ -126,14 +139,23 @@ export function createGreenhouseStore(
         ),
       ),
     toggleMinimised: (agentId) =>
-      set((s) =>
-        withWindows(
+      set((s) => {
+        const showing = s.layout.windows.some(
+          (w) => w.agentId === agentId && w.minimised,
+        );
+        return withWindows(
           s,
           s.layout.windows.map((w) =>
             w.agentId === agentId ? { ...w, minimised: !w.minimised } : w,
           ),
-        ),
-      ),
+          // A window shown again takes the focus
+          showing ? agentId : s.focusedAgentId,
+        );
+      }),
+    focusWindow: (agentId) => {
+      if (get().focusedAgentId === agentId) return;
+      set((s) => withWindows(s, s.layout.windows, agentId));
+    },
     pressSlot: (key, { beside = false } = {}) => {
       const { layout } = get();
       const agent = agentByKey(key)(get());
@@ -146,11 +168,13 @@ export function createGreenhouseStore(
         get().toggleMinimised(agent.id);
         return;
       }
-      set((s) => ({
-        ...withWindows(s, showWindow(s.layout.windows, agent.id, !beside)),
-        // The overview has no slot; the selection stays where it was
-        selectedSlot: agent.slotIndex ?? s.selectedSlot,
-      }));
+      set((s) =>
+        withWindows(
+          s,
+          showWindow(s.layout.windows, agent.id, !beside),
+          agent.id,
+        ),
+      );
     },
 
     // Commands. Components call these instead of client.emit. The result of
@@ -217,10 +241,11 @@ export function createGreenhouseStore(
           windows.length === layout.windows.length
             ? layout
             : { ...layout, windows },
+        focusedAgentId: keepFocus(get().focusedAgentId, windows),
       });
     },
     applyPatch: (patch) => {
-      const { server, selectedSlot, layout } = get();
+      const { server, selectedSlot, layout, focusedAgentId } = get();
       // Without a snapshot there is nothing to patch. It arrives on connect.
       if (server === null) return;
 
@@ -250,6 +275,7 @@ export function createGreenhouseStore(
               windows.length === layout.windows.length
                 ? layout
                 : { ...layout, windows },
+            focusedAgentId: keepFocus(focusedAgentId, windows),
           });
         }
       }
@@ -304,9 +330,34 @@ function agentLeftSlot(
   return hasAgent(before) && !hasAgent(after);
 }
 
-// A store change that replaces only the open windows
-function withWindows(s: GreenhouseStoreState, windows: OpenWindow[]) {
-  return { layout: { ...s.layout, windows } };
+// A store change that replaces the open windows and moves the focus to
+// `focus` (kept if not given). A pot agent's focus selects its slot; the
+// overview has none, so the selection stays.
+function withWindows(
+  s: GreenhouseStoreState,
+  windows: OpenWindow[],
+  focus: AgentId | null = s.focusedAgentId,
+) {
+  const focusedAgentId = keepFocus(focus, windows);
+  const slot = s.server?.agents.find(
+    (agent) => agent.id === focusedAgentId,
+  )?.slotIndex;
+  return {
+    layout: { ...s.layout, windows },
+    focusedAgentId,
+    selectedSlot: slot ?? s.selectedSlot,
+  };
+}
+
+// The focus stays while its window shows; otherwise the last visible window
+// takes it, or nobody
+function keepFocus(
+  focus: AgentId | null,
+  windows: OpenWindow[],
+): AgentId | null {
+  const visible = windows.filter((w) => !w.minimised);
+  if (visible.some((w) => w.agentId === focus)) return focus;
+  return visible.at(-1)?.agentId ?? null;
 }
 
 // openWindow: un-minimise the agent's window in place, or add it at the end.

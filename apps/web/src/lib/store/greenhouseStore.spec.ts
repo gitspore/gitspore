@@ -443,6 +443,130 @@ describe("createGreenhouseStore", () => {
       });
     });
 
+    describe("focusedAgentId (#72)", () => {
+      // Pot 1 (a1) and pot 2 (a2) have agents, plus the overview agent
+      function withAgents() {
+        const { store } = setup();
+        store.getState().applySnapshot(
+          state({
+            agents: [
+              agent({ id: "a1", slotIndex: 0 }),
+              agent({ id: "a2", slotIndex: 1 }),
+              agent({ id: "overview", slotIndex: null, issueNumber: null }),
+            ],
+          }),
+        );
+        return store;
+      }
+      const focused = (store: ReturnType<typeof withAgents>) =>
+        store.getState().focusedAgentId;
+
+      it("starts with no focus", () => {
+        expect(focused(withAgents())).toBeNull();
+      });
+
+      it("goes to the window a slot opens, also beside the others", () => {
+        const store = withAgents();
+        store.getState().pressSlot(1);
+        store.getState().pressSlot(0, { beside: true });
+
+        expect(focused(store)).toBe("overview");
+      });
+
+      it("goes to the last visible window when the focused one is minimised", () => {
+        const store = withAgents();
+        store.getState().pressSlot(1);
+        store.getState().pressSlot(2, { beside: true });
+        store.getState().pressSlot(0, { beside: true });
+
+        // Pressing a visible slot minimises it
+        store.getState().pressSlot(0);
+        expect(focused(store)).toBe("a2");
+
+        store.getState().pressSlot(2);
+        store.getState().pressSlot(1);
+        expect(focused(store)).toBeNull();
+      });
+
+      it("stays when another window is minimised", () => {
+        const store = withAgents();
+        store.getState().pressSlot(1);
+        store.getState().pressSlot(2, { beside: true });
+
+        store.getState().toggleMinimised("a1");
+
+        expect(focused(store)).toBe("a2");
+      });
+
+      it("goes to a window shown again", () => {
+        const store = withAgents();
+        store.getState().pressSlot(1);
+        store.getState().pressSlot(2, { beside: true });
+        store.getState().toggleMinimised("a1");
+
+        store.getState().toggleMinimised("a1");
+
+        expect(focused(store)).toBe("a1");
+      });
+
+      it("follows a click into another window and selects its slot", () => {
+        const store = withAgents();
+        store.getState().pressSlot(1);
+        store.getState().pressSlot(2, { beside: true });
+
+        store.getState().focusWindow("a1");
+
+        expect(focused(store)).toBe("a1");
+        expect(store.getState().selectedSlot).toBe(0);
+      });
+
+      it("ignores focusWindow for a minimised window", () => {
+        const store = withAgents();
+        store.getState().pressSlot(1);
+        store.getState().pressSlot(2, { beside: true });
+        store.getState().toggleMinimised("a1");
+
+        store.getState().focusWindow("a1");
+
+        expect(focused(store)).toBe("a2");
+      });
+
+      it("keeps the selected slot when the overview takes the focus", () => {
+        const store = withAgents();
+        store.getState().pressSlot(2);
+
+        store.getState().pressSlot(0, { beside: true });
+
+        expect(store.getState().selectedSlot).toBe(1);
+      });
+
+      it("moves on when the focused agent is removed", () => {
+        const store = withAgents();
+        store.getState().pressSlot(1);
+        store.getState().pressSlot(2, { beside: true });
+
+        store
+          .getState()
+          .applyPatch(patch(2, [{ type: "agent:remove", agentId: "a2" }]));
+
+        expect(focused(store)).toBe("a1");
+      });
+
+      it("moves on when a snapshot no longer has the focused agent", () => {
+        const store = withAgents();
+        store.getState().pressSlot(1);
+        store.getState().pressSlot(0, { beside: true });
+
+        store
+          .getState()
+          .applySnapshot(
+            state({ agents: [agent({ id: "a1", slotIndex: 0 })] }),
+          );
+
+        expect(focused(store)).toBe("a1");
+      });
+    });
+
     it("closeWindow removes the window", () => {
       const { store } = setup();
       store.getState().openWindow("a1");
