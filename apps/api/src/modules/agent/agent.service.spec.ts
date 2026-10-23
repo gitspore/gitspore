@@ -16,6 +16,7 @@ import { AgentService } from "./agent.service";
 import type { RepoService } from "../repo/repo.service";
 import { PROMPT, taskFile } from "./task-file";
 import type { PullRequest } from "../github/github-api";
+import type { HookService } from "../hooks/hook.service";
 
 // No repo switch is running.
 const notSwitching = { isSwitching: () => false } as unknown as RepoService;
@@ -82,7 +83,24 @@ class FakeGitHub {
   );
 }
 
+class FakeHooks {
+  readonly issue = jest.fn((agentId: string) => `secret-${agentId}`);
+  readonly revoke = jest.fn();
+  readonly url = jest.fn(() => "http://127.0.0.1:3001");
+  private listener?: (agentId: string, payload: unknown) => void;
+  readonly onEvent = jest.fn(
+    (listener: (agentId: string, payload: unknown) => void) => {
+      this.listener = listener;
+    },
+  );
+
+  send(agentId: string, payload: unknown) {
+    this.listener?.(agentId, payload);
+  }
+}
+
 const settle = () => new Promise((resolve) => setImmediate(resolve));
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -99,6 +117,7 @@ describe("AgentService.dispatch", () => {
   let github: FakeGitHub;
   let service: AgentService;
   let statuses: (AgentStatus | "removed")[];
+  let hooks: FakeHooks;
 
   beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), "gitspore-agent-"));
@@ -111,6 +130,7 @@ describe("AgentService.dispatch", () => {
     terminals = new FakeTerminals();
     locator = new FakeLocator();
     github = new FakeGitHub();
+    hooks = new FakeHooks();
     service = new AgentService(
       store,
       github as unknown as GitHubService,
@@ -118,6 +138,7 @@ describe("AgentService.dispatch", () => {
       terminals as unknown as TerminalService,
       locator as unknown as ClaudeLocator,
       new RepoConfig("/repo", "main"),
+      hooks as unknown as HookService,
       notSwitching,
     );
 
@@ -147,14 +168,14 @@ describe("AgentService.dispatch", () => {
     const ack = await dispatch();
 
     expect(ack).toEqual({ agentId: expect.any(String) });
-    expect(statuses).toEqual(["starting", "working"]);
+    expect(statuses).toEqual(["starting"]);
     const [agent] = store.snapshot().agents;
     expect(agent).toMatchObject({
       slotIndex: 0,
       issueNumber: 42,
       branch: "spore/42-issue",
       worktreePath: join(root, "42-issue"),
-      status: "working",
+      status: "starting",
     });
     expect(worktrees.create).toHaveBeenCalledWith({
       issueNumber: 42,
@@ -169,7 +190,13 @@ describe("AgentService.dispatch", () => {
       cwd: join(root, "42-issue"),
       mode: "exec",
       command: "/bin/claude",
-      args: ["--session-id", expect.any(String), PROMPT],
+      args: [
+        "--settings",
+        ".gitspore/settings.json",
+        "--session-id",
+        expect.any(String),
+        PROMPT,
+      ],
     });
   });
 
@@ -221,6 +248,7 @@ describe("AgentService.dispatch", () => {
         terminals as unknown as TerminalService,
         locator as unknown as ClaudeLocator,
         new RepoConfig(repoPath, "main"),
+        hooks as unknown as HookService,
         { isSwitching: () => switching } as unknown as RepoService,
       );
 
@@ -321,6 +349,7 @@ describe("AgentService.dispatch", () => {
     expect(worktrees.remove).toHaveBeenCalledTimes(1);
     expect(worktrees.deleteRemoteBranch).toHaveBeenCalledWith("spore/42-issue");
     expect(store.snapshot().agents).toEqual([]);
+    expect(hooks.revoke).toHaveBeenCalled();
 
     expect(await dispatch()).toEqual({ agentId: expect.any(String) });
   });
@@ -427,7 +456,7 @@ describe("AgentService.dispatch", () => {
       await settle();
 
       expect(statuses).toEqual([]);
-      expect(statusOf()).toBe("working");
+      expect(statusOf()).toBe("starting");
     });
   });
   describe("stop", () => {
@@ -452,6 +481,16 @@ describe("AgentService.dispatch", () => {
       expect(store.snapshot().agents).toEqual([]);
       // The exit caused by the stop sets no status of its own.
       expect(statuses).toEqual(["removed"]);
+    });
+    it("stops an agent that hasn't reported yet, and revokes its secret", async () => {
+      expect(store.snapshot().agents.map((a) => a.status)).toEqual([
+        "starting",
+      ]);
+
+      await service.stop({ agentId, removeWorktree: false });
+
+      expect(store.snapshot().agents).toEqual([]);
+      expect(hooks.revoke).toHaveBeenCalledWith(agentId);
     });
 
     it("removes a clean worktree and keeps the branch", async () => {
@@ -535,6 +574,61 @@ describe("AgentService.dispatch", () => {
     });
   });
 
+  describe("watchdog", () => {
+    let agentId: string;
+
+    beforeEach(async () => {
+      service.onModuleInit();
+      service.watchdogMs = 20;
+      // Like the real TerminalService: kill() ends the process.
+      terminals.kill.mockImplementation((id: string) => terminals.exit(id, 1));
+      const ack = await dispatch();
+      if ("error" in ack) throw new Error("dispatch failed");
+      agentId = ack.agentId;
+      statuses = [];
+    });
+
+    const agentOf = () => store.snapshot().agents.find((a) => a.id === agentId);
+
+    it("is error with a hint at the trust question when no hook arrives", async () => {
+      await sleep(60);
+
+      expect(agentOf()?.status).toBe("error");
+      expect(agentOf()?.statusMessage).toMatch(/trust the folder/);
+    });
+
+    it("is satisfied by the first hook, even SessionStart", async () => {
+      hooks.send(agentId, { hook_event_name: "SessionStart" });
+      await sleep(60);
+
+      expect(agentOf()?.status).toBe("starting");
+      expect(statuses).toEqual([]);
+    });
+
+    it("recovers when the hooks arrive later, and drops its message", async () => {
+      await sleep(60);
+      hooks.send(agentId, { hook_event_name: "UserPromptSubmit" });
+      await settle();
+
+      expect(agentOf()?.status).toBe("working");
+      expect(agentOf()?.statusMessage).toBeUndefined();
+    });
+
+    it("is cleared when Claude Code exits", async () => {
+      terminals.exit(agentId, 0);
+      await sleep(60);
+
+      expect(statuses).toEqual(["needs_input"]);
+    });
+
+    it("is cleared on stop", async () => {
+      await service.stop({ agentId, removeWorktree: false });
+      await sleep(60);
+
+      expect(statuses).toEqual(["removed"]);
+    });
+  });
+
   it("refuses to stop an agent that is still starting", async () => {
     const issueAnswer = deferred<Awaited<ReturnType<FakeGitHub["getIssue"]>>>();
     github.getIssue.mockReturnValue(issueAnswer.promise);
@@ -549,5 +643,112 @@ describe("AgentService.dispatch", () => {
 
     issueAnswer.resolve({ ...issue(42), body: "Fix it." });
     await dispatching;
+  });
+
+  describe("when hooks report", () => {
+    let agentId: string;
+    const path = () => join(root, "42-issue");
+    const openPullRequest: PullRequest = {
+      number: 7,
+      url: "https://github.com/owner/repo/pull/7",
+      state: "open",
+    };
+
+    beforeEach(async () => {
+      service.onModuleInit();
+      const ack = await dispatch();
+      if ("error" in ack) throw new Error("dispatch failed");
+      agentId = ack.agentId;
+      statuses = [];
+    });
+
+    const send = async (payload: unknown) => {
+      hooks.send(agentId, payload);
+      await settle();
+    };
+    const statusOf = () =>
+      store.snapshot().agents.find((a) => a.id === agentId)?.status;
+
+    it("writes hook.json with the daemon's URL and the agent's secret", async () => {
+      const written = JSON.parse(
+        await readFile(join(path(), ".gitspore", "hook.json"), "utf8"),
+      );
+
+      expect(written).toEqual({
+        url: "http://127.0.0.1:3001",
+        agentId,
+        secret: `secret-${agentId}`,
+      });
+    });
+
+    it("writes settings.json that runs the hook script with this Node", async () => {
+      const written = JSON.parse(
+        await readFile(join(path(), ".gitspore", "settings.json"), "utf8"),
+      );
+
+      expect(written.hooks.PreToolUse[0].hooks[0]).toMatchObject({
+        command: process.execPath,
+        args: [expect.stringMatching(/hook-script\.mjs$/)],
+      });
+    });
+
+    it("follows the hooks, and sends a status only when it changes", async () => {
+      await send({ hook_event_name: "SessionStart" });
+      await send({ hook_event_name: "UserPromptSubmit" });
+      await send({ hook_event_name: "PreToolUse" });
+      await send({ hook_event_name: "PermissionRequest" });
+      await send({ hook_event_name: "PostToolUse" });
+
+      expect(statuses).toEqual(["working", "needs_input", "working"]);
+    });
+
+    it("is done after Stop with an open pull request", async () => {
+      github.findPullRequest.mockResolvedValue(openPullRequest);
+
+      await send({ hook_event_name: "Stop" });
+
+      expect(statusOf()).toBe("done");
+      expect(github.findPullRequest).toHaveBeenCalledWith("spore/42-issue");
+    });
+
+    it("is needs_input after Stop without a pull request", async () => {
+      await send({ hook_event_name: "Stop" });
+
+      expect(statusOf()).toBe("needs_input");
+    });
+
+    it("is error after StopFailure", async () => {
+      await send({ hook_event_name: "StopFailure" });
+
+      expect(statusOf()).toBe("error");
+    });
+
+    it("lets a later event win over a pull request check still under way", async () => {
+      const answer = deferred<PullRequest | null>();
+      github.findPullRequest.mockReturnValue(answer.promise);
+
+      await send({ hook_event_name: "Stop" });
+      await send({ hook_event_name: "UserPromptSubmit" });
+      answer.resolve(openPullRequest);
+      await settle();
+
+      expect(statusOf()).toBe("working");
+    });
+
+    it("ignores payloads it can't read and agents it doesn't run", async () => {
+      await send(null);
+      await send({ hook_event_name: 42 });
+      hooks.send("someone-else", { hook_event_name: "PreToolUse" });
+      await settle();
+
+      expect(statuses).toEqual([]);
+    });
+
+    it("revokes the secret when Claude Code exits", async () => {
+      terminals.exit(agentId, 0);
+      await settle();
+
+      expect(hooks.revoke).toHaveBeenCalledWith(agentId);
+    });
   });
 });

@@ -7,6 +7,7 @@ import { GitHubModule } from "./modules/github/github.module";
 import { TerminalModule } from "./modules/terminal/terminal.module";
 import { OverviewModule } from "./modules/overview/overview.module";
 import { AgentModule } from "./modules/agent/agent.module";
+import { HookModule } from "./modules/hooks/hook.module";
 
 // Feature modules from src/modules and background workers from
 // src/workers get registered here as the app grows.
@@ -20,6 +21,7 @@ import { AgentModule } from "./modules/agent/agent.module";
     TerminalModule,
     OverviewModule,
     AgentModule,
+    HookModule,
   ],
   controllers: [],
   providers: [],

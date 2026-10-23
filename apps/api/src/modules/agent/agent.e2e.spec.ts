@@ -1,12 +1,16 @@
-// Acceptance tests of GS-66: dispatch and stop with real git (a bare repo in
-// a temp folder as origin), real PTYs and the fake claude. Only GitHub is a
-// stand-in. The logic of each step has its unit tests in
+// Acceptance tests of GS-66 and GS-67: dispatch, stop and the status from
+// hooks, with real git (a bare repo in a temp folder as origin), real PTYs,
+// the fake claude, and its hooks through the real script and endpoint. Only
+// GitHub is a stand-in. The logic of each step has its unit tests in
 // agent.service.spec.ts; these check that the parts work together on every
 // OS in CI.
 import { RepoConfig } from "@/config/repo-config";
 import type { AgentId, AgentStatus, Issue } from "@gitspore/shared";
-import { Logger } from "@nestjs/common";
+import { Logger, type INestApplication } from "@nestjs/common";
+import { Test } from "@nestjs/testing";
 import { existsSync } from "node:fs";
+import { HookModule } from "../hooks/hook.module";
+import { HookService } from "../hooks/hook.service";
 import {
   mkdir,
   mkdtemp,
@@ -70,6 +74,28 @@ describe("Agent dispatch and stop, end to end", () => {
   };
   const exited = new Set<AgentId>();
 
+  // The real hook endpoint, so the fake's hooks go through the script, HTTP
+  // and the secret check. One for all tests; agent ids never repeat.
+  let app: INestApplication;
+  let hooks: HookService;
+
+  beforeAll(async () => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [HookModule],
+    }).compile();
+    app = moduleRef.createNestApplication({ logger: false });
+    await app.listen(0, "127.0.0.1");
+    const { port } = app.getHttpServer().address() as AddressInfo;
+    // HookService.url() reads it and writes it into every hook.json.
+    process.env.PORT = String(port);
+    hooks = app.get(HookService);
+  });
+
+  afterAll(async () => {
+    await app.close();
+    delete process.env.PORT;
+  });
+
   beforeEach(async () => {
     parent = await realpath(await mkdtemp(join(tmpdir(), "gitspore-e2e-")));
     repo = join(parent, "my-repo");
@@ -110,6 +136,7 @@ describe("Agent dispatch and stop, end to end", () => {
       terminals,
       new ClaudeLocator(systemDeps()),
       new RepoConfig(repo, "main"),
+      hooks,
       notSwitching,
     );
     service.onModuleInit();
@@ -205,7 +232,7 @@ describe("Agent dispatch and stop, end to end", () => {
       const ack = await dispatch();
 
       expect(ack).toEqual({ agentId: expect.any(String) });
-      expect(statuses).toEqual(["starting", "working"]);
+      expect(statuses).toEqual(["starting"]);
       const agent = agentOf((ack as { agentId: AgentId }).agentId);
       expect(existsSync(agent.worktreePath)).toBe(true);
       expect(await onOrigin(agent.branch)).toBe(true);
@@ -219,7 +246,13 @@ describe("Agent dispatch and stop, end to end", () => {
       // The prompt arrives as one argument, after the session id.
       await waitForFile(argsFile);
       const args = JSON.parse(await readFile(argsFile, "utf8"));
-      expect(args).toEqual(["--session-id", expect.any(String), PROMPT]);
+      expect(args).toEqual([
+        "--settings",
+        ".gitspore/settings.json",
+        "--session-id",
+        expect.any(String),
+        PROMPT,
+      ]);
 
       // .gitspore/ never shows up in git status.
       const status = await simpleGit(agent.worktreePath).raw([
@@ -317,7 +350,7 @@ describe("Agent dispatch and stop, end to end", () => {
 
       spawnPty.mockRestore();
       const agent = await dispatchOk();
-      expect(agent.status).toBe("working");
+      expect(agent.status).toBe("starting");
     },
     TEST_TIMEOUT_MS,
   );
@@ -446,6 +479,115 @@ describe("Agent dispatch and stop, end to end", () => {
     TEST_TIMEOUT_MS,
   );
 
+  // --- status from hooks (GS-67) ------------------------------------------
+
+  // Every status the store sends out, in order.
+  function recordStatuses() {
+    const statuses: AgentStatus[] = [];
+    store.onPatch((patch) => {
+      for (const op of patch.ops) {
+        if (op.type === "agent:upsert") statuses.push(op.agent.status);
+      }
+    });
+    return statuses;
+  }
+
+  it(
+    "follows the hooks through the real script and endpoint",
+    async () => {
+      github.findPullRequest.mockResolvedValue({
+        number: 7,
+        url: "https://github.com/owner/repo/pull/7",
+        state: "open",
+      });
+      process.env.FAKE_CLAUDE_HOOKS = [
+        "SessionStart",
+        "UserPromptSubmit",
+        "PreToolUse",
+        "PermissionRequest",
+        "Notification:permission_prompt",
+        "PostToolUse",
+        "Stop",
+      ].join(",");
+      const statuses = recordStatuses();
+
+      const agent = await dispatchOk();
+      await waitForStatus(agent.id, "done");
+
+      expect(statuses).toEqual([
+        "starting",
+        "working",
+        "needs_input",
+        "working",
+        "done",
+      ]);
+      expect(github.findPullRequest).toHaveBeenCalledWith(agent.branch);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "is needs_input after Stop without an open pull request",
+    async () => {
+      process.env.FAKE_CLAUDE_HOOKS = "SessionStart,UserPromptSubmit,Stop";
+      const statuses = recordStatuses();
+
+      const agent = await dispatchOk();
+      await waitForStatus(agent.id, "needs_input");
+
+      expect(statuses).toEqual(["starting", "working", "needs_input"]);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "is error after StopFailure",
+    async () => {
+      process.env.FAKE_CLAUDE_HOOKS =
+        "SessionStart,UserPromptSubmit,StopFailure";
+
+      const agent = await dispatchOk();
+      await waitForStatus(agent.id, "error");
+
+      // Not the watchdog's error: that one comes with a message.
+      expect(agentOf(agent.id).statusMessage).toBeUndefined();
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "is error with the trust hint when no hook arrives in time",
+    async () => {
+      service.watchdogMs = 2_000;
+
+      const agent = await dispatchOk();
+      await waitForStatus(agent.id, "error");
+
+      expect(agentOf(agent.id).statusMessage).toMatch(/trust the folder/);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "keeps the hook files out of git",
+    async () => {
+      process.env.FAKE_CLAUDE_HOOKS = "SessionStart,PreToolUse";
+
+      const agent = await dispatchOk();
+      await waitForStatus(agent.id, "working");
+
+      for (const file of ["task.md", "hook.json", "settings.json"]) {
+        expect(existsSync(join(agent.worktreePath, ".gitspore", file))).toBe(
+          true,
+        );
+      }
+      expect((await simpleGit(agent.worktreePath).status()).isClean()).toBe(
+        true,
+      );
+    },
+    TEST_TIMEOUT_MS,
+  );
+
   // --- stop ---------------------------------------------------------------
 
   it(
@@ -522,7 +664,7 @@ describe("Agent dispatch and stop, end to end", () => {
       });
 
       expect(store.snapshot().agents.map((a) => a.status)).toEqual(
-        Array(6).fill("working"),
+        Array(6).fill("starting"),
       );
       expect(exited.size).toBe(0);
 
