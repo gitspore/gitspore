@@ -28,7 +28,7 @@ export type GreenhouseStoreState = {
   lastError: ServerError | null;
 
   // Layout slice: side panel, main mode, open windows.
-  // Snapshots never touch it.
+  // Snapshots and patches only close the windows of agents that are gone.
   layout: LayoutSettings;
 
   applySnapshot: (state: GreenhouseState) => void;
@@ -173,7 +173,20 @@ export function createGreenhouseStore(
 
     applySnapshot: (state) => {
       snapshotRequested = false;
-      set({ server: state });
+      // Windows follow agents: after a reconnect an agent can be gone (the
+      // daemon restarted without the overview agent, #72), and its window
+      // would only hold an empty terminal band
+      const { layout } = get();
+      const windows = layout.windows.filter((w) =>
+        state.agents.some((agent) => agent.id === w.agentId),
+      );
+      set({
+        server: state,
+        layout:
+          windows.length === layout.windows.length
+            ? layout
+            : { ...layout, windows },
+      });
     },
     applyPatch: (patch) => {
       const { server, selectedSlot, layout } = get();

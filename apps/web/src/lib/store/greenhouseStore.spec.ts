@@ -490,15 +490,26 @@ describe("createGreenhouseStore", () => {
       expect(store.getState().layout).toBe(before);
     });
 
-    it("a snapshot leaves the layout untouched", () => {
+    it("a snapshot leaves the layout untouched while its agents exist", () => {
       const { store } = setup();
       store.getState().openWindow("a1");
       store.getState().setSidePanel(null);
       const before = store.getState().layout;
 
-      store.getState().applySnapshot(state());
+      store.getState().applySnapshot(state({ agents: [agent({ id: "a1" })] }));
 
       expect(store.getState().layout).toBe(before);
+    });
+
+    it("a snapshot closes the windows of agents it doesn't have", () => {
+      const { store } = setup();
+      store.getState().openWindow("overview");
+      store.getState().openWindow("a1");
+
+      // e.g. the daemon restarted without GITSPORE_START_OVERVIEW
+      store.getState().applySnapshot(state({ agents: [agent({ id: "a1" })] }));
+
+      expect(windows(store)).toEqual([{ agentId: "a1", minimised: false }]);
     });
   });
 
