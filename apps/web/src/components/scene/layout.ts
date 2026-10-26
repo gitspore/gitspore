@@ -17,8 +17,16 @@ export const BOOK_SPOT: [number, number] = [-0.4, 2.3];
 // How far the book is turned on the table (around y, counter-clockwise
 // from above), so it lies diagonally
 export const BOOK_TURN = 0.2;
-// Where the git map lies: front right of the book, its back left corner
-// tucked under the book's right edge, its front edge hanging a little
+
+// seed packets position,
+// [x, z, turn]: six left of the book and six
+// right of the map, in two rows of three each.
+const SEED_COLUMNS = [-3.3, -2.55, -1.8, 2.0, 2.7, 3.4];
+const SEED_ROWS = [1.62, 2.52];
+
+// git map position.
+// under the book's right edge.
+// Front edge hanging a little
 // over the table's front edge (z ≈ 3.33)
 export const MAP_SPOT: [number, number] = [0.8, 2.85];
 
@@ -31,4 +39,17 @@ export const POT_SPOTS: [number, number][] = Array.from(
     const z = BACK_ROW_Z + row * ROW_GAP;
     return [x, z];
   },
+);
+
+// Small fixed jitter in place and turn,
+// so packets look laid down by hand.
+export const SEED_SPOTS: [number, number, number][] = SEED_ROWS.flatMap(
+  (z, row) =>
+    SEED_COLUMNS.map((x, column): [number, number, number] => {
+      const index = row * SEED_COLUMNS.length + column;
+      const jitterX = ((index * 13) % 5) * 0.02 - 0.04;
+      const jitterZ = ((index * 7) % 3) * 0.04 - 0.04;
+      const turn = (((index * 29) % 7) - 3) * 0.035;
+      return [x + jitterX, z + jitterZ, turn];
+    }),
 );

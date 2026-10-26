@@ -15,6 +15,7 @@ import { Table } from "./scene/Table";
 import { Book } from "./scene/Book";
 import { Effects } from "./scene/Effects";
 import { GitMap } from "./scene/GitMap";
+import { SeedPackets } from "./scene/SeedPackets";
 
 //
 //
@@ -155,6 +156,18 @@ export function Scene({
         main={t.color["branch-main"]}
         branches={[t.color.agent["1"], t.color.agent["4"]]}
         outline={t.color.scene.heart}
+      />
+
+      <SeedPackets
+        colors={{
+          paper: t.color.packet.paper,
+          band: t.color.art.pot.empty,
+          title: t.color.packet.title,
+          leaf: t.color.packet.leaf,
+          ink: t.color.packet.ink,
+          muted: t.color.packet.muted,
+          outline: t.color.scene.heart,
+        }}
       />
 
       <Table wood={t.color.wood} floor={t.color.scene.floor} />
