@@ -6,15 +6,15 @@ import {
 } from "./windowGrid";
 
 // xterm's default font today, measured in #106: 9.03 × 18 px per cell. A
-// tile's chrome: 12 px padding on each side, the 40 px header and its 2 px
-// line. The areas are the windows area of these screens, side panel closed
+// tile's chrome: 12 px padding on each side and the 14 px scrollbar, the
+// 40 px header and its 2 px line. The areas are the windows area of these screens, side panel closed
 // unless named.
 function area(width: number, height: number): TileArea {
   return {
     width,
     height,
     gap: 8,
-    chrome: { x: 24, y: 66 },
+    chrome: { x: 38, y: 66 },
     cell: { width: 9.03, height: 18 },
   };
 }
