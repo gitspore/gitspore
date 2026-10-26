@@ -1,16 +1,17 @@
 import { Outlines, Text } from "@react-three/drei";
 import { useShallow } from "zustand/react/shallow";
-import type { Issue } from "@gitspore/shared";
+import type { Issue, ServerError } from "@gitspore/shared";
 
 import { useGreenhouseStore } from "@/lib/client/GreenhouseClientProvider";
 import { freeSlots, openIssuesWithoutAgent } from "@/lib/store/selectors";
 import { TAG_FONT } from "./fonts";
 import { SEED_SPOTS, potAt } from "./layout";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import type { ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { useSeedDrag } from "./seedDrag";
 import { DRAG_PX, useClickable } from "./useClickable";
+
 //
 //
 //
@@ -83,6 +84,27 @@ export function SeedPackets({ colors }: { colors: PacketColors }) {
 
   const free = useGreenhouseStore(useShallow(freeSlots));
 
+  const dispatchAgent = useGreenhouseStore((state) => state.dispatchAgent);
+  const lastError = useGreenhouseStore((state) => state.lastError);
+
+  // The packet just dropped on a pot, and the error there was then.
+  // It stays hidden until the agent's patch takes the issue out of
+  // the list; a new error (a refused dispatch) shows it again
+  const [planting, setPlanting] = useState<{
+    issue: number;
+    error: ServerError | null;
+  } | null>(null);
+  if (planting && !issues.some((issue) => issue.number === planting.issue)) {
+    setPlanting(null);
+  }
+  const hidden =
+    planting && planting.error === lastError ? planting.issue : null;
+
+  const plant = (issueNumber: number, slot: number) => {
+    dispatchAgent(issueNumber, slot);
+    setPlanting({ issue: issueNumber, error: lastError });
+  };
+
   const issuesOpen = useGreenhouseStore(
     (state) => state.layout.sidePanel === "issues",
   );
@@ -90,6 +112,7 @@ export function SeedPackets({ colors }: { colors: PacketColors }) {
   const toggleIssues = () => setSidePanel(issuesOpen ? null : "issues");
 
   return issues
+    .filter((issue) => issue.number !== hidden)
     .slice(0, SEED_SPOTS.length)
     .map((issue, index) => (
       <SeedPacket
@@ -99,6 +122,7 @@ export function SeedPackets({ colors }: { colors: PacketColors }) {
         free={free}
         colors={colors}
         onOpen={toggleIssues}
+        onPlant={(slot) => plant(issue.number, slot)}
       />
     ));
 }
@@ -120,12 +144,14 @@ function SeedPacket({
   free,
   colors,
   onOpen,
+  onPlant,
 }: {
   issue: Issue;
   spot: [number, number, number];
   free: number[];
   colors: PacketColors;
   onOpen: () => void;
+  onPlant: (slot: number) => void;
 }) {
   const { hovered, handlers } = useClickable(onOpen);
 
@@ -177,6 +203,14 @@ function SeedPacket({
     press.current = null;
   };
 
+  // Released over a free pot: plant there. A target is only
+  // set during a drag, so a click never plants
+  const onPointerUp = () => {
+    const { target } = useSeedDrag.getState();
+    if (target !== null) onPlant(target);
+    finish();
+  };
+
   const lyingFlat = { "rotation-x": -Math.PI / 2 } as const;
 
   return (
@@ -187,7 +221,7 @@ function SeedPacket({
       {...handlers}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
-      onPointerUp={finish}
+      onPointerUp={onPointerUp}
       onPointerCancel={finish}
     >
       <mesh position-y={PACKET_THICKNESS / 2} castShadow receiveShadow>
