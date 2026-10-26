@@ -8,6 +8,7 @@
 import type {
   Agent,
   AgentId,
+  BranchGraph,
   GreenhouseState,
   Issue,
   JsonValue,
@@ -167,6 +168,8 @@ export type RepoCheck = {
 /** In the order above. Checks that need a git repo are left out without one. */
 export type RepoCheckAck = { checks: RepoCheck[] };
 
+export type BranchGraphAck = { graph: BranchGraph } | { error: ServerError };
+
 // --- Payloads: Server → Client --------------------------------------------
 
 export type TerminalDataPayload = {
@@ -248,6 +251,11 @@ export interface ClientToServerEvents {
   "repo:check": (
     payload: RepoChoosePayload,
     ack: (response: RepoCheckAck) => void,
+  ) => void;
+
+  "branches:graph": (
+    payload: EmptyPayload,
+    ack: (response: BranchGraphAck) => void,
   ) => void;
 
   /**
