@@ -27,6 +27,7 @@ import {
   type RingColor,
 } from "./statusVisuals";
 import { RING_RADIUS, RING_TUBE, StatusRing } from "./StatusRing";
+import { NameTag, type TagColors } from "./NameTag";
 
 //
 //
@@ -104,6 +105,7 @@ const Pot = memo(function Pot({
   bodyGeo,
   soilGeo,
   ringGeo,
+  tag,
 }: {
   slot: number;
   test: PlantLook | null;
@@ -111,6 +113,7 @@ const Pot = memo(function Pot({
   art: ArtColors;
   ringColors: Record<RingColor, string>;
   glow: number;
+  tag: TagColors;
 } & Shapes) {
   const agent = useGreenhouseStore(agentBySlot(slot));
   const [x, z] = POT_SPOTS[slot];
@@ -155,6 +158,10 @@ const Pot = memo(function Pot({
         />
       )}
 
+      {agent?.issueNumber != null && (
+        <NameTag issueNumber={agent.issueNumber} soilY={SOIL_Y} colors={tag} />
+      )}
+
       {look && (
         <group position-y={SOIL_Y}>
           <Plant
@@ -185,12 +192,14 @@ export function Pots({
   art,
   ringColors,
   glow,
+  tag,
   testKeys,
 }: {
   colors: SceneColors;
   art: ArtColors;
   ringColors: Record<RingColor, string>;
   glow: number;
+  tag: TagColors;
   testKeys: boolean;
 }) {
   const bodyGeo = useMemo(() => new THREE.LatheGeometry(POT_PROFILE, 24), []);
@@ -248,6 +257,7 @@ export function Pots({
           ringGeo={ringGeo}
           ringColors={ringColors}
           glow={glow}
+          tag={tag}
         />
       ))}
     </>

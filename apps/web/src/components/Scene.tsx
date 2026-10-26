@@ -138,6 +138,7 @@ export function Scene({
         testKeys={testingOn}
         ringColors={t.color.status}
         glow={t.scene.glow}
+        tag={t.color.tag}
       />
       <Book
         cover={t.color.plate}
