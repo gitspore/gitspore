@@ -3,11 +3,14 @@ import { useShallow } from "zustand/react/shallow";
 import type { Issue } from "@gitspore/shared";
 
 import { useGreenhouseStore } from "@/lib/client/GreenhouseClientProvider";
-import { openIssuesWithoutAgent } from "@/lib/store/selectors";
+import { freeSlots, openIssuesWithoutAgent } from "@/lib/store/selectors";
 import { TAG_FONT } from "./fonts";
-import { SEED_SPOTS } from "./layout";
-import { useClickable } from "./useClickable";
-
+import { SEED_SPOTS, potAt } from "./layout";
+import { useRef } from "react";
+import type { ThreeEvent } from "@react-three/fiber";
+import * as THREE from "three";
+import { useSeedDrag } from "./seedDrag";
+import { DRAG_PX, useClickable } from "./useClickable";
 //
 //
 //
@@ -21,6 +24,15 @@ const BAND_DEPTH = 0.18;
 const ON_TOP = PACKET_THICKNESS + 0.002;
 const ON_BAND = ON_TOP + 0.002;
 const TITLE_MAX = 40;
+
+// A dragged packet floats just above the pots' rim (1.1),
+// on a flat plane at that height. The pointer's ray
+// meets that plane right where the packet shows,
+// so the packet stays under the pointer.
+// hit: reused for the point, no new vector per move
+const DRAG_HEIGHT = 1.2;
+const DRAG_PLANE = new THREE.Plane(new THREE.Vector3(0, 1, 0), -DRAG_HEIGHT);
+const hit = new THREE.Vector3();
 
 // The print is laid out on a 256 × 336 canvas
 // One canvas pixel in scene units,
@@ -68,6 +80,9 @@ type PacketColors = {
 // A click on any packet toggles the Issues tab
 export function SeedPackets({ colors }: { colors: PacketColors }) {
   const issues = useGreenhouseStore(useShallow(openIssuesWithoutAgent));
+
+  const free = useGreenhouseStore(useShallow(freeSlots));
+
   const issuesOpen = useGreenhouseStore(
     (state) => state.layout.sidePanel === "issues",
   );
@@ -81,35 +96,100 @@ export function SeedPackets({ colors }: { colors: PacketColors }) {
         key={issue.number}
         issue={issue}
         spot={SEED_SPOTS[index]}
+        free={free}
         colors={colors}
         onOpen={toggleIssues}
       />
     ));
 }
 
-// One packet: a plain box (RoundedBox's smoothed normals shade a top this
-// thin with a round gradient), a band at the back with SEEDS and a leaf,
+// One packet:
+// a plain box
+// (RoundedBox's smoothed normals shade top
+// thin with a round gradient),
+// a band at the back with SEEDS and a leaf,
 // the number under the band, the title under that.
-// - every print part lies flat on the top (turned −90° around x)
+// - every print part lies flat on the top
+// (turned −90° around x)
 // - SEEDS is lit (troika's default isn't),
 //   so it dims at night and doesn't glow
 // - hovering shows a hand and the packet's outline
 function SeedPacket({
   issue,
   spot: [x, z, turn],
+  free,
   colors,
   onOpen,
 }: {
   issue: Issue;
   spot: [number, number, number];
+  free: number[];
   colors: PacketColors;
   onOpen: () => void;
 }) {
   const { hovered, handlers } = useClickable(onOpen);
+
+  const group = useRef<THREE.Group>(null);
+  // The press on this packet: where it started on the page,
+  // and whether it became a drag. null: not pressed
+  const press = useRef<{ x: number; y: number; dragged: boolean } | null>(null);
+
+  const onPointerDown = (event: ThreeEvent<PointerEvent>) => {
+    event.stopPropagation();
+    (event.target as Element).setPointerCapture(event.pointerId);
+    press.current = { x: event.clientX, y: event.clientY, dragged: false };
+  };
+
+  // Past DRAG_PX:
+  // press becomes a drag;
+  // from then on the packet follows
+  // the point where the pointer's ray
+  // meets the table, lifted,
+  // without React render
+  const onPointerMove = (event: ThreeEvent<PointerEvent>) => {
+    const current = press.current;
+    if (!current || !group.current) return;
+    if (!current.dragged) {
+      const moved = Math.hypot(
+        event.clientX - current.x,
+        event.clientY - current.y,
+      );
+      if (moved <= DRAG_PX) return;
+      current.dragged = true;
+      useSeedDrag.getState().start(issue.number);
+    }
+    if (event.ray.intersectPlane(DRAG_PLANE, hit)) {
+      group.current.position.copy(hit);
+      // The pot under the packet, if it's free;
+      // the store only hears when that changes
+      const slot = potAt(hit.x, hit.z);
+      const target = slot !== null && free.includes(slot) ? slot : null;
+      const drag = useSeedDrag.getState();
+      if (target !== drag.target) drag.aim(target);
+    }
+  };
+
+  // Release or cancel:
+  // back to its spot (a jump), drag over
+  const finish = () => {
+    group.current?.position.set(x, 0, z);
+    useSeedDrag.getState().end();
+    press.current = null;
+  };
+
   const lyingFlat = { "rotation-x": -Math.PI / 2 } as const;
 
   return (
-    <group position={[x, 0, z]} rotation-y={turn} {...handlers}>
+    <group
+      ref={group}
+      position={[x, 0, z]}
+      rotation-y={turn}
+      {...handlers}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={finish}
+      onPointerCancel={finish}
+    >
       <mesh position-y={PACKET_THICKNESS / 2} castShadow receiveShadow>
         <boxGeometry args={[PACKET_WIDTH, PACKET_THICKNESS, PACKET_DEPTH]} />
         <meshStandardMaterial color={colors.paper} roughness={0.85} />

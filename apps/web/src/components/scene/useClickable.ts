@@ -7,7 +7,7 @@ import type { ThreeEvent } from "@react-three/fiber";
 //
 // How far the pointer may move between press and release, in pixels,
 // and still count as a click
-const DRAG_PX = 4;
+export const DRAG_PX = 4;
 
 // Click and hover for a scene object (a pot, the book). onOpen runs on a
 // click; null means nothing to open, so no hand and no outline. A press

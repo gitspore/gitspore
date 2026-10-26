@@ -28,6 +28,7 @@ import {
 } from "./statusVisuals";
 import { RING_RADIUS, RING_TUBE, StatusRing } from "./StatusRing";
 import { NameTag, type TagColors } from "./NameTag";
+import { useSeedDrag } from "./seedDrag";
 
 //
 //
@@ -130,6 +131,12 @@ const Pot = memo(function Pot({
   const { hovered, handlers } = useClickable(
     agent ? () => openWindow(agent.id) : null,
   );
+  // During a seed packet drag: the outline marks the free pot
+  // the packet would land in, and hovering doesn't outline
+  // (a planted pot isn't a place to drop)
+  const targeted = useSeedDrag((state) => state.target === slot);
+  const dragging = useSeedDrag((state) => state.issue !== null);
+  const outlined = targeted || (hovered && !dragging);
 
   return (
     <group position={[x, 0, z]} {...handlers}>
@@ -139,7 +146,7 @@ const Pot = memo(function Pot({
           roughness={0.9}
           shadowSide={THREE.FrontSide}
         />
-        {hovered && <Outlines thickness={3} color={colors.heart} />}
+        {outlined && <Outlines thickness={3} color={colors.heart} />}
       </mesh>
       <mesh
         geometry={soilGeo}
