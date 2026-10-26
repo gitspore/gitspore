@@ -128,9 +128,7 @@ export function SeedPackets({ colors }: { colors: PacketColors }) {
 }
 
 // One packet:
-// a plain box
-// (RoundedBox's smoothed normals shade top
-// thin with a round gradient),
+// a plain box,
 // a band at the back with SEEDS and a leaf,
 // the number under the band, the title under that.
 // - every print part lies flat on the top
