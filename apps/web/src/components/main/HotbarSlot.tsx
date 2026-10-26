@@ -61,25 +61,23 @@ export function HotbarSlot({
             aria-pressed={selected}
             // Not `disabled`: it stays focusable, so the tooltip says why
             aria-disabled={off || undefined}
-            // A click leaves the focus where it was: no focus ring that looks
-            // like the selected outline, and the opened terminal takes it.
-            // Tab still reaches the slot.
+            // A click leaves the focus where it was: no focus ring, and the
+            // opened terminal takes it. Tab still reaches the slot.
             onMouseDown={(e) => e.preventDefault()}
             onClick={(e) => onPress(e.shiftKey)}
+            // The selected ring and the focus line are in globals.css
+            // (.hotbar-slot), outside the layers like the focus ring itself
             className={cn(
               // The fill is a variable, so the slot beetle's cuts follow it on hover
               "hotbar-slot relative grid shrink-0 place-items-center rounded-xl bg-(--slot-fill)",
               waiting
                 ? "text-wait-ink [--slot-fill:var(--color-wait)] hover:[--slot-fill:color-mix(in_srgb,var(--color-wait)_80%,var(--color-panel))] motion-safe:animate-bob"
-                : "text-ink [--slot-fill:var(--color-panel-2)]",
-              !waiting &&
-                !off &&
-                "hover:[--slot-fill:color-mix(in_srgb,var(--color-panel-2)_80%,var(--color-panel))]",
-              // Disabled (components.md, States): no hover
-              off && "cursor-not-allowed opacity-(--opacity-disabled)",
-              // color.accent is shadcn's primary
-              selected &&
-                "outline-(length:--border-selected) outline-offset-2 outline-primary",
+                : off
+                  ? // Disabled (components.md, States): no hover, fill and
+                    // content at opacity.disabled. Not `opacity` on the
+                    // button, which would fade the focus line too (#114)
+                    "cursor-not-allowed text-[color-mix(in_srgb,var(--color-ink)_calc(var(--opacity-disabled)*100%),transparent)] [--slot-fill:color-mix(in_srgb,var(--color-panel-2)_calc(var(--opacity-disabled)*100%),transparent)]"
+                  : "text-ink [--slot-fill:var(--color-panel-2)] hover:[--slot-fill:color-mix(in_srgb,var(--color-panel-2)_80%,var(--color-panel))]",
             )}
           />
         }

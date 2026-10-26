@@ -109,6 +109,29 @@ body {
 }
 
 /*
+  Hotbar slot rings (#114, design #108). Selected is a box-shadow: a gap in
+  color.panel, then border.selected in color.accent. That leaves the outline
+  for keyboard focus, a dashed color.ink line, so the two can't be taken for
+  each other. On a selected slot the line sits right outside the amber ring.
+  Outside any layer and more specific than :focus-visible above, so it wins.
+*/
+.hotbar-slot[aria-pressed="true"] {
+  box-shadow:
+    0 0 0 var(--space-focus-offset) var(--color-panel),
+    0 0 0 calc(var(--space-focus-offset) + var(--border-selected))
+      var(--color-accent);
+}
+
+.hotbar-slot:focus-visible {
+  outline-style: dashed;
+  outline-color: var(--color-ink);
+}
+
+.hotbar-slot[aria-pressed="true"]:focus-visible {
+  outline-offset: calc(var(--space-focus-offset) + var(--border-selected));
+}
+
+/*
   Motion (components.md): the notification nudges sideways every 2.4 s, a
   waiting hotbar slot bobs. Use them as motion-safe:animate-nudge, so they
   stop under prefers-reduced-motion.
