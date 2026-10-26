@@ -38,7 +38,9 @@ const SCENE_OPTIONS: {
 
 export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const repo = useGreenhouseStore(selectRepo);
-  const agentCount = useGreenhouseStore((s) => selectAgents(s).length);
+  const agentCount = useGreenhouseStore(
+    (s) => selectAgents(s).filter((a) => a.id !== "overview").length,
+  );
   const openSetup = useGreenhouseStore((s) => s.openSetup);
   const { stored, flags, scene } = useSceneSettings();
 
@@ -71,7 +73,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
                 </p>
                 <p className="mt-2 text-ui-meta text-muted-foreground">
                   base {repo.baseBranch} · {agentCount}{" "}
-                  {agentCount === 1 ? "agent" : "agents"} running
+                  {agentCount === 1 ? "plant agent" : "plant agents"} running
                 </p>
               </>
             ) : (
