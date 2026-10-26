@@ -10,6 +10,12 @@ const POT_GAP = 2.15;
 const BACK_ROW_Z = -1.5;
 const ROW_GAP = 1.92;
 
+// How far from a pot's centre a dropped
+// seed packet still lands in it:
+// a bit more than the rim (0.74),
+// less than half the row gap (0.96),
+// so no two pots claim the same point
+const DROP_RADIUS = 0.9;
 // Where the overview book lies: front, a little left of the middle, its
 // back corner clear of the front pots (z ≈ 1.16), its front corner inside
 // the table's edge (z ≈ 3.3)
@@ -40,6 +46,16 @@ export const POT_SPOTS: [number, number][] = Array.from(
     return [x, z];
   },
 );
+
+// The slot whose pot stands at (x, z),
+// or null between and beside the pots.
+// Where a dragged seed packet lands
+export function potAt(x: number, z: number): number | null {
+  const slot = POT_SPOTS.findIndex(
+    ([potX, potZ]) => Math.hypot(x - potX, z - potZ) <= DROP_RADIUS,
+  );
+  return slot === -1 ? null : slot;
+}
 
 // Small fixed jitter in place and turn,
 // so packets look laid down by hand.

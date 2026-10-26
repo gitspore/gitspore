@@ -1,4 +1,4 @@
-import { SEED_SPOTS } from "./layout";
+import { POT_SPOTS, SEED_SPOTS, potAt } from "./layout";
 
 //
 //
@@ -26,5 +26,25 @@ describe("SEED_SPOTS", () => {
       expect(z - PACKET_REACH).toBeGreaterThan(TABLE_BACK_Z);
       expect(z + PACKET_REACH).toBeLessThan(TABLE_FRONT_Z);
     }
+  });
+});
+
+describe("potAt", () => {
+  it("finds each pot at its centre", () => {
+    POT_SPOTS.forEach(([x, z], slot) => {
+      expect(potAt(x, z)).toBe(slot);
+    });
+  });
+
+  it("finds a pot just inside its rim", () => {
+    const [x, z] = POT_SPOTS[4];
+    expect(potAt(x + 0.85, z)).toBe(4);
+  });
+
+  it("misses the strip between neighbouring pots", () => {
+    const [backLeft, backMiddle] = POT_SPOTS;
+    const frontLeft = POT_SPOTS[3];
+    expect(potAt((backLeft[0] + backMiddle[0]) / 2, backLeft[1])).toBeNull();
+    expect(potAt(backLeft[0], (backLeft[1] + frontLeft[1]) / 2)).toBeNull();
   });
 });
