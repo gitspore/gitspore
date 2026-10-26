@@ -92,7 +92,7 @@ export function SidePanel({ tab, onTabChange, onClose }: SidePanelProps) {
 
   return (
     <div className="flex flex-col gap-3">
-      <header className="flex items-start justify-between px-2 pt-1">
+      <header className="flex items-start justify-between px-1 pt-1">
         <div>
           <h2 className="font-title text-title-panel">Your pots</h2>
           <p className="text-ui-meta text-muted-foreground">

@@ -48,7 +48,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <header className="flex items-start justify-between pt-1 pl-3">
+      <header className="flex items-start justify-between px-1 pt-1">
         <h2 className="font-title text-title-panel">Settings</h2>
         <Button
           variant="ghost"

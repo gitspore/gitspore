@@ -18,7 +18,7 @@ export function SettingsButton() {
       className="size-9 rounded-lg bg-hover hover:bg-ink/20 [&_svg]:size-5"
       aria-label="Settings"
       aria-pressed={open}
-      onClick={() => setSidePanel(open ? null : "settings")}
+      onClick={() => setSidePanel(open ? "agents" : "settings")}
     >
       <SettingsIcon />
     </Button>
