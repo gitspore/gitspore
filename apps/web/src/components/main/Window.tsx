@@ -9,7 +9,7 @@ import { UsageMeter, type ContextUsage } from "@/components/shell/UsageMeter";
 import { agentName } from "@/lib/agentName";
 import { STATUS_COLOUR, STATUS_ICON, STATUS_WORD } from "@/lib/status";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useRef, useState, type MouseEvent } from "react";
 import { useTheme } from "next-themes";
 import type { TerminalTheme } from "./TerminalPanel";
 
@@ -51,9 +51,27 @@ export function Window({
   const theme = terminalTheme ?? (resolvedTheme === "dark" ? "dark" : "light");
   const name = agentName(agent, issueTitle);
 
+  // The title, the header's gaps and the padding have nothing focusable, so
+  // a click there would leave the keys where they were (or drop them on the
+  // page). Like a click into the terminal it focuses the window and moves
+  // the keys into its terminal. Buttons and the terminal handle their own.
+  const terminalArea = useRef<HTMLDivElement>(null);
+  const focusFromBackground = (e: MouseEvent) => {
+    const target = e.target as Element;
+    const area = terminalArea.current;
+    if (target.closest("button")) return;
+    if (area && target !== area && area.contains(target)) return;
+    e.preventDefault();
+    onFocus();
+    // xterm.js takes keys through its one textarea
+    area?.querySelector("textarea")?.focus();
+  };
+
   return (
     <div
+      // Focus inside the window: a click into the terminal, Tab, a button
       onFocusCapture={onFocus}
+      onMouseDown={focusFromBackground}
       className={cn(
         `terminal-${theme} flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl bg-terminal-bg shadow-lg outline-2`,
         // Unfocused: the same outline at opacity.window-unfocused (components.md, States)
@@ -104,7 +122,7 @@ export function Window({
         </Button>
       </header>
 
-      <div className="min-h-0 flex-1 p-3">
+      <div ref={terminalArea} className="min-h-0 flex-1 p-3">
         <TerminalPanel agentId={agent.id} theme={theme} focused={focused} />
       </div>
     </div>
