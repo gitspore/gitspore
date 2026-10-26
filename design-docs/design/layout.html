@@ -239,9 +239,9 @@ td.nw { white-space: nowrap; }
 
     <h3 class="group-title">Rules</h3>
     <ol class="rules prose">
-      <li><b>Windows tile by count.</b> 1 fills its zone, 2 sit side by side, 3 make two plus one, 4 make two by two. At most 4 windows are visible; a fifth one opens as a tab in the focused tile.</li>
-      <li><b>A terminal tile is at least about 650 px wide</b> (80 columns of 13 px monospace). If a new column would make tiles narrower, the window stacks below instead. If there is no room below either, it becomes a tab.</li>
-      <li><b>A terminal tile is at least about 350 px tall</b> (about 20 rows). In scene mode the band holds one row of tiles.</li>
+      <li><b>Windows tile in rows.</b> Side by side go as many tiles as keep 80 columns; when that is only one, as many as keep 60 (2 on a laptop, 3 on about 2560 px). At most 4 tiles are visible. When one more window doesn't fit, the oldest visible one is minimised and its hotbar slot shows the mark. Tabs come later (#107). (<a href="../decisions/0011-window-tiling-in-columns-and-rows.md">ADR 0011</a>)</li>
+      <li><b>A terminal tile shows at least 60 columns, preferably 80.</b> Sizes are counted in terminal columns and rows, so they follow the terminal font. A second row of tiles only in focus mode, and it goes on top, so the tiles you are reading don't move. Stacked rows keep at least 10 rows each.</li>
+      <li><b>In scene mode the band holds one row of tiles.</b> Opening a window that would need a second row switches to focus mode.</li>
       <li><b>Maximise acts on all visible windows.</b> Minimised windows stay minimised.</li>
       <li><b>Focus this</b> = focus mode + minimise every other window.</li>
       <li><b>Entering focus mode closes the side panel.</b> The user can open it again; the windows shrink. Leaving focus mode restores the panel state from before.</li>
@@ -317,7 +317,7 @@ td.nw { white-space: nowrap; }
         <tr><td class="nw"><code>WindowGrid</code></td><td>Calculates the tiles from mode, window list and screen width (rules R1–R6). Triggers <code>fit()</code> after each change.</td><td>1 window <span class="pill p-mvp">MVP</span><br>tiling <span class="pill p-should">should</span></td><td>N1, N6</td></tr>
         <tr><td class="nw"><code>Window</code></td><td>Frame with header: agent colour, title, status, controls (minimise, focus this, maximise/restore, close), <code>⋯</code> menu. Only terminals use it for now; a shell tab inside an agent window is possible later.</td><td><span class="pill p-mvp">MVP</span></td><td>N2</td></tr>
         <tr><td class="nw"><code>TerminalView</code></td><td>xterm.js with the fit addon, one per agent, kept alive while minimised.</td><td><span class="pill p-mvp">MVP</span></td><td>#11</td></tr>
-        <tr><td class="nw"><code>WindowTabs</code></td><td>Tabs inside a tile when there is no room for another tile (R1, R2). shadcn <code>Tabs</code>.</td><td><span class="pill p-should">should</span></td><td>N6</td></tr>
+        <tr><td class="nw"><code>WindowTabs</code></td><td>Later (#107): tabs inside a tile instead of minimising the oldest window when no other tile fits (R1). shadcn <code>Tabs</code>.</td><td><span class="pill p-should">should</span></td><td>N6</td></tr>
         <tr><td class="nw"><code>IssueSheet</code></td><td>Issue title, body, labels, age. Buttons: Give to agent, Open on GitHub, Close.</td><td><span class="pill p-mvp">MVP</span></td><td>N3</td></tr>
         <tr><td class="nw"><code>Hotbar</code></td><td>Bottom centre of the main area: one slot per pot (keys <code>1</code>–<code>6</code>) and the overview (key <code>0</code>). Each slot shows the plant, the status shape, the agent colour as a band, and the seconds while it waits. The focused window's slot is outlined, a minimised window is a mark at the top of its slot. Click opens that terminal (shift-click: beside). It replaces the tray of minimised chips. The windows tile above it.</td><td><span class="pill p-mvp">MVP</span>, overview slot <span class="pill p-should">should</span></td><td>N1, N11, N14</td></tr>
         <tr><td class="nw"><code>OverviewWindow</code></td><td><code>Window</code> + <code>TerminalView</code> for the overview agent. Title "overview", no pot number, same status and controls as an agent window.</td><td><span class="pill p-should">should</span></td><td>N13</td></tr>
@@ -354,7 +354,7 @@ td.nw { white-space: nowrap; }
     <h2>Limits</h2>
     <ul class="prose">
       <li><b>Screen width.</b> Minimum 1280 px. No phone or tablet layout. Below 1280 a message asks for a wider window.</li>
-      <li><b>Tiles.</b> On a 1440 × 900 laptop: two terminals side by side only with the side panel closed (about 670 px each). With the panel open (about 950 px left) they stack. At most 4 visible terminal tiles; more become tabs.</li>
+      <li><b>Tiles.</b> On a 1440 × 900 laptop: two terminals side by side with the side panel closed, 60 to 79 columns each. With the panel open (about 950 px left) only one fits across, so in focus mode they stack. At most 4 visible terminal tiles; one more minimises the oldest.</li>
       <li><b>Pots.</b> One repo, six pots, fixed slots (v3 scope).</li>
       <li><b>Camera framing.</b> The view offset can only frame the pots into a rectangle. When the free area is an L-shape, it uses the largest rectangle, so the pots get smaller.</li>
       <li><b>Animation.</b> Browsers animate changes of grid column and row sizes, but not of <code>grid-template-areas</code>. Smooth moves between states need the View Transitions API; check the Next.js docs in the repo before relying on it. xterm needs <code>fit()</code> when a transition ends, not on every frame.</li>
@@ -401,7 +401,7 @@ td.nw { white-space: nowrap; }
         <tr><td>N3</td><td>Issues tab, issue rows with the packet look, issue sheet, <i>Give to agent</i></td><td><span class="pill p-mvp">MVP</span></td><td>US-07, US-09</td></tr>
         <tr><td>N4</td><td>Drag an issue row onto a pot or the table</td><td><span class="pill p-should">should</span></td><td>US-08</td></tr>
         <tr><td>N5</td><td>Attention: notification stack, tab title and favicon count, browser notification, sound</td><td><span class="pill p-mvp">MVP</span> / <span class="pill p-should">should</span></td><td>US-02, US-03</td></tr>
-        <tr><td>N6</td><td>Tiling: 2–4 tiles, width and height rules, tabs fallback, <i>Open beside</i></td><td><span class="pill p-should">should</span></td><td>US-05</td></tr>
+        <tr><td>N6</td><td>Tiling: rows of tiles by width and height in terminal columns and rows, minimise the oldest, <i>Open beside</i>; tabs later (#107)</td><td><span class="pill p-should">should</span></td><td>US-05</td></tr>
         <tr><td>N7</td><td>Branches tab with <code>commit-graph</code>, colour adapter, dark CSS</td><td><span class="pill p-should">should</span></td><td>US-11</td></tr>
         <tr><td>N8</td><td>Agent colours: palette, band, tag dot, picker, colour in rows, hotbar slots, windows, graph</td><td><span class="pill p-should">should</span></td><td>US-10</td></tr>
         <tr><td>N9</td><td>Garden map object in the scene</td><td><span class="pill p-should">should</span></td><td>US-11</td></tr>
@@ -704,27 +704,26 @@ td.nw { white-space: nowrap; }
       get: 'Open a second agent while one is in the band, panel closed.',
       see: 'Two tiles side by side, scene above.',
       limit: 'About 670 px per tile. Only works with the side panel closed.' },
-    { id: 'S06', name: 'Two terminals, panel open: tabs', board: '–',
-      pots: { x: 20, y: 16, w: 214, h: 104 }, sel: 1, rail: ['A'], panel: { tab: 'agents', sel: 1 },
-      wins: [{ x: 20, y: 124, w: 214, h: 72, tabs: ['#15 waiting', '#12'], wait: true, focus: true }],
+    { id: 'S06', name: 'Two terminals, panel open: focus mode', board: '–',
+      rail: ['F'], wins: [{ x: 20, y: 18, w: 146, h: 178, title: '#12 login-redirect' }, { x: 170, y: 18, w: 146, h: 178, title: T15, wait: true, focus: true }],
       get: 'As S05, but the side panel is open.',
-      see: 'Side by side would be under 650 px per tile, and the band has no room to stack, so the second terminal is a tab (R2).',
-      limit: 'Only one terminal readable at a time.' },
+      see: 'Side by side would be under 60 columns, and the band holds one row, so gitspore switches to focus mode. That closes the panel (R6), and the two tiles sit side by side (R3).',
+      limit: 'The panel closes. Opening it again stacks the two tiles.' },
     { id: 'S07', name: 'Focus: three terminals tiled', board: 'board 4',
       rail: ['F'], wins: [
-        { x: 20, y: 18, w: 146, h: 87, title: '#12 login-redirect' },
-        { x: 170, y: 18, w: 146, h: 87, title: T15, wait: true, focus: true },
-        { x: 20, y: 109, w: 296, h: 87, title: '#9 readme-setup' }],
-      get: 'Three visible terminals, then maximise.',
-      see: 'Two on top, one across the bottom (R1).',
-      limit: 'About 22 rows per tile on a 900 px screen. Four is the maximum (2 × 2).' },
+        { x: 20, y: 18, w: 296, h: 87, title: T15, wait: true, focus: true },
+        { x: 20, y: 109, w: 146, h: 87, title: '#12 login-redirect' },
+        { x: 170, y: 109, w: 146, h: 87, title: '#9 readme-setup' }],
+      get: 'Three visible terminals in focus mode.',
+      see: 'The two you were reading stay at the bottom, the new one goes on top across the row (R2).',
+      limit: 'About 16 rows per tile on a 900 px screen. Four is the maximum.' },
     { id: 'S08', name: 'Focus: two terminals, panel open', board: '–',
       rail: ['A', 'F'], panel: { tab: 'agents', sel: 1 }, wins: [
-        { x: 20, y: 18, w: 214, h: 87, title: '#12 login-redirect' },
-        { x: 20, y: 109, w: 214, h: 87, title: T15, wait: true, focus: true }],
+        { x: 20, y: 18, w: 214, h: 87, title: T15, wait: true, focus: true },
+        { x: 20, y: 109, w: 214, h: 87, title: '#12 login-redirect' }],
       get: 'From a two-terminal focus, open the side panel.',
       see: 'Not enough width for side by side, so the tiles stack (R2).',
-      limit: 'Each tile has about 20 rows. A third terminal becomes a tab.' },
+      limit: 'Each tile has about 16 rows. A third terminal minimises the oldest (R1).' },
     { id: 'S09', name: 'Issues tab', board: 'board 6',
       pots: { x: 20, y: 16, w: 214, h: 104 }, rail: ['I'], panel: { tab: 'issues', sel: -1 },
       wins: [{ x: 20, y: 124, w: 214, h: 72, title: '#12 login-redirect · growing', focus: true }],
@@ -754,7 +753,7 @@ td.nw { white-space: nowrap; }
       rail: ['F'], wins: [{ x: 20, y: 18, w: 146, h: 178, title: '#12 login-redirect' }, { x: 170, y: 18, w: 146, h: 178, title: T15, wait: true, focus: true }],
       get: 'Click Open beside in the notification.',
       see: 'The waiting agent tiles next to the one you were reading. Focus moves to it.',
-      limit: 'If tiles would get too narrow, it opens as a tab instead (R2).' },
+      limit: 'If no other tile fits, the oldest visible window is minimised (R1).' },
     { id: 'S14', name: 'Drag an issue onto a pot', board: '–',
       pots: { x: 20, y: 16, w: 214, h: 168 }, drop: 5, rail: ['I'], panel: { tab: 'issues', sel: 1 }, min: [1],
       ghost: [207, 108, 56],
