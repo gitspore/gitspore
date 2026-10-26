@@ -291,6 +291,16 @@ describe("createGreenhouseStore", () => {
       expect(store.getState().layout.sidePanel).toBeNull();
     });
 
+    it("setSidePanel puts the settings in the tab's place and back", () => {
+      const { store } = setup();
+
+      store.getState().setSidePanel("settings");
+      expect(store.getState().layout.sidePanel).toBe("settings");
+
+      store.getState().setSidePanel("issues");
+      expect(store.getState().layout.sidePanel).toBe("issues");
+    });
+
     it("setMode closes the panel for focus and brings it back for the scene", () => {
       const { store } = setup();
       store.getState().setSidePanel("issues");

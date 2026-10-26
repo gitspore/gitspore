@@ -14,6 +14,7 @@ import {
 } from "@/lib/store/selectors";
 import { ConnectionStatus, type Connection } from "./ConnectionStatus";
 import { Logo } from "./Logo";
+import { SettingsButton } from "./SettingsButton";
 import { ThemeToggle } from "./ThemeToggle";
 import { WaitBadge } from "./WaitBadge";
 import { HelpPopover } from "./HelpPopover";
@@ -73,6 +74,7 @@ export function TopBar({ usage, children }: TopBarProps) {
       {usage?.week && <UsageMeter label="week" {...usage.week} />}
       <ConnectionStatus status={connection} />
       <HelpPopover />
+      <SettingsButton />
       <ThemeToggle />
     </div>
   );
