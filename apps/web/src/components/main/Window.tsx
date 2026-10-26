@@ -6,8 +6,10 @@ import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 // import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { UsageMeter, type ContextUsage } from "@/components/shell/UsageMeter";
+import { agentName } from "@/lib/agentName";
 import { STATUS_COLOUR, STATUS_ICON, STATUS_WORD } from "@/lib/status";
-import { useState } from "react";
+import { cn } from "@/lib/utils";
+import { useRef, useState, type MouseEvent } from "react";
 import { useTheme } from "next-themes";
 import type { TerminalTheme } from "./TerminalPanel";
 
@@ -24,6 +26,10 @@ type WindowProps = {
   issueTitle: string;
   // Missing until the daemon sends it (#42): the meter stays hidden
   context?: ContextUsage;
+  // The window the user works in: full outline, and its terminal takes the keys
+  focused: boolean;
+  // Focus moved into the window, e.g. a click into its terminal
+  onFocus: () => void;
   onMinimise: () => void;
 };
 
@@ -31,6 +37,8 @@ export function Window({
   agent,
   issueTitle,
   context,
+  focused,
+  onFocus,
   onMinimise,
 }: WindowProps) {
   const StatusIcon = STATUS_ICON[agent.status];
@@ -41,10 +49,36 @@ export function Window({
     null,
   );
   const theme = terminalTheme ?? (resolvedTheme === "dark" ? "dark" : "light");
+  const name = agentName(agent, issueTitle);
+
+  // The title, the header's gaps and the padding have nothing focusable, so
+  // a click there would leave the keys where they were (or drop them on the
+  // page). Like a click into the terminal it focuses the window and moves
+  // the keys into its terminal. Buttons and the terminal handle their own.
+  const terminalArea = useRef<HTMLDivElement>(null);
+  const focusFromBackground = (e: MouseEvent) => {
+    const target = e.target as Element;
+    const area = terminalArea.current;
+    if (target.closest("button")) return;
+    if (area && target !== area && area.contains(target)) return;
+    e.preventDefault();
+    onFocus();
+    // xterm.js takes keys through its one textarea
+    area?.querySelector("textarea")?.focus();
+  };
 
   return (
     <div
-      className={`terminal-${theme} flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl bg-terminal-bg shadow-lg outline-2 outline-line`}
+      // Focus inside the window: a click into the terminal, Tab, a button
+      onFocusCapture={onFocus}
+      onMouseDown={focusFromBackground}
+      className={cn(
+        `terminal-${theme} flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl bg-terminal-bg shadow-lg outline-2`,
+        // Unfocused: the same outline at opacity.window-unfocused (components.md, States)
+        focused
+          ? "outline-line"
+          : "outline-[color-mix(in_srgb,var(--color-line)_calc(var(--opacity-window-unfocused)*100%),transparent)]",
+      )}
     >
       <header className="flex h-terminal-header shrink-0 items-center gap-2 border-b-2 border-line bg-panel pr-2 pl-3 text-ink">
         <StatusIcon
@@ -54,9 +88,7 @@ export function Window({
         <span className="sr-only">{STATUS_WORD[agent.status]}</span>
 
         <p className="min-w-0 flex-1 truncate text-ui-meta">
-          <span className="font-bold">
-            #{agent.issueNumber} {issueTitle}
-          </span>
+          <span className="font-bold">{name}</span>
           <span className="text-muted-foreground"> · {agent.branch}</span>
         </p>
 
@@ -83,15 +115,15 @@ export function Window({
           variant="ghost"
           size="icon"
           className="rounded-lg [&_svg]:size-5"
-          aria-label={`Minimise #${agent.issueNumber}`}
+          aria-label={`Minimise ${name}`}
           onClick={onMinimise}
         >
           <Minus />
         </Button>
       </header>
 
-      <div className="min-h-0 flex-1 p-3">
-        <TerminalPanel agentId={agent.id} theme={theme} />
+      <div ref={terminalArea} className="min-h-0 flex-1 p-3">
+        <TerminalPanel agentId={agent.id} theme={theme} focused={focused} />
       </div>
     </div>
   );

@@ -25,11 +25,17 @@ export type TerminalTheme = keyof typeof xtermTheme;
 export function TerminalPanel({
   agentId,
   theme,
+  focused,
 }: {
   agentId: AgentId;
   theme: TerminalTheme;
+  // Its window is the focused one: the terminal takes the keys (S13)
+  focused: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const terminalRef = useRef<Terminal | null>(null);
+  // Read by the effect below without making it build a new terminal
+  const focusedRef = useRef(focused);
   const client = useGreenhouseClient();
   // openTerminal waits connection to load.
   const connected = useGreenhouseStore(
@@ -69,6 +75,8 @@ export function TerminalPanel({
     };
     fitToContainer();
     void session.open(agentId);
+    terminalRef.current = terminal;
+    if (focusedRef.current) terminal.focus();
 
     // first fit after observe().
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -82,7 +90,14 @@ export function TerminalPanel({
       clearTimeout(timer);
       session.dispose();
       terminal.dispose();
+      terminalRef.current = null;
     };
   }, [client, connected, agentId, actions, theme]);
+
+  // The window became the focused one (a slot, a pot, a notification)
+  useEffect(() => {
+    focusedRef.current = focused;
+    if (focused) terminalRef.current?.focus();
+  }, [focused]);
   return <div ref={containerRef} className="size-full" />;
 }

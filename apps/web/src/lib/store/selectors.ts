@@ -1,5 +1,6 @@
 import {
   MAX_SLOTS,
+  OVERVIEW_AGENT_ID,
   type Agent,
   type Issue,
   type RepoInfo,
@@ -43,6 +44,23 @@ export function showSetup(state: GreenhouseStoreState): boolean {
 export function agentBySlot(slot: number) {
   return (state: GreenhouseStoreState): Agent | null =>
     selectAgents(state).find((agent) => agent.slotIndex === slot) ?? null;
+}
+
+/** The agent whose window the user works in, or null (#72). */
+export function focusedAgent(state: GreenhouseStoreState): Agent | null {
+  return (
+    selectAgents(state).find((agent) => agent.id === state.focusedAgentId) ??
+    null
+  );
+}
+
+/** The agent on a hotbar key: 1–6 the pots, 0 the overview. Null if none. */
+export function agentByKey(key: number) {
+  return (state: GreenhouseStoreState): Agent | null =>
+    key === 0
+      ? (selectAgents(state).find((agent) => agent.id === OVERVIEW_AGENT_ID) ??
+        null)
+      : agentBySlot(key - 1)(state);
 }
 
 /**
