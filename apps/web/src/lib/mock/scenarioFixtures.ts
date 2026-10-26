@@ -12,6 +12,7 @@ export const agent: Agent = {
   startedAt: "2026-10-09T09:00:00.000Z",
   pullRequest: null,
   statusReason: null,
+  usage: null,
 };
 
 export const ANCHOR = "2026-10-09T09:30:00.000Z";
@@ -33,6 +34,7 @@ export function makeScenario(
       repo: { path: "/mock/repo", baseBranch: "main", github: "on" },
       agents,
       issues: [],
+      plan: null,
     },
     events,
   };

@@ -16,6 +16,7 @@ const agent: Agent = {
   startedAt: "2026-10-09T08:00:00.000Z",
   pullRequest: null,
   statusReason: null,
+  usage: null,
 };
 
 function scenario(events: Scenario["events"] = []): Scenario {
@@ -27,6 +28,7 @@ function scenario(events: Scenario["events"] = []): Scenario {
       repo: { path: "/mock/repo", baseBranch: "main", github: "on" },
       agents: [agent],
       issues: [{ number: 1, title: "Issue", url: "u", labels: ["bug"] }],
+      plan: null,
     },
     events,
   };

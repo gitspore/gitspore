@@ -1017,6 +1017,7 @@ describe("AgentService.dispatch", () => {
             startedAt: "2026-10-21T10:00:00.000Z",
             pullRequest: null,
             statusReason: null,
+            usage: null,
           },
         },
       ]);

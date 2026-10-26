@@ -11,6 +11,7 @@ import type {
   GreenhouseState,
   Issue,
   JsonValue,
+  PlanUsage,
   RepoInfo,
   SessionId,
 } from "./models";
@@ -76,7 +77,9 @@ export type PatchOp =
   | { type: "issue:upsert"; issue: Issue }
   | { type: "issue:remove"; issueNumber: number }
   /** GitHub sync for the current repo turned on or off. Nothing without a repo. */
-  | { type: "repo:github"; github: RepoInfo["github"] };
+  | { type: "repo:github"; github: RepoInfo["github"] }
+  /** The plan's limits changed. Replaces `plan` as a whole. */
+  | { type: "plan:set"; plan: PlanUsage | null };
 
 /**
  * Changes from version `version - 1` to `version`. Versions increase by

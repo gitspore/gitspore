@@ -77,6 +77,7 @@ export class MockClient implements GreenhouseClient {
     issues: [],
     version: 0,
     repo: null,
+    plan: null,
   };
   // How far the mock's own patches have pushed the scenario's version
   // numbers. A scenario patch is sent as `version + versionOffset`.
@@ -120,6 +121,7 @@ export class MockClient implements GreenhouseClient {
         startedAt: now,
         pullRequest: null,
         statusReason: null,
+        usage: null,
       };
       ack({ agentId });
       this.sendPatch([{ type: "agent:upsert", agent }]);

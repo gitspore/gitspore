@@ -180,6 +180,7 @@ export class AgentService implements OnModuleInit {
           startedAt: now,
           pullRequest: null,
           statusReason: null,
+          usage: null,
         },
       },
     ]);
@@ -334,6 +335,7 @@ export class AgentService implements OnModuleInit {
             startedAt: now,
             pullRequest: null,
             statusReason: RESTARTED_REASON,
+            usage: null,
           },
         },
       ]);

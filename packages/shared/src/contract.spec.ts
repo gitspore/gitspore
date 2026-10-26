@@ -38,6 +38,17 @@ const snapshot: GreenhouseState = {
         state: "open",
       },
       statusReason: null,
+      usage: {
+        contextPercent: 22,
+        model: "Opus",
+        tokens: {
+          input: 1_200,
+          output: 48_000,
+          cacheRead: 640_000,
+          cacheWrite: 11_800,
+          total: 701_000,
+        },
+      },
     },
     {
       id: "overview",
@@ -50,6 +61,7 @@ const snapshot: GreenhouseState = {
       startedAt: "2026-10-08T09:01:00.000Z",
       pullRequest: null,
       statusReason: null,
+      usage: null,
     },
   ],
   issues: [
@@ -66,6 +78,10 @@ const snapshot: GreenhouseState = {
       labels: [],
     },
   ],
+  plan: {
+    fiveHour: { usedPercent: 23.5, resetsAt: "2026-10-08T12:00:00.000Z" },
+    sevenDay: null,
+  },
 };
 
 // One sample per op type. A new PatchOp type is a compile error here until it
@@ -91,6 +107,13 @@ const ops: { [T in PatchOp["type"]]: Extract<PatchOp, { type: T }> } = {
   },
   "issue:remove": { type: "issue:remove", issueNumber: 43 },
   "repo:github": { type: "repo:github", github: "off" },
+  "plan:set": {
+    type: "plan:set",
+    plan: {
+      fiveHour: { usedPercent: 100, resetsAt: "2026-10-08T14:30:00.000Z" },
+      sevenDay: { usedPercent: 41.2, resetsAt: "2026-10-12T08:00:00.000Z" },
+    },
+  },
 };
 
 // One sample payload per event, so the event log can hold every one of them.
@@ -270,6 +293,7 @@ describe("applyPatch", () => {
         repo: { ...snapshot.repo!, github: "off" },
         agents: [snapshot.agents[1]],
         issues: [snapshot.issues[0], ops["issue:upsert"].issue],
+        plan: ops["plan:set"].plan,
       },
     });
   });
