@@ -2,7 +2,7 @@
 
 import type { Agent } from "@gitspore/shared";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useGreenhouseStore } from "@/lib/client/GreenhouseClientProvider";
 import { mainGrid, shellGrid } from "@/lib/layout";
@@ -16,6 +16,7 @@ import { Hotbar } from "../main/Hotbar";
 import { Window } from "../main/Window";
 import { SettingsPanel } from "../side-panel/SettingsPanel";
 import { SidePanel } from "../side-panel/SidePanel";
+import { SceneLoader, SceneVeil } from "./SceneLoading";
 import { ToolRail } from "./ToolRail";
 import { TopBar } from "./TopBar";
 
@@ -40,6 +41,9 @@ export function AppShell() {
   const sceneArea = useRef<HTMLDivElement>(null);
   const sceneHidden =
     layout.mode === "focus" && layout.windows.some((w) => !w.minimised);
+  // Until the scene has drawn its first frames a veil covers it, with a
+  // growing seedling in its free area
+  const [sceneReady, setSceneReady] = useState(false);
 
   // The agents of the visible windows; a window whose agent is gone is skipped
   const visibleWindows = useGreenhouseStore(
@@ -56,7 +60,10 @@ export function AppShell() {
     <>
       {/* The scene fills the page under the interface */}
       <div className="fixed inset-0 z-0 bg-panel-2">
-        {showScene && <Scene sceneArea={sceneArea} />}
+        {showScene && (
+          <Scene sceneArea={sceneArea} onReady={() => setSceneReady(true)} />
+        )}
+        {showScene && <SceneVeil ready={sceneReady} />}
       </div>
 
       <div
@@ -92,7 +99,9 @@ export function AppShell() {
           <div
             ref={sceneArea}
             className={sceneHidden ? "hidden" : "[grid-area:scene]"}
-          />
+          >
+            {showScene && <SceneLoader ready={sceneReady} />}
+          </div>
 
           {visibleWindows.length > 0 && (
             // Side by side for now; tiling (1, 2, 2+1, 2×2) comes with WindowGrid

@@ -1,7 +1,7 @@
 import { Outlines, RoundedBox } from "@react-three/drei";
-import { OVERVIEW_AGENT_ID } from "@gitspore/shared";
 
 import { useGreenhouseStore } from "@/lib/client/GreenhouseClientProvider";
+import { agentByKey } from "@/lib/store/selectors";
 import { BOOK_SPOT, BOOK_TURN } from "./layout";
 import { useClickable } from "./useClickable";
 import { Beetle } from "./Beetle";
@@ -39,17 +39,12 @@ export function Book({
   logo: { ink: string; leaf: string; seam: string; glow: number };
 }) {
   const [x, z] = BOOK_SPOT;
-  const overviewVisible = useGreenhouseStore((state) =>
-    state.layout.windows.some(
-      (window) => window.agentId === OVERVIEW_AGENT_ID && !window.minimised,
-    ),
+  const hasOverview = useGreenhouseStore(
+    (state) => agentByKey(0)(state) !== null,
   );
-  const openWindow = useGreenhouseStore((state) => state.openWindow);
-  const toggleMinimised = useGreenhouseStore((state) => state.toggleMinimised);
-  const { hovered, handlers } = useClickable(() =>
-    overviewVisible
-      ? toggleMinimised(OVERVIEW_AGENT_ID)
-      : openWindow(OVERVIEW_AGENT_ID),
+  const pressSlot = useGreenhouseStore((state) => state.pressSlot);
+  const { hovered, handlers } = useClickable(
+    hasOverview ? () => pressSlot(0) : null,
   );
 
   return (

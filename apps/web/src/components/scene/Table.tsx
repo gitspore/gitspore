@@ -85,10 +85,9 @@ function chamferedPlank() {
 }
 
 // One plank shape for all nine planks and one box for all four legs, like
-// the shared pot shape. Planks cast and receive shadows, legs only cast,
-// the floor receives. The floor is a large plane laid flat, where the
-// legs end
-export function Table({ wood, floor }: { wood: WoodColors; floor: string }) {
+// the shared pot shape. Planks cast and receive shadows, legs only cast.
+// The legs end on the garden's floor (Garden)
+export function Table({ wood }: { wood: WoodColors }) {
   const plankGeo = useMemo(() => chamferedPlank(), []);
 
   const legGeo = useMemo(() => new THREE.BoxGeometry(0.2, 1.9, 0.2), []);
@@ -119,10 +118,6 @@ export function Table({ wood, floor }: { wood: WoodColors; floor: string }) {
           <meshStandardMaterial color={wood.leg} roughness={0.8} />
         </mesh>
       ))}
-      <mesh rotation-x={-Math.PI / 2} position-y={-2} receiveShadow>
-        <planeGeometry args={[40, 40]} />
-        <meshStandardMaterial color={floor} roughness={1} />
-      </mesh>
     </group>
   );
 }

@@ -44,10 +44,11 @@ describe("parseUrlFlags", () => {
   });
 
   it("reads each option's flag", () => {
-    expect(flags("?shadows=off&fx=off&orbit=0")).toEqual({
+    expect(flags("?shadows=off&fx=off&orbit=0&life=off")).toEqual({
       shadows: false,
       glow: false,
       cameraMotion: false,
+      life: false,
     });
   });
 
@@ -62,6 +63,7 @@ describe("resolveScene", () => {
       shadows: false,
       glow: true,
       cameraMotion: true,
+      life: true,
       fog: true,
     });
   });
@@ -71,6 +73,7 @@ describe("resolveScene", () => {
       shadows: false,
       glow: false,
       cameraMotion: false,
+      life: false,
       fog: false,
     });
   });
