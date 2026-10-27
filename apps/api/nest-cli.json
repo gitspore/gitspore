@@ -4,7 +4,10 @@
   "sourceRoot": "src",
   "compilerOptions": {
     "deleteOutDir": true,
-    "assets": ["modules/agent/hook-script.mjs"],
+    "assets": [
+      "modules/agent/hook-script.mjs",
+      "modules/agent/statusline-script.mjs"
+    ],
     "watchAssets": true
   }
 }
