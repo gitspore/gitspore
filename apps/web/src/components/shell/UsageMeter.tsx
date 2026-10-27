@@ -9,15 +9,6 @@ type UsageMeterProps = {
 
 type MeterState = "normal" | "warn" | "full";
 
-// One plan limit. Moves to @gitspore/shared with #42 (the daemon sends it)
-export type UsageLimit = { percent: number; resetsAt?: string };
-
-// Both windows can be missing: API key, before the first answer, after a reset
-export type PlanUsage = { fiveHour?: UsageLimit; week?: UsageLimit };
-
-// How full one agent's context is, for its window header.
-export type ContextUsage = { percent: number; tokens: number };
-
 // 701000 -> "701k", 20800000 -> "20.8M"
 const formatTokens = (n: number) =>
   new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 })

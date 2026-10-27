@@ -1,4 +1,4 @@
-import type { Agent } from "@gitspore/shared";
+import type { Agent, PlanUsage } from "@gitspore/shared";
 import { getScenario } from "../../../mocks/scenarios";
 import type { Scenario } from "./scenario";
 import { shiftScenario } from "./shiftTimestamps";
@@ -35,6 +35,49 @@ function scenario(events: Scenario["events"] = []): Scenario {
 }
 
 describe("shiftScenario", () => {
+  it("moves the reset times of the plan limits", () => {
+    const plan: PlanUsage = {
+      fiveHour: { usedPercent: 86, resetsAt: "2026-10-09T11:30:00.000Z" },
+      sevenDay: null,
+    };
+    const base = scenario();
+
+    const shifted = shiftScenario(
+      { ...base, snapshot: { ...base.snapshot, plan } },
+      5 * MINUTE,
+    );
+
+    expect(shifted.snapshot.plan).toEqual({
+      fiveHour: { usedPercent: 86, resetsAt: "2026-10-09T11:35:00.000Z" },
+      sevenDay: null,
+    });
+  });
+
+  it("moves the reset times in plan:set ops", () => {
+    const plan: PlanUsage = {
+      fiveHour: null,
+      sevenDay: { usedPercent: 34, resetsAt: "2026-10-13T09:30:00.000Z" },
+    };
+    const [entry] = shiftScenario(
+      scenario([
+        {
+          at: 10,
+          event: "state:patch",
+          payload: { version: 2, ops: [{ type: "plan:set", plan }] },
+        },
+      ]),
+      MINUTE,
+    ).events;
+
+    expect(entry.event === "state:patch" && entry.payload.ops[0]).toEqual({
+      type: "plan:set",
+      plan: {
+        fiveHour: null,
+        sevenDay: { usedPercent: 34, resetsAt: "2026-10-13T09:31:00.000Z" },
+      },
+    });
+  });
+
   it("moves both timestamps of an agent by exactly the offset", () => {
     const shifted = shiftScenario(scenario(), 5 * MINUTE);
 

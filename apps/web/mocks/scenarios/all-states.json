@@ -27,7 +27,18 @@
         "statusSince": "2026-10-09T09:05:00.000Z",
         "startedAt": "2026-10-09T09:00:00.000Z",
         "pullRequest": null,
-        "statusReason": null
+        "statusReason": null,
+        "usage": {
+          "contextPercent": 22,
+          "model": "Opus",
+          "tokens": {
+            "input": 1200,
+            "output": 48000,
+            "cacheRead": 640000,
+            "cacheWrite": 11800,
+            "total": 701000
+          }
+        }
       },
       {
         "id": "agent-3",
@@ -39,7 +50,18 @@
         "statusSince": "2026-10-09T09:10:00.000Z",
         "startedAt": "2026-10-09T09:00:00.000Z",
         "pullRequest": null,
-        "statusReason": null
+        "statusReason": null,
+        "usage": {
+          "contextPercent": 84,
+          "model": "Opus",
+          "tokens": {
+            "input": 3400,
+            "output": 96600,
+            "cacheRead": 2180000,
+            "cacheWrite": 70000,
+            "total": 2350000
+          }
+        }
       },
       {
         "id": "agent-4",
@@ -135,7 +157,11 @@
         "url": "https://github.com/gitspore/gitspore/issues/106",
         "labels": ["chore"]
       }
-    ]
+    ],
+    "plan": {
+      "fiveHour": { "usedPercent": 86, "resetsAt": "2026-10-09T11:30:00.000Z" },
+      "sevenDay": { "usedPercent": 34, "resetsAt": "2026-10-13T09:30:00.000Z" }
+    }
   },
   "events": []
 }
