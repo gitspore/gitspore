@@ -31,7 +31,14 @@ function issue(number: number): Issue {
 }
 
 function state(overrides: Partial<GreenhouseState> = {}): GreenhouseState {
-  return { version: 1, repo: null, agents: [], issues: [], ...overrides };
+  return {
+    version: 1,
+    repo: null,
+    agents: [],
+    issues: [],
+    plan: null,
+    ...overrides,
+  };
 }
 
 const serverError: ServerError = { code: "slot_unavailable", message: "taken" };
@@ -171,6 +178,7 @@ describe("createGreenhouseStore", () => {
         repo: null,
         agents: [agent({ status: "needs_input" })],
         issues: [],
+        plan: null,
       });
     });
 
