@@ -291,6 +291,16 @@ describe("createGreenhouseStore", () => {
       expect(store.getState().layout.sidePanel).toBeNull();
     });
 
+    it("setSidePanel puts the settings in the tab's place and back", () => {
+      const { store } = setup();
+
+      store.getState().setSidePanel("settings");
+      expect(store.getState().layout.sidePanel).toBe("settings");
+
+      store.getState().setSidePanel("issues");
+      expect(store.getState().layout.sidePanel).toBe("issues");
+    });
+
     it("setMode closes the panel for focus and brings it back for the scene", () => {
       const { store } = setup();
       store.getState().setSidePanel("issues");
@@ -652,7 +662,7 @@ describe("createGreenhouseStore", () => {
       store.getState().openWindow("overview");
       store.getState().openWindow("a1");
 
-      // e.g. the daemon restarted without GITSPORE_START_OVERVIEW
+      // e.g. the daemon restarted with GITSPORE_START_OVERVIEW=0
       store.getState().applySnapshot(state({ agents: [agent({ id: "a1" })] }));
 
       expect(windows(store)).toEqual([{ agentId: "a1", minimised: false }]);

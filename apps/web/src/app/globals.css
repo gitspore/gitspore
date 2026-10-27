@@ -112,12 +112,51 @@ body {
 
 /*
   Motion (components.md): the notification nudges sideways every 2.4 s, a
-  waiting hotbar slot bobs. Use them as motion-safe:animate-nudge, so they
-  stop under prefers-reduced-motion.
+  waiting hotbar slot bobs, the loading seedling grows (stem, then leaves),
+  stands a moment, fades and grows again. Use them as motion-safe:animate-nudge,
+  so they stop under prefers-reduced-motion.
 */
 @theme {
   --animate-nudge: nudge 2.4s ease-in-out infinite;
   --animate-bob: bob 1.1s ease-in-out infinite;
+  --animate-sprout-stem: sprout-stem 2.4s ease-out infinite;
+  --animate-sprout-leaf: sprout-leaf 2.4s ease-out infinite;
+
+  @keyframes sprout-stem {
+    0% {
+      transform: scaleY(0);
+      opacity: 1;
+    }
+    35%,
+    85% {
+      transform: scaleY(1);
+      opacity: 1;
+    }
+    100% {
+      transform: scaleY(1);
+      opacity: 0;
+    }
+  }
+
+  @keyframes sprout-leaf {
+    0%,
+    30% {
+      transform: scale(0);
+      opacity: 1;
+    }
+    48% {
+      transform: scale(1.15);
+    }
+    58%,
+    85% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 0;
+    }
+  }
 
   @keyframes bob {
     0%,

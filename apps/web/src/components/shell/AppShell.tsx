@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useGreenhouseStore } from "@/lib/client/GreenhouseClientProvider";
 import { mainGrid, shellGrid } from "@/lib/layout";
 // Stays mock until the daemon sends usage (#42)
@@ -13,7 +13,9 @@ import { ConnectScreen } from "../attention/ConnectScreen";
 import { NotificationStack } from "../attention/NotificationStack";
 import { Hotbar } from "../main/Hotbar";
 import { WindowGrid } from "../main/WindowGrid";
+import { SettingsPanel } from "../side-panel/SettingsPanel";
 import { SidePanel } from "../side-panel/SidePanel";
+import { SceneLoader, SceneVeil } from "./SceneLoading";
 import { ToolRail } from "./ToolRail";
 import { TopBar } from "./TopBar";
 
@@ -35,6 +37,9 @@ export function AppShell() {
   const sceneArea = useRef<HTMLDivElement>(null);
   const sceneHidden =
     layout.mode === "focus" && layout.windows.some((w) => !w.minimised);
+  // Until the scene has drawn its first frames a veil covers it, with a
+  // growing seedling in its free area
+  const [sceneReady, setSceneReady] = useState(false);
 
   // The windows themselves are WindowGrid's (#109)
   const hasVisibleWindow = layout.windows.some((w) => !w.minimised);
@@ -44,7 +49,10 @@ export function AppShell() {
     <>
       {/* The scene fills the page under the interface */}
       <div className="fixed inset-0 z-0 bg-panel-2">
-        {showScene && <Scene sceneArea={sceneArea} />}
+        {showScene && (
+          <Scene sceneArea={sceneArea} onReady={() => setSceneReady(true)} />
+        )}
+        {showScene && <SceneVeil ready={sceneReady} />}
       </div>
 
       <div
@@ -80,7 +88,9 @@ export function AppShell() {
           <div
             ref={sceneArea}
             className={sceneHidden ? "hidden" : "[grid-area:scene]"}
-          />
+          >
+            {showScene && <SceneLoader ready={sceneReady} />}
+          </div>
 
           {hasVisibleWindow && (
             <div className="pointer-events-auto min-h-0 min-w-0 [grid-area:windows]">
@@ -93,14 +103,18 @@ export function AppShell() {
           </div>
         </section>
 
-        {/* Side Panel */}
+        {/* Side Panel, or the settings in its place (#111) */}
         {layout.sidePanel && (
           <aside className="pointer-events-auto overflow-y-auto rounded-xl bg-panel p-2 text-ink shadow-lg [grid-area:panel]">
-            <SidePanel
-              tab={layout.sidePanel}
-              onTabChange={setSidePanel}
-              onClose={() => setSidePanel(null)}
-            />
+            {layout.sidePanel === "settings" ? (
+              <SettingsPanel onClose={() => setSidePanel(null)} />
+            ) : (
+              <SidePanel
+                tab={layout.sidePanel}
+                onTabChange={setSidePanel}
+                onClose={() => setSidePanel(null)}
+              />
+            )}
           </aside>
         )}
 

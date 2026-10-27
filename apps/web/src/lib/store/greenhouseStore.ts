@@ -17,7 +17,7 @@ import type {
   LayoutSettings,
   MainMode,
   OpenWindow,
-  SidePanelTab,
+  SidePanelView,
 } from "../layout";
 import { agentByKey } from "./selectors";
 
@@ -51,7 +51,8 @@ export type GreenhouseStoreState = {
   setConnection: (status: ConnectionStatus) => void;
   setError: (error: ServerError | null) => void;
 
-  setSidePanel: (tab: SidePanelTab | null) => void;
+  /** A tab, or "settings" in the panel's place (#111); null closes it. */
+  setSidePanel: (view: SidePanelView | null) => void;
   /** Focus closes the side panel; back in the scene it returns. */
   setMode: (mode: MainMode) => void;
   /**
@@ -100,7 +101,7 @@ export function createGreenhouseStore(
 ) {
   let snapshotRequested = false;
   // The side panel before entering focus mode, to bring it back afterwards
-  let panelBeforeFocus: SidePanelTab | null = null;
+  let panelBeforeFocus: SidePanelView | null = null;
 
   return createStore<GreenhouseStoreState>()((set, get) => ({
     server: null,

@@ -27,6 +27,11 @@ import {
   type RingColor,
 } from "./statusVisuals";
 import { RING_RADIUS, RING_TUBE, StatusRing } from "./StatusRing";
+import { NameTag, type TagColors } from "./NameTag";
+import { useSeedDrag } from "./seedDrag";
+import { Burst, type BurstKind } from "./Burst";
+import { useReducedMotion } from "./life";
+import { WateringCan } from "./WateringCan";
 
 //
 //
@@ -104,6 +109,7 @@ const Pot = memo(function Pot({
   bodyGeo,
   soilGeo,
   ringGeo,
+  tag,
 }: {
   slot: number;
   test: PlantLook | null;
@@ -111,6 +117,7 @@ const Pot = memo(function Pot({
   art: ArtColors;
   ringColors: Record<RingColor, string>;
   glow: number;
+  tag: TagColors;
 } & Shapes) {
   const agent = useGreenhouseStore(agentBySlot(slot));
   const [x, z] = POT_SPOTS[slot];
@@ -127,6 +134,30 @@ const Pot = memo(function Pot({
   const { hovered, handlers } = useClickable(
     agent ? () => openWindow(agent.id) : null,
   );
+  // During a seed packet drag: the outline marks the free pot
+  // the packet would land in, and hovering doesn't outline
+  // (a planted pot isn't a place to drop)
+  const targeted = useSeedDrag((state) => state.target === slot);
+  const dragging = useSeedDrag((state) => state.issue !== null);
+  const outlined = targeted || (hovered && !dragging);
+
+  // A burst when something happens to this pot while the page is open:
+  // soil flies up when an agent is planted, petals when its branch is
+  // merged. The pot keeps what it saw last and compares while rendering;
+  // on page load it has seen everything, so nothing bursts
+  const reducedMotion = useReducedMotion();
+  const seeing = { id: agent?.id ?? null, merged: agent?.status === "merged" };
+  const [seen, setSeen] = useState(seeing);
+  const [burst, setBurst] = useState<{ kind: BurstKind; count: number }>();
+  if (seen.id !== seeing.id || seen.merged !== seeing.merged) {
+    setSeen(seeing);
+    const count = (burst?.count ?? 0) + 1;
+    if (seeing.id && seeing.id !== seen.id) {
+      setBurst({ kind: "soil", count });
+    } else if (seeing.merged && !seen.merged) {
+      setBurst({ kind: "petals", count });
+    }
+  }
 
   return (
     <group position={[x, 0, z]} {...handlers}>
@@ -136,7 +167,7 @@ const Pot = memo(function Pot({
           roughness={0.9}
           shadowSide={THREE.FrontSide}
         />
-        {hovered && <Outlines thickness={3} color={colors.heart} />}
+        {outlined && <Outlines thickness={3} color={colors.heart} />}
       </mesh>
       <mesh
         geometry={soilGeo}
@@ -155,6 +186,10 @@ const Pot = memo(function Pot({
         />
       )}
 
+      {agent?.issueNumber != null && (
+        <NameTag issueNumber={agent.issueNumber} soilY={SOIL_Y} colors={tag} />
+      )}
+
       {look && (
         <group position-y={SOIL_Y}>
           <Plant
@@ -164,8 +199,30 @@ const Pot = memo(function Pot({
             colors={colors}
             art={art}
             wholeScale={look.wholeScale}
+            touched={hovered}
           />
         </group>
+      )}
+
+      {agent?.status === "working" && (
+        <WateringCan
+          slot={slot}
+          soilY={SOIL_Y}
+          color={colors["watering-can"]}
+          drop={colors.drop}
+          glow={glow}
+          reducedMotion={reducedMotion}
+        />
+      )}
+      {burst && !reducedMotion && (
+        <Burst
+          key={burst.count}
+          kind={burst.kind}
+          colors={
+            burst.kind === "soil" ? [colors.soil] : [art.petal, art.heart]
+          }
+          y={SOIL_Y}
+        />
       )}
     </group>
   );
@@ -185,12 +242,14 @@ export function Pots({
   art,
   ringColors,
   glow,
+  tag,
   testKeys,
 }: {
   colors: SceneColors;
   art: ArtColors;
   ringColors: Record<RingColor, string>;
   glow: number;
+  tag: TagColors;
   testKeys: boolean;
 }) {
   const bodyGeo = useMemo(() => new THREE.LatheGeometry(POT_PROFILE, 24), []);
@@ -248,6 +307,7 @@ export function Pots({
           ringGeo={ringGeo}
           ringColors={ringColors}
           glow={glow}
+          tag={tag}
         />
       ))}
     </>
