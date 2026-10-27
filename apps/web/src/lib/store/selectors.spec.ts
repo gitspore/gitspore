@@ -44,6 +44,7 @@ function storeWith(server: Partial<GreenhouseState> | null) {
       agents: [],
       issues: [],
       plan: null,
+      repoTokens: null,
       ...server,
     });
   return store.getState();
@@ -119,6 +120,7 @@ describe("selectors", () => {
         issues: [],
         repo: null,
         plan: null,
+        repoTokens: null,
       });
       expect(focusedAgent(store.getState())).toBeNull();
 

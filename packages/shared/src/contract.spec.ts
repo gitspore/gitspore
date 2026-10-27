@@ -82,6 +82,7 @@ const snapshot: GreenhouseState = {
     fiveHour: { usedPercent: 23.5, resetsAt: "2026-10-08T12:00:00.000Z" },
     sevenDay: null,
   },
+  repoTokens: 20_800_000,
 };
 
 // One sample per op type. A new PatchOp type is a compile error here until it
@@ -114,6 +115,7 @@ const ops: { [T in PatchOp["type"]]: Extract<PatchOp, { type: T }> } = {
       sevenDay: { usedPercent: 41.2, resetsAt: "2026-10-12T08:00:00.000Z" },
     },
   },
+  "repoTokens:set": { type: "repoTokens:set", repoTokens: 21_500_000 },
 };
 
 // One sample payload per event, so the event log can hold every one of them.
@@ -294,6 +296,7 @@ describe("applyPatch", () => {
         agents: [snapshot.agents[1]],
         issues: [snapshot.issues[0], ops["issue:upsert"].issue],
         plan: ops["plan:set"].plan,
+        repoTokens: ops["repoTokens:set"].repoTokens,
       },
     });
   });

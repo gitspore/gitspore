@@ -18,6 +18,7 @@ export class StateStore {
     agents: [],
     issues: [],
     plan: null,
+    repoTokens: null,
   };
   private readonly listeners: PatchListener[] = [];
   private readonly resetListeners: ResetListener[] = [];
@@ -46,7 +47,8 @@ export class StateStore {
   /**
    * Starts the state over for the repo gitspore works in: agents and issues
    * belonged to the old one, the plan's limits belong to the account and
-   * stay. Patches can't say that, so reset listeners hear about it and send
+   * stay. The token total belongs to the repo; UsageService sends the new
+   * one's. Patches can't say that, so reset listeners hear about it and send
    * a snapshot.
    */
   setRepo(repo: RepoInfo | null): void {
@@ -56,6 +58,7 @@ export class StateStore {
       agents: [],
       issues: [],
       plan: this.state.plan,
+      repoTokens: null,
     };
     for (const listener of this.resetListeners) listener();
   }

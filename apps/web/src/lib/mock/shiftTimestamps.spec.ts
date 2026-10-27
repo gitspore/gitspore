@@ -29,6 +29,7 @@ function scenario(events: Scenario["events"] = []): Scenario {
       agents: [agent],
       issues: [{ number: 1, title: "Issue", url: "u", labels: ["bug"] }],
       plan: null,
+      repoTokens: null,
     },
     events,
   };

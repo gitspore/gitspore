@@ -38,6 +38,7 @@ describe("StateStore", () => {
         agents: [],
         issues: [],
         plan: null,
+        repoTokens: null,
       });
     });
   });
@@ -116,6 +117,7 @@ describe("StateStore", () => {
         agents: [],
         issues: [issue(1)],
         plan: null,
+        repoTokens: null,
       });
     });
 
@@ -130,6 +132,7 @@ describe("StateStore", () => {
         agents: [],
         issues: [],
         plan: null,
+        repoTokens: null,
       });
     });
   });
@@ -226,6 +229,7 @@ describe("StateStore", () => {
         agents: [],
         issues: [],
         plan: null,
+        repoTokens: null,
       });
     });
 
@@ -239,6 +243,14 @@ describe("StateStore", () => {
       store.setRepo(repo);
 
       expect(store.snapshot().plan).toEqual(plan);
+    });
+
+    it("drops the token total: it belongs to the old repo", () => {
+      store.apply([{ type: "repoTokens:set", repoTokens: 5_000 }]);
+
+      store.setRepo(repo);
+
+      expect(store.snapshot().repoTokens).toBeNull();
     });
 
     it("tells reset listeners, not patch listeners", () => {

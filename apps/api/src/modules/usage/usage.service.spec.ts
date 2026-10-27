@@ -1,4 +1,4 @@
-import type { Agent, PatchOp, PlanUsage } from "@gitspore/shared";
+import type { Agent, PatchOp, PlanUsage, RepoInfo } from "@gitspore/shared";
 import { Logger } from "@nestjs/common";
 import { appendFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { HookService } from "../hooks/hook.service";
 import { StateStore } from "../state/state.store";
 import type { PlanMemory } from "./plan-memory";
+import { RepoTokens } from "./repo-tokens";
 import { UsageService } from "./usage.service";
 
 const NOW = Date.parse("2026-10-27T10:00:00.000Z");
@@ -53,12 +54,18 @@ describe("UsageService", () => {
   let store: StateStore;
   let hooks: HookService;
   let memory: FakeMemory;
+  let totals: RepoTokens;
   let service: UsageService;
   let ops: PatchOp[];
 
   // What Nest does at startup: build the service, then call the hook.
   const startService = async () => {
-    service = new UsageService(store, hooks, memory as unknown as PlanMemory);
+    service = new UsageService(
+      store,
+      hooks,
+      memory as unknown as PlanMemory,
+      totals,
+    );
     await service.onModuleInit();
   };
 
@@ -67,6 +74,10 @@ describe("UsageService", () => {
     store = new StateStore();
     hooks = new HookService();
     memory = new FakeMemory();
+    // The real counting, without the file in ~/.gitspore.
+    totals = new RepoTokens(join(tmpdir(), "gitspore-unused-usage.json"));
+    jest.spyOn(totals, "load").mockResolvedValue();
+    jest.spyOn(totals, "save").mockResolvedValue();
     await startService();
     store.apply([{ type: "agent:upsert", agent: agent("a1") }]);
     ops = [];
@@ -464,6 +475,107 @@ describe("UsageService", () => {
       // A fresh count from the start, not 0 because the old counter has
       // already read the file.
       expect(usageOf("a1")?.tokens.total).toBe(41_302);
+    });
+
+    describe("the repo's total", () => {
+      const REPO: RepoInfo = {
+        path: "/repo",
+        baseBranch: "main",
+        github: "off",
+      };
+      const repoTokens = () => store.snapshot().repoTokens;
+
+      // setRepo starts the state over, so a1 comes back afterwards.
+      const useRepo = (path = REPO.path) => {
+        store.setRepo({ ...REPO, path });
+        store.apply([{ type: "agent:upsert", agent: agent("a1") }]);
+      };
+
+      it("is null without a repo, and nothing is counted", async () => {
+        await writeFile(log, answer("req-1"));
+
+        await sendWithLog();
+
+        expect(repoTokens()).toBeNull();
+        expect(totals.total(REPO.path)).toBe(0);
+      });
+
+      it("is 0 for a new repo", () => {
+        useRepo();
+
+        expect(repoTokens()).toBe(0);
+      });
+
+      it("adds the agent's tokens", async () => {
+        useRepo();
+        await writeFile(log, answer("req-1") + answer("req-2"));
+
+        await sendWithLog();
+
+        expect(repoTokens()).toBe(2 * 41_302);
+      });
+
+      it("counts a request once, also from another agent's log", async () => {
+        useRepo();
+        store.apply([{ type: "agent:upsert", agent: agent("a2") }]);
+        await writeFile(log, answer("req-1"));
+        const copy = join(projects, "repo", "session-2.jsonl");
+        await writeFile(copy, answer("req-1") + answer("req-2"));
+
+        await sendWithLog();
+        send("a2", statusline({ transcript_path: copy }));
+        await service.idle();
+
+        expect(repoTokens()).toBe(2 * 41_302);
+      });
+
+      it("keeps what a removed agent counted, and saves it at once", async () => {
+        useRepo();
+        await writeFile(log, answer("req-1"));
+        await sendWithLog();
+
+        store.apply([{ type: "agent:remove", agentId: "a1" }]);
+
+        expect(repoTokens()).toBe(41_302);
+        expect(totals.save).toHaveBeenCalledTimes(1);
+      });
+
+      it("saves at most every 10 s", async () => {
+        jest.useFakeTimers({ doNotFake: ["nextTick", "setImmediate"] });
+        useRepo();
+        await writeFile(log, answer("req-1"));
+        await sendWithLog();
+        await appendFile(log, answer("req-2"));
+        await sendWithLog();
+
+        expect(totals.save).not.toHaveBeenCalled();
+
+        jest.advanceTimersByTime(10_000);
+
+        expect(totals.save).toHaveBeenCalledTimes(1);
+      });
+
+      it("starts from the saved total of the repo", async () => {
+        totals.add(REPO.path, [["earlier", 5_000]]);
+        store = new StateStore();
+        hooks = new HookService();
+        store.setRepo(REPO);
+
+        await startService();
+
+        expect(repoTokens()).toBe(5_000);
+      });
+
+      it("switches to the other repo's total", () => {
+        totals.add("/other", [["earlier", 5_000]]);
+        useRepo();
+
+        useRepo("/other");
+        expect(repoTokens()).toBe(5_000);
+
+        store.setRepo(null);
+        expect(repoTokens()).toBeNull();
+      });
     });
   });
 

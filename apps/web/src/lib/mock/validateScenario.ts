@@ -98,6 +98,7 @@ const greenhouseStateSchema = z.object({
   version: z.number(),
   repo: repoSchema.nullable(),
   plan: planUsageSchema.nullable().default(null),
+  repoTokens: z.number().nullable().default(null),
 }) satisfies z.ZodType<GreenhouseState>;
 
 const patchOpSchema = z.discriminatedUnion("type", [
@@ -107,6 +108,10 @@ const patchOpSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("issue:remove"), issueNumber: z.number() }),
   z.object({ type: z.literal("repo:github"), github: z.enum(["on", "off"]) }),
   z.object({ type: z.literal("plan:set"), plan: planUsageSchema.nullable() }),
+  z.object({
+    type: z.literal("repoTokens:set"),
+    repoTokens: z.number().nullable(),
+  }),
 ]) satisfies z.ZodType<PatchOp>;
 
 const statePatchSchema = z.object({

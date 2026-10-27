@@ -50,6 +50,11 @@ export class TranscriptCounter {
     return { ...this.sum };
   }
 
+  /** Each request's id and total, for the repo's token total. */
+  *requestTotals(): Generator<[string, number]> {
+    for (const [id, counts] of this.requests) yield [id, counts.total];
+  }
+
   /**
    * Reads what is new in the session log and in its subagents' logs
    * (`<session>/subagents/*.jsonl`). A log of an earlier session (after

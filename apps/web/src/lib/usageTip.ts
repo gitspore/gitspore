@@ -18,6 +18,16 @@ export const CACHE_NOTE =
 export const PAUSED_NOTE = "All agents are paused until the reset.";
 export const ACCOUNT_NOTE =
   "The limit covers your whole Claude account, sessions outside gitspore too.";
+export const REPO_NOTE =
+  "Every answer of this repo's agents, each once, since gitspore started " +
+  "counting. gitspore keeps it, so it stays when Claude Code deletes its " +
+  "logs. Earlier sessions include agents that are gone.";
+
+// 701000 -> "701k", 20800000 -> "20.8M": for the meters and the panel title.
+export const formatTokens = (n: number) =>
+  new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 })
+    .format(n)
+    .replace("K", "k");
 
 // 2247198 -> "2,247,198": the tip has room for the exact number.
 const count = (n: number) => n.toLocaleString("en");
@@ -83,6 +93,21 @@ export function limitTip(
     rows,
     notes:
       limit.usedPercent >= 100 ? [PAUSED_NOTE, ACCOUNT_NOTE] : [ACCOUNT_NOTE],
+  };
+}
+
+/** The panel title's tip: the running agents, earlier sessions, the total. */
+export function repoTip(total: number, agents: AgentTokens[]): TipContent {
+  const running = agents.reduce((sum, agent) => sum + agent.tokens, 0);
+  return {
+    title: "Tokens of this repo",
+    rows: [
+      { label: "Running agents", value: count(running) },
+      // The total counts each request once, the agents too: never below 0.
+      { label: "Earlier sessions", value: count(Math.max(total - running, 0)) },
+      { label: "Total", value: count(total), total: true },
+    ],
+    notes: [REPO_NOTE],
   };
 }
 

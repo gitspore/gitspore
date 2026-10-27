@@ -1,5 +1,5 @@
 import { Meter } from "@base-ui/react/meter";
-import type { TipContent } from "@/lib/usageTip";
+import { formatTokens, type TipContent } from "@/lib/usageTip";
 import { cn } from "@/lib/utils";
 import { UsageTip } from "./UsageTip";
 
@@ -12,12 +12,6 @@ type UsageMeterProps = {
 };
 
 type MeterState = "normal" | "warn" | "full";
-
-// 701000 -> "701k", 20800000 -> "20.8M"
-const formatTokens = (n: number) =>
-  new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 })
-    .format(n)
-    .replace("K", "k");
 
 export function UsageMeter({
   label,

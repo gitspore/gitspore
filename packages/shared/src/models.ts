@@ -195,4 +195,11 @@ export type GreenhouseState = {
    * limits belong to the account, not to the repo.
    */
   plan: PlanUsage | null;
+  /**
+   * The repo's token total: every request of its agents once, also of agents
+   * that are gone and of sessions before the daemon's start. The daemon keeps
+   * it, so it outlives Claude Code deleting its logs. `null` without a repo;
+   * a repo switch resets it, and the daemon sends the new repo's.
+   */
+  repoTokens: number | null;
 };
