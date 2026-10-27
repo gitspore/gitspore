@@ -5,17 +5,20 @@ import { useSyncExternalStore } from "react";
 // them, for testing. Read in the browser only, like scene.ts.
 
 export type SceneSettings = {
-  // Turns off shadows, glow, camera motion and fog, whatever is stored
+  // Turns off shadows, glow, camera motion, garden life and fog, whatever
+  // is stored
   lowPower: boolean;
   shadows: boolean;
   // Bloom (post-processing); the URL flag is ?fx
   glow: boolean;
   // OrbitControls: turn and zoom; the URL flag is ?orbit
   cameraMotion: boolean;
+  // Grass, flowers, insects and the string lights; the URL flag is ?life
+  life: boolean;
 };
 
 // The options a URL flag can set, and what the scene finally draws
-export type SceneOption = "shadows" | "glow" | "cameraMotion";
+export type SceneOption = "shadows" | "glow" | "cameraMotion" | "life";
 export type SceneFlags = Partial<Record<SceneOption, boolean>>;
 export type SceneOptions = Record<SceneOption | "fog", boolean>;
 
@@ -24,12 +27,14 @@ export const DEFAULT_SCENE_SETTINGS: SceneSettings = {
   shadows: true,
   glow: true,
   cameraMotion: true,
+  life: true,
 };
 
 export const URL_FLAGS: Record<SceneOption, string> = {
   shadows: "shadows",
   glow: "fx",
   cameraMotion: "orbit",
+  life: "life",
 };
 
 export const STORAGE_KEY = "gitspore.scene";
@@ -71,6 +76,7 @@ export function resolveScene(
     shadows: on && stored.shadows,
     glow: on && stored.glow,
     cameraMotion: on && stored.cameraMotion,
+    life: on && stored.life,
     ...flags,
     fog: on,
   };
