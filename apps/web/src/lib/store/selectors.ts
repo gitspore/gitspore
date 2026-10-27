@@ -36,6 +36,11 @@ export function selectPlan(state: GreenhouseStoreState): PlanUsage | null {
   return state.server?.plan ?? null;
 }
 
+/** The repo's token total; null without a repo. */
+export function selectRepoTokens(state: GreenhouseStoreState): number | null {
+  return state.server?.repoTokens ?? null;
+}
+
 /**
  * Whether the setup screen shows: the daemon has no repo yet, or the user
  * opened the screen to switch. Not before the first snapshot: until then

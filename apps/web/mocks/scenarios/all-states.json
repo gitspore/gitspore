@@ -161,7 +161,8 @@
     "plan": {
       "fiveHour": { "usedPercent": 86, "resetsAt": "2026-10-09T11:30:00.000Z" },
       "sevenDay": { "usedPercent": 34, "resetsAt": "2026-10-13T09:30:00.000Z" }
-    }
+    },
+    "repoTokens": 20800000
   },
   "events": []
 }

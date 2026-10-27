@@ -37,6 +37,7 @@ function state(overrides: Partial<GreenhouseState> = {}): GreenhouseState {
     agents: [],
     issues: [],
     plan: null,
+    repoTokens: null,
     ...overrides,
   };
 }
@@ -179,6 +180,7 @@ describe("createGreenhouseStore", () => {
         agents: [agent({ status: "needs_input" })],
         issues: [],
         plan: null,
+        repoTokens: null,
       });
     });
 

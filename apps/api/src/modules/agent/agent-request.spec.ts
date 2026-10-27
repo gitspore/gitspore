@@ -29,6 +29,7 @@ const state = (agents: Agent[] = []): GreenhouseState => ({
   agents,
   issues: [issue(42), issue(43)],
   plan: null,
+  repoTokens: null,
 });
 
 // The code of the error an action throws.

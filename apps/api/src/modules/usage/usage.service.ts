@@ -9,6 +9,7 @@ import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { HookService } from "../hooks/hook.service";
 import { StateStore } from "../state/state.store";
 import { PlanMemory } from "./plan-memory";
+import { RepoTokens } from "./repo-tokens";
 import { parseStatusline, type Limit, type Statusline } from "./statusline";
 import {
   claudeProjectsDir,
@@ -23,6 +24,10 @@ const NO_TOKENS: TokenCounts = {
   cacheWrite: 0,
   total: 0,
 };
+
+// The repo's total is saved at most this often. A save lost to a crash
+// mends itself: the next start reads the agents' logs again.
+const SAVE_DELAY_MS = 10_000;
 
 // setTimeout fires at once for a delay above 2^31 - 1 ms (about 24 days).
 const MAX_TIMER_MS = 2 ** 31 - 1;
@@ -39,12 +44,14 @@ type Counting = {
 /**
  * Turns the agents' statuslines into the state (#42, ADR 0009): the plan's
  * limits into `plan`, kept in PlanMemory for the next start; context, model
- * and the tokens from the session log into the agent's `usage`.
+ * and the tokens from the session log into the agent's `usage`, and into
+ * the repo's total in RepoTokens.
  */
 @Injectable()
 export class UsageService implements OnModuleInit {
   private readonly logger = new Logger(UsageService.name);
   private resetTimer?: NodeJS.Timeout;
+  private saveTimer?: NodeJS.Timeout;
   private readonly counting = new Map<AgentId, Counting>();
   private readonly reads = new Set<Promise<void>>();
   // Only session logs in here are read. Tests point it at a temp folder.
@@ -54,20 +61,30 @@ export class UsageService implements OnModuleInit {
     private readonly store: StateStore,
     private readonly hooks: HookService,
     private readonly memory: PlanMemory,
+    private readonly totals: RepoTokens,
   ) {}
 
   async onModuleInit(): Promise<void> {
+    await this.totals.load();
     this.hooks.onStatusline((agentId, payload) => {
       this.handleStatusline(agentId, payload);
     });
-    // A removed agent's count goes with it; a repo switch removes them all.
+    // A removed agent's count goes with it, and what it added to the repo's
+    // total is saved now; a repo switch removes them all.
     this.store.onPatch(({ ops }) => {
       for (const op of ops) {
-        if (op.type === "agent:remove") this.counting.delete(op.agentId);
+        if (op.type !== "agent:remove") continue;
+        this.counting.delete(op.agentId);
+        if (this.saveTimer) this.saveTotals();
       }
     });
-    this.store.onReset(() => this.counting.clear());
+    this.store.onReset(() => {
+      this.counting.clear();
+      this.sendRepoTokens();
+    });
     await this.restorePlan();
+    // RepoService may have set the repo before this module started.
+    this.sendRepoTokens();
   }
 
   // The limits from before the daemon's start, so the top bar shows them
@@ -152,6 +169,7 @@ export class UsageService implements OnModuleInit {
         // Removed, or a repo switch, while the file was read.
         if (this.counting.get(agentId) !== entry) return;
         this.setTokens(agentId, tokens);
+        this.addToRepo(entry.counter);
       } while (entry.again);
     } catch (error) {
       // Before the session's first answer the log may not exist yet.
@@ -174,6 +192,31 @@ export class UsageService implements OnModuleInit {
       model: agent.usage?.model ?? null,
       tokens,
     });
+  }
+
+  private addToRepo(counter: TranscriptCounter): void {
+    const repo = this.store.snapshot().repo;
+    if (!repo || !this.totals.add(repo.path, counter.requestTotals())) return;
+    this.sendRepoTokens();
+    this.saveTimer ??= setTimeout(() => this.saveTotals(), SAVE_DELAY_MS);
+    this.saveTimer.unref();
+  }
+
+  private saveTotals(): void {
+    clearTimeout(this.saveTimer);
+    this.saveTimer = undefined;
+    this.totals.save().catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Could not save the token totals: ${message}`);
+    });
+  }
+
+  private sendRepoTokens(): void {
+    const { repo, repoTokens } = this.store.snapshot();
+    const total = repo ? this.totals.total(repo.path) : null;
+    if (total !== repoTokens) {
+      this.store.apply([{ type: "repoTokens:set", repoTokens: total }]);
+    }
   }
 
   private setPlan(plan: PlanUsage): void {

@@ -79,7 +79,8 @@ export type PatchOp =
   /** GitHub sync for the current repo turned on or off. Nothing without a repo. */
   | { type: "repo:github"; github: RepoInfo["github"] }
   /** The plan's limits changed. Replaces `plan` as a whole. */
-  | { type: "plan:set"; plan: PlanUsage | null };
+  | { type: "plan:set"; plan: PlanUsage | null }
+  | { type: "repoTokens:set"; repoTokens: number | null };
 
 /**
  * Changes from version `version - 1` to `version`. Versions increase by

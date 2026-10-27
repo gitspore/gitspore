@@ -6,7 +6,10 @@ import {
   CACHE_NOTE,
   contextTip,
   limitTip,
+  formatTokens,
   PAUSED_NOTE,
+  REPO_NOTE,
+  repoTip,
   resetTime,
 } from "./usageTip";
 
@@ -148,6 +151,42 @@ describe("limitTip", () => {
     );
 
     expect(tip.notes).toEqual([PAUSED_NOTE, ACCOUNT_NOTE]);
+  });
+});
+
+describe("repoTip", () => {
+  it("splits the total into the running agents and earlier sessions", () => {
+    const agents = [
+      { name: "#7 Add a rabbit", tokens: 2_000_000 },
+      { name: "Overview", tokens: 247_198 },
+    ];
+
+    expect(repoTip(20_800_000, agents)).toEqual({
+      title: "Tokens of this repo",
+      rows: [
+        { label: "Running agents", value: "2,247,198" },
+        { label: "Earlier sessions", value: "18,552,802" },
+        { label: "Total", value: "20,800,000", total: true },
+      ],
+      notes: [REPO_NOTE],
+    });
+  });
+
+  it("never shows earlier sessions below 0", () => {
+    const rows = repoTip(100, [{ name: "Overview", tokens: 150 }]).rows;
+
+    expect(rows[1]).toEqual({ label: "Earlier sessions", value: "0" });
+  });
+});
+
+describe("formatTokens", () => {
+  it.each([
+    [58, "58"],
+    [701_000, "701k"],
+    [2_247_198, "2.2M"],
+    [20_800_000, "20.8M"],
+  ])("writes %d as %s", (n, text) => {
+    expect(formatTokens(n)).toBe(text);
   });
 });
 

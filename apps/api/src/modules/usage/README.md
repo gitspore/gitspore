@@ -6,9 +6,10 @@ Token usage from Claude Code (#42, [ADR 0009](../../../../../design-docs/decisio
 | ---------------------- | ---------------------------------------------------------------------------------------- |
 | `statusline.ts`        | `parseStatusline`: the statusline JSON → what the daemon reads, pure and defensive       |
 | `plan-memory.ts`       | `PlanMemory`: the last known limits in `~/.gitspore/plan.json`, for the next start       |
+| `repo-tokens.ts`       | `RepoTokens`: each repo's token total, every request once, in `~/.gitspore/usage.json`   |
 | `transcript-tokens.ts` | `TranscriptCounter`: the token counts of one agent from its session logs; `isSessionLog` |
 | `usage.service.ts`     | `UsageService`: listens to `HookService.onStatusline`, writes `plan` and `agent.usage`   |
-| `usage.module.ts`      | Provides `UsageService` and `PlanMemory`; imports State and Hook                         |
+| `usage.module.ts`      | Provides `UsageService`, `PlanMemory` and `RepoTokens`; imports State and Hook           |
 
 ## From the statusline into the state
 
@@ -55,11 +56,21 @@ The statusline names the session's log (`transcript_path`); the token counts com
 - **After `--continue`** the statusline names a new log, which starts with the history of the old one. The old log's requests stay in the sum, the copied ones have the same ids.
 - **One read per agent at a time.** A statusline during a read asks for one more read afterwards. A log that doesn't exist yet (before the first answer) is tried again with the next statusline; other read errors are logged.
 - **Only Claude Code's own files.** The path comes from outside the daemon, so only a `.jsonl` inside `~/.claude/projects` (or `$CLAUDE_CONFIG_DIR/projects`) is read.
-- A removed agent's count goes with it; a repo switch drops all. After a daemon restart the count starts from the log again, so only what is still in the logs counts. Claude Code deletes logs after 30 days by default.
+- A removed agent's count goes with it; a repo switch drops all. After a daemon restart an agent's count starts from its newest log again. What it counted before stays in the repo's total.
+
+### Repo total
+
+`repoTokens` on the state: every request of the repo's agents once, also of agents that are gone and of sessions before the daemon's start (components.md: the panel title). Claude Code deletes its logs after 30 days by default, so the daemon keeps the total itself.
+
+- **Every request with its count.** After each read, `UsageService` hands the counter's requests to `RepoTokens.add` for the repo in the state. A request id it already has counts again only with a larger count, like in the counter. So the history `--continue` copies into a new log and a log read again after a restart count once.
+- **In `~/.gitspore/usage.json`**, by repo path: `{ "repos": { "<path>": { "<request id>": <total> } } }`. Loaded at the start, saved at most every 10 s and right away when an agent is removed. A save lost to a crash mends itself: the next start reads the agents' logs again, as long as Claude Code keeps them. The file grows about 40 bytes per request, so 10,000 requests are about 400 KB.
+- **Sent** as `repoTokens:set`, only when the total changed. A repo switch resets it to `null` (`StateStore.setRepo`); the service then sends the new repo's total, 0 for a repo with nothing counted. Without a repo it stays `null`.
+- **Only the agents' logs.** The daemon reads only logs a statusline names, so sessions in the repo outside gitspore, and agents from before this total existed, don't count.
 
 ## Tests
 
 - `statusline.spec.ts`: the parser with the example from Claude Code's docs and every missing or odd field.
 - `plan-memory.spec.ts`: saving and loading in a temp folder, the last of several saves, broken files and odd windows.
+- `repo-tokens.spec.ts`: each request once with its largest count, repos apart, odd counts, saving and loading with the ids, broken files.
 - `transcript-tokens.spec.ts`: the counter on real files in a temp folder: duplicate lines, zeros, reading on, a half-written line, odd lines and numbers, subagents, `--continue`, a replaced file; `isSessionLog`.
 - `usage.service.spec.ts`: with the real `StateStore` and `HookService`, a `PlanMemory` stand-in, fake timers for the reset times, a temp folder as Claude Code's projects folder for the tokens.
