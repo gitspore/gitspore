@@ -36,8 +36,8 @@ export function HotbarSlot({
   onPress,
 }: HotbarSlotProps) {
   const overview = hotkey === 0;
-  // Slot 0 without the overview agent: the daemon runs without
-  // GITSPORE_START_OVERVIEW, or there is no daemon (#72)
+  // Slot 0 without the overview agent: the daemon runs with
+  // GITSPORE_START_OVERVIEW=0, or there is no daemon (#72)
   const off = overview && !agent;
   const waiting = agent?.status === "needs_input";
   const seconds = useSecondsSince(agent?.statusSince ?? "", waiting);
