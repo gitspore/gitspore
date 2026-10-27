@@ -1,27 +1,32 @@
 import type { CSSProperties } from "react";
 
 export type SidePanelTab = "agents" | "issues" | "branches";
+// What the panel column shows: a tab, or the settings in its place (#111)
+export type SidePanelView = SidePanelTab | "settings";
 export type MainMode = "scene" | "focus";
 export type OpenWindow = { agentId: string; minimised: boolean };
 
 // The three settings that make every layout state (ADR 0003)
 export type LayoutSettings = {
-  sidePanel: SidePanelTab | null;
+  sidePanel: SidePanelView | null;
   mode: MainMode;
   windows: OpenWindow[];
 };
 
-// Outer grid: the panel column exists only while the panel is open
+// Outer grid: the panel column exists only while the panel is open. The main
+// column is minmax(0, 1fr): a plain 1fr can't get narrower than its content,
+// so three windows side by side pushed the panel off the screen. Until the
+// windows tile (WindowGrid, ADR 0003) they get narrower instead.
 export function shellGrid({ sidePanel }: LayoutSettings): CSSProperties {
   if (sidePanel === null) {
     return {
-      gridTemplateColumns: "var(--size-bookmark-width) 1fr",
+      gridTemplateColumns: "var(--size-bookmark-width) minmax(0, 1fr)",
       gridTemplateAreas: `"topbar topbar" "rail main"`,
     };
   }
   return {
     gridTemplateColumns:
-      "var(--size-bookmark-width) 1fr var(--size-panel-width)",
+      "var(--size-bookmark-width) minmax(0, 1fr) var(--size-panel-width)",
     gridTemplateAreas: `"topbar topbar topbar" "rail main panel"`,
   };
 }

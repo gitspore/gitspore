@@ -8,6 +8,7 @@ import {
 import { useFrame } from "@react-three/fiber";
 import { OrbitControls, PerspectiveCamera } from "@react-three/drei";
 import * as THREE from "three";
+import { useSeedDrag } from "./seedDrag";
 
 //
 //
@@ -46,6 +47,9 @@ export function CameraRig({
   const [reducedMotion] = useState(
     () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
+  // While a seed packet is dragged the camera holds still,
+  // so the drag moves the packet, not the view
+  const dragging = useSeedDrag((state) => state.issue !== null);
 
   // Turn the camera toward the table once, before the first frame
   useLayoutEffect(() => {
@@ -139,6 +143,7 @@ export function CameraRig({
       />
       {orbit && (
         <OrbitControls
+          enabled={!dragging}
           target={TARGET}
           enablePan={false}
           enableDamping

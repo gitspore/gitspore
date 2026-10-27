@@ -184,13 +184,26 @@ Penpot shows all of these on the board "states (GS-34)" below the components, wi
 
 | Name | Where | What |
 |---|---|---|
-| wiggle | waiting plant (row and scene) | rotation ±8°, 0.7 s |
+| wiggle | waiting plant (row and scene) | rotation ±8°, 0.7 s; in the scene half as much once it droops, none once yellow |
 | bob | waiting hotbar slot | up 6 px, 1.1 s |
 | blink | wait-badge dot, current growth square | opacity, 1 s steps |
 | nudge | notification | sideways shake every 2.4 s |
 | pulse | waiting pot rim in the scene | glow in and out |
+| sway | plants, grass, flowers and string lights in the scene | one wind for all: a breeze and a gust every ~9 s rolling from back left to front right; a wilted or bare plant gives less |
+| shiver | plant in the scene | shakes and rustles when the pointer arrives over its pot |
+| grow in | plant in the scene | springs up from nothing when it appears, pot after pot once the scene has loaded |
+| sprout | loading seedling | stem grows, then two leaves pop open, holds, fades; 2.4 s, while the scene loads |
+| burst | pot in the scene | soil crumbs when a seed is planted, petals when the branch is merged |
 
 All motion stops under `prefers-reduced-motion`. In Penpot a layer named "(wiggles)", "(blinks)" or "(pulses)" carries it.
+
+**Garden life (scene).** Around the table: grass, flowers, pebbles and mushrooms on the floor, string lights between two posts, sun (or moon) beams with dust, a cup of steaming tea, a snail on a leg and a ladybug on the table (click it and it flies off). By day butterflies, a bumblebee, a dragonfly, a robin and a rabbit that hops about, nibbles the grass and sits up to look around; at night fireflies, moths around the bulbs, and now and then a pair of eyes shining in the woods behind the fence (they open, look around, blink and are gone). A watering can pours over each working agent's plant. Insects avoid the pointer, the robin flies off and the rabbit bounds away when it comes near, fireflies drift toward it, grass bends away from it. Colours and what shows by day and at night are in `scene.json`; the settings switch it off ("Garden life"), and so does low power.
+
+**Sky (scene).** Behind the garden, always on: a gradient from the horizon up, clouds drifting with the wind by day, stars and the moon at night, and a ring of far hills with a row of trees on the horizon, fading into the haze. The floor runs on into far ground that disappears in the fog.
+
+**Surroundings (scene).** Around the meadow, always on: a rail fence in an arc behind the table with a gate, stepping stones from the table to the gate, bushes along the fence, a garden shed with a rain barrel at the back left, a wheelbarrow at the back right, stacked pots and a crate of seedlings by the table's back left corner, and behind it all round trees and pines that sway a little in the wind and fade into the fog. At night the shed's windows glow and throw warm light on the grass in front. Colours in `scene.json` (`tree`, `bush`, `shed`, `metal`) and the wood tokens.
+
+**Loading (scene).** Until the scene has drawn its first frames, a veil in `panel-2` covers it, and a seedling grows in a pot in the middle of the scene's free area, with "Your garden is growing…" under it (`title-logo`). Both fade out (0.5 s) when the scene is ready; then the plants grow in. Not in Penpot yet.
 
 ## Logo source
 

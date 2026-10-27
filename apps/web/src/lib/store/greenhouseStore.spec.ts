@@ -291,6 +291,16 @@ describe("createGreenhouseStore", () => {
       expect(store.getState().layout.sidePanel).toBeNull();
     });
 
+    it("setSidePanel puts the settings in the tab's place and back", () => {
+      const { store } = setup();
+
+      store.getState().setSidePanel("settings");
+      expect(store.getState().layout.sidePanel).toBe("settings");
+
+      store.getState().setSidePanel("issues");
+      expect(store.getState().layout.sidePanel).toBe("issues");
+    });
+
     it("setMode closes the panel for focus and brings it back for the scene", () => {
       const { store } = setup();
       store.getState().setSidePanel("issues");
@@ -357,6 +367,216 @@ describe("createGreenhouseStore", () => {
       ]);
     });
 
+    describe("pressSlot (hotbar, #72)", () => {
+      // Pot 1 and pot 3 have agents, pot 2 is empty, plus the overview agent
+      function withAgents() {
+        const { store } = setup();
+        store.getState().applySnapshot(
+          state({
+            agents: [
+              agent({ id: "a1", slotIndex: 0 }),
+              agent({ id: "a3", slotIndex: 2 }),
+              agent({ id: "overview", slotIndex: null, issueNumber: null }),
+            ],
+          }),
+        );
+        return store;
+      }
+
+      it("opens the slot's agent window alone and selects its slot", () => {
+        const store = withAgents();
+        store.getState().openWindow("a1");
+
+        store.getState().pressSlot(3);
+
+        expect(windows(store)).toEqual([
+          { agentId: "a1", minimised: true },
+          { agentId: "a3", minimised: false },
+        ]);
+        expect(store.getState().selectedSlot).toBe(2);
+      });
+
+      it("opens it beside the others with beside", () => {
+        const store = withAgents();
+        store.getState().openWindow("a1");
+
+        store.getState().pressSlot(3, { beside: true });
+
+        expect(windows(store)).toEqual([
+          { agentId: "a1", minimised: false },
+          { agentId: "a3", minimised: false },
+        ]);
+      });
+
+      it("minimises a visible window and shows it again on the next press", () => {
+        const store = withAgents();
+        store.getState().pressSlot(1);
+
+        store.getState().pressSlot(1);
+        expect(windows(store)).toEqual([{ agentId: "a1", minimised: true }]);
+
+        store.getState().pressSlot(1);
+        expect(windows(store)).toEqual([{ agentId: "a1", minimised: false }]);
+      });
+
+      it("opens the overview agent with 0, keeping the selected slot", () => {
+        const store = withAgents();
+        store.getState().selectSlot(2);
+
+        store.getState().pressSlot(0);
+
+        expect(windows(store)).toEqual([
+          { agentId: "overview", minimised: false },
+        ]);
+        expect(store.getState().selectedSlot).toBe(2);
+      });
+
+      it.each([
+        ["an empty pot", 2],
+        ["a pot beyond the six", 7],
+      ])("does nothing for %s", (_, key) => {
+        const store = withAgents();
+        const before = store.getState().layout;
+
+        store.getState().pressSlot(key);
+
+        expect(store.getState().layout).toBe(before);
+      });
+
+      it("does nothing for 0 without an overview agent, or before a snapshot", () => {
+        const { store } = setup();
+        store.getState().pressSlot(1);
+        store.getState().applySnapshot(state({ agents: [] }));
+        store.getState().pressSlot(0);
+
+        expect(windows(store)).toEqual([]);
+      });
+    });
+
+    describe("focusedAgentId (#72)", () => {
+      // Pot 1 (a1) and pot 2 (a2) have agents, plus the overview agent
+      function withAgents() {
+        const { store } = setup();
+        store.getState().applySnapshot(
+          state({
+            agents: [
+              agent({ id: "a1", slotIndex: 0 }),
+              agent({ id: "a2", slotIndex: 1 }),
+              agent({ id: "overview", slotIndex: null, issueNumber: null }),
+            ],
+          }),
+        );
+        return store;
+      }
+      const focused = (store: ReturnType<typeof withAgents>) =>
+        store.getState().focusedAgentId;
+
+      it("starts with no focus", () => {
+        expect(focused(withAgents())).toBeNull();
+      });
+
+      it("goes to the window a slot opens, also beside the others", () => {
+        const store = withAgents();
+        store.getState().pressSlot(1);
+        store.getState().pressSlot(0, { beside: true });
+
+        expect(focused(store)).toBe("overview");
+      });
+
+      it("goes to the last visible window when the focused one is minimised", () => {
+        const store = withAgents();
+        store.getState().pressSlot(1);
+        store.getState().pressSlot(2, { beside: true });
+        store.getState().pressSlot(0, { beside: true });
+
+        // Pressing a visible slot minimises it
+        store.getState().pressSlot(0);
+        expect(focused(store)).toBe("a2");
+
+        store.getState().pressSlot(2);
+        store.getState().pressSlot(1);
+        expect(focused(store)).toBeNull();
+      });
+
+      it("stays when another window is minimised", () => {
+        const store = withAgents();
+        store.getState().pressSlot(1);
+        store.getState().pressSlot(2, { beside: true });
+
+        store.getState().toggleMinimised("a1");
+
+        expect(focused(store)).toBe("a2");
+      });
+
+      it("goes to a window shown again", () => {
+        const store = withAgents();
+        store.getState().pressSlot(1);
+        store.getState().pressSlot(2, { beside: true });
+        store.getState().toggleMinimised("a1");
+
+        store.getState().toggleMinimised("a1");
+
+        expect(focused(store)).toBe("a1");
+      });
+
+      it("follows a click into another window and selects its slot", () => {
+        const store = withAgents();
+        store.getState().pressSlot(1);
+        store.getState().pressSlot(2, { beside: true });
+
+        store.getState().focusWindow("a1");
+
+        expect(focused(store)).toBe("a1");
+        expect(store.getState().selectedSlot).toBe(0);
+      });
+
+      it("ignores focusWindow for a minimised window", () => {
+        const store = withAgents();
+        store.getState().pressSlot(1);
+        store.getState().pressSlot(2, { beside: true });
+        store.getState().toggleMinimised("a1");
+
+        store.getState().focusWindow("a1");
+
+        expect(focused(store)).toBe("a2");
+      });
+
+      it("keeps the selected slot when the overview takes the focus", () => {
+        const store = withAgents();
+        store.getState().pressSlot(2);
+
+        store.getState().pressSlot(0, { beside: true });
+
+        expect(store.getState().selectedSlot).toBe(1);
+      });
+
+      it("moves on when the focused agent is removed", () => {
+        const store = withAgents();
+        store.getState().pressSlot(1);
+        store.getState().pressSlot(2, { beside: true });
+
+        store
+          .getState()
+          .applyPatch(patch(2, [{ type: "agent:remove", agentId: "a2" }]));
+
+        expect(focused(store)).toBe("a1");
+      });
+
+      it("moves on when a snapshot no longer has the focused agent", () => {
+        const store = withAgents();
+        store.getState().pressSlot(1);
+        store.getState().pressSlot(0, { beside: true });
+
+        store
+          .getState()
+          .applySnapshot(
+            state({ agents: [agent({ id: "a1", slotIndex: 0 })] }),
+          );
+
+        expect(focused(store)).toBe("a1");
+      });
+    });
+
     it("closeWindow removes the window", () => {
       const { store } = setup();
       store.getState().openWindow("a1");
@@ -410,15 +630,26 @@ describe("createGreenhouseStore", () => {
       expect(store.getState().layout).toBe(before);
     });
 
-    it("a snapshot leaves the layout untouched", () => {
+    it("a snapshot leaves the layout untouched while its agents exist", () => {
       const { store } = setup();
       store.getState().openWindow("a1");
       store.getState().setSidePanel(null);
       const before = store.getState().layout;
 
-      store.getState().applySnapshot(state());
+      store.getState().applySnapshot(state({ agents: [agent({ id: "a1" })] }));
 
       expect(store.getState().layout).toBe(before);
+    });
+
+    it("a snapshot closes the windows of agents it doesn't have", () => {
+      const { store } = setup();
+      store.getState().openWindow("overview");
+      store.getState().openWindow("a1");
+
+      // e.g. the daemon restarted with GITSPORE_START_OVERVIEW=0
+      store.getState().applySnapshot(state({ agents: [agent({ id: "a1" })] }));
+
+      expect(windows(store)).toEqual([{ agentId: "a1", minimised: false }]);
     });
   });
 
