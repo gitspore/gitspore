@@ -11,8 +11,8 @@ import { OverviewAgentService, START_OVERVIEW } from "./overview-agent.service";
     {
       provide: START_OVERVIEW,
       // Read once at startup.
-      // Off unless "1".
-      useFactory: () => process.env.GITSPORE_START_OVERVIEW === "1",
+      // On unless "0".
+      useFactory: () => process.env.GITSPORE_START_OVERVIEW !== "0",
     },
   ],
   // RepoService restarts it in another repo (#58).

@@ -654,7 +654,7 @@ describe("createGreenhouseStore", () => {
       store.getState().openWindow("overview");
       store.getState().openWindow("a1");
 
-      // e.g. the daemon restarted without GITSPORE_START_OVERVIEW
+      // e.g. the daemon restarted with GITSPORE_START_OVERVIEW=0
       store.getState().applySnapshot(state({ agents: [agent({ id: "a1" })] }));
 
       expect(windows(store)).toEqual([{ agentId: "a1", minimised: false }]);
