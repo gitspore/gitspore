@@ -89,11 +89,11 @@ Claude Code runs `hook-script.mjs` for each event, with the daemon's own Node (`
 
 ### Statusline
 
-For token usage (#42, ADR 0009), `settings.json` also sets `statusLine`. Claude Code runs it once at the start and after every answer (debounced by 300 ms), with JSON about the session on stdin: the plan's limits, the context, the model, the path of the session log. `statusline-script.mjs` posts that JSON to `POST /hooks/<agentId>/statusline` with the secret from `hook.json`, and prints a short line for Claude Code's footer ("Opus · context 22 %"). Like the hook script it always exits 0, also without the daemon; it gives up after 1 s, because Claude Code cancels a statusline that still runs when the next update comes.
+For token usage (#42, ADR 0009), `settings.json` also sets `statusLine`. Claude Code runs it once at the start and after every answer (debounced by 300 ms), with JSON about the session on stdin: the plan's limits, the context, the model, the path of the session log. `statusline-script.mjs` posts that JSON to `POST /hooks/<agentId>/statusline` with the secret from `hook.json`, and prints the footer line (see below). Like the hook script it always exits 0, also without the daemon. The post gives up after 1 s, because Claude Code cancels a statusline that still runs when the next update comes.
 
 - `hook.json` is found through `workspace.project_dir` from the JSON, then `CLAUDE_PROJECT_DIR`, then the working directory.
 - Unlike a hook, the statusline is one command line for a shell: Git Bash (or PowerShell without it) on Windows, sh elsewhere. A quoted path as the first word is a string in PowerShell, not a command, so it can't use `process.execPath` and runs `node` from the PATH. The script path goes in single quotes with forward slashes, which read the same in all three shells; a path with `'` in it is refused. Checked by hand in Git Bash and Windows PowerShell.
-- The agent's own statusline from `~/.claude/settings.json` is replaced while it runs in gitspore.
+- `--settings` replaces the statusline the user set for Claude Code, so the script runs it itself and prints its output: the first `statusLine` command in the worktree's `.claude/settings.local.json`, its `.claude/settings.json`, then `~/.claude/settings.json` (or `$CLAUDE_CONFIG_DIR`), Claude Code's own order. It gets the same JSON on stdin and runs in the shell Claude Code would use (`CLAUDE_CODE_GIT_BASH_PATH` or Git Bash under Program Files, else PowerShell; `/bin/sh` elsewhere). Without one, or if it fails, prints nothing or takes longer than 2 s, the footer shows gitspore's short line ("Opus · context 22 %"). The post runs alongside, so a slow statusline never holds it back.
 
 ### Watchdog
 
