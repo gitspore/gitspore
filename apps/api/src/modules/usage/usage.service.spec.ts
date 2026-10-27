@@ -1,0 +1,218 @@
+import type { Agent, PatchOp } from "@gitspore/shared";
+import { HookService } from "../hooks/hook.service";
+import { StateStore } from "../state/state.store";
+import { UsageService } from "./usage.service";
+
+const NOW = Date.parse("2026-10-27T10:00:00.000Z");
+const HOUR = 3600;
+// Unix seconds, as Claude Code sends them.
+const inHours = (hours: number) => NOW / 1000 + hours * HOUR;
+const iso = (seconds: number) => new Date(seconds * 1000).toISOString();
+
+const agent = (id: string, overrides: Partial<Agent> = {}): Agent => ({
+  id,
+  slotIndex: 0,
+  issueNumber: 1,
+  branch: "spore/1-test",
+  worktreePath: "/tmp/worktree",
+  status: "working",
+  statusSince: "2026-10-27T09:00:00.000Z",
+  startedAt: "2026-10-27T09:00:00.000Z",
+  pullRequest: null,
+  statusReason: null,
+  usage: null,
+  ...overrides,
+});
+
+const statusline = (overrides: Record<string, unknown> = {}) => ({
+  session_id: "session-1",
+  model: { display_name: "Opus" },
+  context_window: { used_percentage: 22 },
+  rate_limits: {
+    five_hour: { used_percentage: 41, resets_at: inHours(2) },
+    seven_day: { used_percentage: 12, resets_at: inHours(72) },
+  },
+  ...overrides,
+});
+
+describe("UsageService", () => {
+  let store: StateStore;
+  let hooks: HookService;
+  let ops: PatchOp[];
+
+  beforeEach(() => {
+    jest.useFakeTimers({ now: NOW });
+    store = new StateStore();
+    hooks = new HookService();
+    new UsageService(store, hooks).onModuleInit();
+    store.apply([{ type: "agent:upsert", agent: agent("a1") }]);
+    ops = [];
+    store.onPatch((patch) => ops.push(...patch.ops));
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  const send = (agentId: string, payload: unknown = statusline()) =>
+    hooks.receiveStatusline(agentId, payload);
+  const usageOf = (id: string) =>
+    store.snapshot().agents.find((a) => a.id === id)?.usage;
+
+  describe("plan limits", () => {
+    it("puts both windows into the state", () => {
+      send("a1");
+
+      expect(store.snapshot().plan).toEqual({
+        fiveHour: { usedPercent: 41, resetsAt: iso(inHours(2)) },
+        sevenDay: { usedPercent: 12, resetsAt: iso(inHours(72)) },
+      });
+    });
+
+    it("sends nothing when the limits haven't changed", () => {
+      send("a1");
+      ops = [];
+
+      send("a1");
+
+      expect(ops).toEqual([]);
+    });
+
+    it("keeps the limits when a statusline has no rate_limits", () => {
+      send("a1");
+      store.apply([{ type: "agent:upsert", agent: agent("a2") }]);
+
+      // A second agent before its first answer, or one with an API key.
+      send("a2", statusline({ rate_limits: undefined }));
+
+      expect(store.snapshot().plan?.fiveHour?.usedPercent).toBe(41);
+    });
+
+    it("stays null with an API key", () => {
+      send("a1", statusline({ rate_limits: undefined }));
+
+      expect(store.snapshot().plan).toBeNull();
+    });
+
+    it("takes the newest statusline of any agent", () => {
+      store.apply([{ type: "agent:upsert", agent: agent("a2") }]);
+      send("a1");
+
+      send(
+        "a2",
+        statusline({
+          rate_limits: {
+            five_hour: { used_percentage: 43, resets_at: inHours(2) },
+          },
+        }),
+      );
+
+      expect(store.snapshot().plan).toEqual({
+        fiveHour: { usedPercent: 43, resetsAt: iso(inHours(2)) },
+        sevenDay: null,
+      });
+    });
+
+    it("drops a window at its reset time, also without a new statusline", () => {
+      send("a1");
+
+      jest.advanceTimersByTime(2 * HOUR * 1000);
+
+      expect(store.snapshot().plan).toEqual({
+        fiveHour: null,
+        sevenDay: { usedPercent: 12, resetsAt: iso(inHours(72)) },
+      });
+
+      jest.advanceTimersByTime(70 * HOUR * 1000);
+
+      expect(store.snapshot().plan).toEqual({ fiveHour: null, sevenDay: null });
+    });
+
+    it("drops a window whose reset time has passed in a late statusline", () => {
+      send(
+        "a1",
+        statusline({
+          rate_limits: {
+            five_hour: { used_percentage: 100, resets_at: inHours(-1) },
+          },
+        }),
+      );
+
+      expect(store.snapshot().plan).toEqual({ fiveHour: null, sevenDay: null });
+    });
+
+    it("keeps the limits across a repo switch", () => {
+      send("a1");
+
+      store.setRepo({ path: "/other", baseBranch: "main", github: "off" });
+
+      expect(store.snapshot().plan?.fiveHour?.usedPercent).toBe(41);
+    });
+  });
+
+  describe("agent usage", () => {
+    it("puts context and model on the agent, with no tokens yet", () => {
+      send("a1");
+
+      expect(usageOf("a1")).toEqual({
+        contextPercent: 22,
+        model: "Opus",
+        tokens: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+      });
+    });
+
+    it("keeps the rest of the agent as it is", () => {
+      store.apply([
+        {
+          type: "agent:upsert",
+          agent: agent("a1", { status: "needs_input" }),
+        },
+      ]);
+
+      send("a1");
+
+      expect(store.snapshot().agents[0]).toMatchObject({
+        status: "needs_input",
+        usage: { contextPercent: 22 },
+      });
+    });
+
+    it("sends an agent:upsert only when the usage changed", () => {
+      send("a1");
+      send("a1");
+      send("a1", statusline({ context_window: { used_percentage: 30 } }));
+
+      const upserts = ops.filter((op) => op.type === "agent:upsert");
+      expect(upserts).toHaveLength(2);
+      expect(usageOf("a1")?.contextPercent).toBe(30);
+    });
+
+    it("has no context percentage early in a session", () => {
+      send("a1", statusline({ context_window: { used_percentage: null } }));
+
+      expect(usageOf("a1")?.contextPercent).toBeNull();
+    });
+
+    it("keeps the usage when a later status change upserts the agent", () => {
+      send("a1");
+      const [current] = store.snapshot().agents;
+
+      // What AgentService does: the agent from the snapshot, spread.
+      store.apply([
+        { type: "agent:upsert", agent: { ...current, status: "done" } },
+      ]);
+
+      expect(usageOf("a1")?.contextPercent).toBe(22);
+    });
+  });
+
+  it.each([
+    ["an unknown agent", "nobody", statusline()],
+    ["a payload that isn't an object", "a1", "not json"],
+  ])("ignores %s", (_, agentId, payload) => {
+    send(agentId, payload);
+
+    expect(ops).toEqual([]);
+    expect(store.snapshot().plan).toBeNull();
+  });
+});
