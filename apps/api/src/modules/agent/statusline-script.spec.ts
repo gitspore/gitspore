@@ -25,13 +25,29 @@ function statusline(projectDir?: string) {
   });
 }
 
+// A Claude Code config folder that doesn't exist, so the developer's own
+// statusline from ~/.claude/settings.json never runs in a test.
+const NO_CONFIG = join(tmpdir(), "gitspore-no-claude-config");
+
 // CLAUDE_PROJECT_DIR is emptied, so one set in the shell that runs the
 // tests can't point the script at a real hook.json.
 function runStatusline(
   stdin: string,
   env: NodeJS.ProcessEnv = {},
 ): Promise<Run> {
-  return runScript(SCRIPT, { CLAUDE_PROJECT_DIR: "", ...env }, stdin);
+  return runScript(
+    SCRIPT,
+    { CLAUDE_PROJECT_DIR: "", CLAUDE_CONFIG_DIR: NO_CONFIG, ...env },
+    stdin,
+  );
+}
+
+async function writeSettings(dir: string, command: string): Promise<void> {
+  await mkdir(dir, { recursive: true });
+  await writeFile(
+    join(dir, "settings.json"),
+    JSON.stringify({ statusLine: { type: "command", command } }),
+  );
 }
 
 async function writeHookFile(dir: string, url: string): Promise<void> {
@@ -134,5 +150,81 @@ describe("statusline-script", () => {
 
     expect(run).toMatchObject({ code: 0, stdout: "", stderr: "" });
     expect(daemon.received).toHaveLength(0);
+  });
+
+  // The commands run in Git Bash or PowerShell on Windows and sh elsewhere,
+  // so they stick to what all three understand.
+  describe("the user's own statusline", () => {
+    let config: string;
+
+    beforeEach(() => {
+      config = join(dir, "claude-config");
+    });
+
+    const runWithConfig = (stdin = statusline(dir)) =>
+      runStatusline(stdin, { CLAUDE_CONFIG_DIR: config });
+
+    it("prints it instead of gitspore's line, and still posts", async () => {
+      const daemon = await startDaemon((res) => res.writeHead(204).end());
+      server = daemon.server;
+      await writeHookFile(dir, daemon.url);
+      await writeSettings(config, "echo own-line");
+
+      const run = await runWithConfig();
+
+      expect(run).toMatchObject({ code: 0, stdout: "own-line" });
+      expect(daemon.received).toHaveLength(1);
+    });
+
+    it("takes the project's statusline before the user's", async () => {
+      await writeSettings(config, "echo user-line");
+      await writeSettings(join(dir, ".claude"), "echo project-line");
+
+      expect((await runWithConfig()).stdout).toBe("project-line");
+    });
+
+    it("hands it the statusline JSON on stdin", async () => {
+      await writeSettings(
+        config,
+        'node -e "process.stdin.pipe(process.stdout)"',
+      );
+      const stdin = statusline(dir);
+
+      expect((await runWithConfig(stdin)).stdout).toBe(stdin);
+    });
+
+    it.each([
+      ["fails", "exit 3"],
+      ["prints nothing", "exit 0"],
+    ])("prints gitspore's line when it %s", async (_, command) => {
+      await writeSettings(config, command);
+
+      expect((await runWithConfig()).stdout).toBe("Opus · context 22 %");
+    });
+
+    it("gives up on it after its timeout, and posts anyway", async () => {
+      const daemon = await startDaemon((res) => res.writeHead(204).end());
+      server = daemon.server;
+      await writeHookFile(dir, daemon.url);
+      await writeSettings(config, "sleep 10");
+
+      const run = await runWithConfig();
+
+      expect(run).toMatchObject({ code: 0, stdout: "Opus · context 22 %" });
+      expect(run.ms).toBeLessThan(4000);
+      expect(daemon.received).toHaveLength(1);
+    });
+
+    it("ignores settings that aren't JSON or have no command", async () => {
+      await mkdir(join(dir, ".claude"), { recursive: true });
+      await writeFile(join(dir, ".claude", "settings.json"), "not json");
+      await writeFile(
+        join(dir, ".claude", "settings.local.json"),
+        JSON.stringify({ statusLine: { type: "static" } }),
+      );
+      await writeSettings(config, "echo user-line");
+
+      expect((await runWithConfig()).stdout).toBe("user-line");
+    });
   });
 });
