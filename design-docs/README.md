@@ -41,6 +41,6 @@ Open the HTML files directly in a browser. They load fonts and three.js from CDN
 | [0008](decisions/0008-generated-theme-files.md) | Theme files are generated from a copy of the Penpot tokens | proposed |
 | [0009](decisions/0009-show-token-usage.md) | Show token usage: plan limits and tokens per agent | proposed |
 | [0010](decisions/0010-token-layers-and-base-scales.md) | Token layers, base scales and units | proposed |
-| [0011](decisions/0011-window-tiling-in-columns-and-rows.md) | Windows tile in terminal columns and rows, and minimise the oldest | proposed |
+| [0011](decisions/0011-window-tiling-in-columns-and-rows.md) | Windows tile in terminal columns and rows, and minimise the oldest | accepted |
 
 "Proposed" means not yet agreed by the team. When the team agrees, the status changes to "accepted".

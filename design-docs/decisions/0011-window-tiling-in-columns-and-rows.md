@@ -1,6 +1,6 @@
 # 0011: Windows tile in terminal columns and rows, and minimise the oldest
 
-- Status: proposed
+- Status: accepted
 - Date: 2026-10-26
 
 Supersedes the tiling rule of [0003](0003-layout-model.md) ("Terminals tile by count (1, 2, 2+1, 2×2) and keep 80 columns; when that doesn't fit they stack, then become tabs"). The rest of 0003 stands.
