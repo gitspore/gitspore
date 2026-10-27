@@ -300,6 +300,11 @@ export const tokens = {
           body: "#8a6446",
           breast: "#e2733a",
         },
+        rabbit: {
+          fur: "#a08468",
+          pale: "#efe6d6",
+          pink: "#e8a59c",
+        },
         dragonfly: "#3d9db3",
         snail: {
           shell: "#b07a45",
@@ -704,6 +709,11 @@ export const tokens = {
         robin: {
           body: "#8a6446",
           breast: "#e2733a",
+        },
+        rabbit: {
+          fur: "#a08468",
+          pale: "#efe6d6",
+          pink: "#e8a59c",
         },
         dragonfly: "#3d9db3",
         snail: {
