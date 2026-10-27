@@ -34,6 +34,11 @@ const SCENE_OPTIONS: {
     label: "Camera motion",
     description: "Drag to turn the camera around the table",
   },
+  {
+    option: "life",
+    label: "Garden life",
+    description: "Grass, flowers, insects and string lights around the table",
+  },
 ];
 
 export function SettingsPanel({ onClose }: { onClose: () => void }) {
@@ -97,7 +102,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         <div className="flex flex-col gap-1 rounded-xl bg-panel-2 py-1">
           <SettingsRow
             label="Low power"
-            description="Shadows, glow and camera motion off. For laptops that stutter."
+            description="Shadows, glow, camera motion and garden life off. For laptops that stutter."
             checked={stored.lowPower}
             onChange={(lowPower) => change({ lowPower })}
           />

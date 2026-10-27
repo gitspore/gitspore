@@ -108,6 +108,188 @@
             "$value": "#7a5a2e",
             "$type": "color"
           }
+        },
+        "grass": {
+          "base": {
+            "$value": "#3e6a2c",
+            "$type": "color",
+            "$description": "grass blades: dark at the root, light at the tip, a few dry ones"
+          },
+          "tip": {
+            "$value": "#a6c85f",
+            "$type": "color"
+          },
+          "dry": {
+            "$value": "#cdb66c",
+            "$type": "color"
+          }
+        },
+        "wildflower": {
+          "1": {
+            "$value": "#fff4e2",
+            "$type": "color",
+            "$description": "small flowers in the grass"
+          },
+          "2": {
+            "$value": "#ffd34a",
+            "$type": "color"
+          },
+          "3": {
+            "$value": "#b9a0e0",
+            "$type": "color"
+          },
+          "4": {
+            "$value": "#f4a3bd",
+            "$type": "color"
+          }
+        },
+        "mushroom": {
+          "cap": {
+            "$value": "#c4553a",
+            "$type": "color"
+          },
+          "stem": {
+            "$value": "#efe3cb",
+            "$type": "color"
+          }
+        },
+        "butterfly": {
+          "1": {
+            "$value": "#f28c38",
+            "$type": "color",
+            "$description": "by day; moths take their place at night"
+          },
+          "2": {
+            "$value": "#f5dc5e",
+            "$type": "color"
+          },
+          "3": {
+            "$value": "#79b2ea",
+            "$type": "color"
+          }
+        },
+        "moth": {
+          "$value": "#e9dcc2",
+          "$type": "color"
+        },
+        "bee": {
+          "$value": "#f2b42e",
+          "$type": "color"
+        },
+        "ladybug": {
+          "$value": "#d6372a",
+          "$type": "color"
+        },
+        "insect": {
+          "$value": "#2a221c",
+          "$type": "color",
+          "$description": "insect bodies, spots, stripes and wing edges"
+        },
+        "firefly": {
+          "$value": "#d8ff73",
+          "$type": "color"
+        },
+        "mote": {
+          "$value": "#fff2d0",
+          "$type": "color",
+          "$description": "dust in the sun beams"
+        },
+        "robin": {
+          "body": {
+            "$value": "#8a6446",
+            "$type": "color",
+            "$description": "the robin hopping in the grass by day"
+          },
+          "breast": {
+            "$value": "#e2733a",
+            "$type": "color"
+          }
+        },
+        "dragonfly": {
+          "$value": "#3d9db3",
+          "$type": "color"
+        },
+        "snail": {
+          "shell": {
+            "$value": "#b07a45",
+            "$type": "color"
+          },
+          "body": {
+            "$value": "#c9b9a0",
+            "$type": "color"
+          }
+        },
+        "teacup": {
+          "$value": "#f1e6d2",
+          "$type": "color",
+          "$description": "the cup of tea on the table's back corner"
+        },
+        "tea": {
+          "$value": "#6e4122",
+          "$type": "color"
+        },
+        "steam": {
+          "$value": "#fdf8ee",
+          "$type": "color"
+        },
+        "tree": {
+          "trunk": {
+            "$value": "#6b4a32",
+            "$type": "color",
+            "$description": "the trees and bushes around the garden"
+          },
+          "crown": {
+            "1": {
+              "$value": "#5b8c3b",
+              "$type": "color"
+            },
+            "2": {
+              "$value": "#6e9c45",
+              "$type": "color"
+            },
+            "3": {
+              "$value": "#4c7a35",
+              "$type": "color"
+            },
+            "4": {
+              "$value": "#86a84c",
+              "$type": "color"
+            }
+          },
+          "pine": {
+            "$value": "#3e6a3a",
+            "$type": "color"
+          }
+        },
+        "bush": {
+          "1": {
+            "$value": "#557f38",
+            "$type": "color"
+          },
+          "2": {
+            "$value": "#6a9442",
+            "$type": "color"
+          }
+        },
+        "shed": {
+          "roof": {
+            "$value": "#8a4b3a",
+            "$type": "color",
+            "$description": "the garden shed behind the fence"
+          },
+          "door": {
+            "$value": "#5f8a93",
+            "$type": "color"
+          },
+          "trim": {
+            "$value": "#efe6d6",
+            "$type": "color"
+          }
+        },
+        "metal": {
+          "$value": "#5b5f63",
+          "$type": "color",
+          "$description": "hoops, hinges and the wheelbarrow's legs"
         }
       },
       "light": {
@@ -204,6 +386,15 @@
           "$type": "color"
         }
       }
+    },
+    "opacity": {
+      "scene": {
+        "wing": {
+          "$value": "0.45",
+          "$type": "opacity",
+          "$description": "the bee's see-through wings"
+        }
+      }
     }
   },
   "scene/day": {
@@ -221,6 +412,24 @@
           "$value": "#c8b896",
           "$type": "color"
         },
+        "hill-far": {
+          "$value": "#b7bf9c",
+          "$type": "color",
+          "$description": "the far hills on the horizon, behind the haze"
+        },
+        "hill-near": {
+          "$value": "#7d946a",
+          "$type": "color",
+          "$description": "the row of trees in front of the hills"
+        },
+        "cloud": {
+          "$value": "#fffaf0",
+          "$type": "color"
+        },
+        "moon": {
+          "$value": "#f6eed6",
+          "$type": "color"
+        },
         "fog": {
           "$value": "#e8dcc2",
           "$type": "color"
@@ -235,6 +444,15 @@
         },
         "foliage": {
           "$value": "#6f9356",
+          "$type": "color"
+        },
+        "moss": {
+          "$value": "#6a8a3c",
+          "$type": "color",
+          "$description": "the ground under the grass"
+        },
+        "pebble": {
+          "$value": "#a89e8c",
           "$type": "color"
         }
       },
@@ -291,6 +509,11 @@
         "fill": {
           "$value": "0.35",
           "$type": "number"
+        },
+        "lamp": {
+          "$value": "0",
+          "$type": "number",
+          "$description": "the two warm lights under the string lights"
         }
       },
       "fog": {
@@ -311,7 +534,42 @@
       "stars": {
         "$value": "0",
         "$type": "number",
-        "$description": "1 = stars on"
+        "$description": "1 = stars and the moon in the sky"
+      },
+      "clouds": {
+        "$value": "0.85",
+        "$type": "number",
+        "$description": "how much the clouds show in the sky"
+      },
+      "beams": {
+        "$value": "0.07",
+        "$type": "number",
+        "$description": "opacity of the sun (or moon) beams"
+      },
+      "dust": {
+        "$value": "1",
+        "$type": "number",
+        "$description": "1 = dust motes drift in the beams"
+      },
+      "fireflies": {
+        "$value": "0",
+        "$type": "number",
+        "$description": "1 = fireflies over the grass"
+      },
+      "butterflies": {
+        "$value": "1",
+        "$type": "number",
+        "$description": "1 = the day animals: butterflies, bumblebee, dragonfly, robin"
+      },
+      "moths": {
+        "$value": "0",
+        "$type": "number",
+        "$description": "1 = moths around the string lights"
+      },
+      "steam": {
+        "$value": "0.55",
+        "$type": "number",
+        "$description": "how much the tea's steam shows"
       }
     },
     "opacity": {
@@ -338,6 +596,22 @@
           "$value": "#0b0a10",
           "$type": "color"
         },
+        "hill-far": {
+          "$value": "#1a1e33",
+          "$type": "color"
+        },
+        "hill-near": {
+          "$value": "#0d111c",
+          "$type": "color"
+        },
+        "cloud": {
+          "$value": "#2c3150",
+          "$type": "color"
+        },
+        "moon": {
+          "$value": "#f6eed6",
+          "$type": "color"
+        },
         "fog": {
           "$value": "#0d0e18",
           "$type": "color"
@@ -352,6 +626,14 @@
         },
         "foliage": {
           "$value": "#142019",
+          "$type": "color"
+        },
+        "moss": {
+          "$value": "#1e2512",
+          "$type": "color"
+        },
+        "pebble": {
+          "$value": "#4a453d",
           "$type": "color"
         }
       },
@@ -408,6 +690,11 @@
         "fill": {
           "$value": "0",
           "$type": "number"
+        },
+        "lamp": {
+          "$value": "7",
+          "$type": "number",
+          "$description": "the two warm lights under the string lights"
         }
       },
       "fog": {
@@ -429,6 +716,39 @@
         "$value": "1",
         "$type": "number",
         "$description": "1 = stars on"
+      },
+      "clouds": {
+        "$value": "0.35",
+        "$type": "number"
+      },
+      "beams": {
+        "$value": "0.05",
+        "$type": "number",
+        "$description": "opacity of the sun (or moon) beams"
+      },
+      "dust": {
+        "$value": "0",
+        "$type": "number",
+        "$description": "1 = dust motes drift in the beams"
+      },
+      "fireflies": {
+        "$value": "1",
+        "$type": "number",
+        "$description": "1 = fireflies over the grass"
+      },
+      "butterflies": {
+        "$value": "0",
+        "$type": "number",
+        "$description": "1 = the day animals: butterflies, bumblebee, dragonfly, robin"
+      },
+      "moths": {
+        "$value": "1",
+        "$type": "number",
+        "$description": "1 = moths around the string lights"
+      },
+      "steam": {
+        "$value": "0.3",
+        "$type": "number"
       }
     },
     "opacity": {

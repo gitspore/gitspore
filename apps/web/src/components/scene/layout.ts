@@ -16,6 +16,12 @@ const ROW_GAP = 1.92;
 // less than half the row gap (0.96),
 // so no two pots claim the same point
 const DROP_RADIUS = 0.9;
+// The floor under the table, where the legs end and the grass grows
+export const FLOOR_Y = -2;
+// The table's top: half its width (x) and its back and front edges (z)
+export const TABLE_HALF_WIDTH = 3.9;
+export const TABLE_BACK = -2.6;
+export const TABLE_FRONT = 3.3;
 // Where the overview book lies: front, a little left of the middle, its
 // back corner clear of the front pots (z ≈ 1.16), its front corner inside
 // the table's edge (z ≈ 3.3)
@@ -35,6 +41,9 @@ const SEED_ROWS = [1.62, 2.52];
 // Front edge hanging a little
 // over the table's front edge (z ≈ 3.33)
 export const MAP_SPOT: [number, number] = [0.8, 2.85];
+
+// The cup of tea: on the table's back right corner, right of pot 3
+export const TEACUP_SPOT: [number, number] = [3.3, -2.05];
 
 export const POT_SPOTS: [number, number][] = Array.from(
   { length: MAX_SLOTS },
