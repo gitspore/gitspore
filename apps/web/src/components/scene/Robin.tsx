@@ -15,8 +15,8 @@ import { paintedParts } from "./shapes";
 // back and lands somewhere else in its patch
 
 // Its patch of meadow (x from–to, z from–to), where the camera sees the
-// floor beside the table's left legs
-const HOME = [-7.6, -4.9, -2.6, 2.2];
+// floor beside the table's left legs, behind the pond
+const HOME = [-7.6, -4.9, -2.6, 1.2];
 // One hop: how far, how long, how high
 const HOP = 0.28;
 const HOP_SECONDS = 0.22;

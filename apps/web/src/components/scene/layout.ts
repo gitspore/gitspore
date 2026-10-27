@@ -45,6 +45,12 @@ export const MAP_SPOT: [number, number] = [0.8, 2.85];
 // The cup of tea: on the table's back right corner, right of pot 3
 export const TEACUP_SPOT: [number, number] = [3.3, -2.05];
 
+// The pond in the grass, left of the table's front left leg, where the
+// camera sees it in the bottom left of the picture, clear of the
+// mushrooms at the leg's foot; and its water's radius
+export const POND_SPOT: [number, number] = [-5.3, 2.3];
+export const POND_RADIUS = 0.7;
+
 export const POT_SPOTS: [number, number][] = Array.from(
   { length: MAX_SLOTS },
   (_, slot) => {

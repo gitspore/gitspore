@@ -8,6 +8,7 @@ import { Dragonfly } from "./Dragonfly";
 import { Eyes } from "./Eyes";
 import { Ladybug } from "./Ladybug";
 import { DUST, FIREFLIES, Motes } from "./Motes";
+import { Pond } from "./Pond";
 import { Rabbit } from "./Rabbit";
 import { Robin } from "./Robin";
 import { Snail } from "./Snail";
@@ -27,7 +28,7 @@ import { Teacup } from "./Teacup";
 //   rabbit in the grass; at night moths around the bulbs, and eyes in
 //   the woods
 // - day and night: a ladybug on the table, a steaming cup of tea, a snail
-//   on a table leg
+//   on a table leg, and a pond in the grass with a frog and two fish
 // Mounted only with garden life on (the settings; off in low power)
 
 type ModeTokens = (typeof tokens)[Mode];
@@ -140,6 +141,21 @@ export function GardenLife({
       <Snail
         shell={scene.snail.shell}
         body={scene.snail.body}
+        dark={scene.insect}
+        reducedMotion={reducedMotion}
+      />
+      <Pond
+        water={scene.pond.water}
+        bed={scene.pond.bed}
+        stone={scene.pond.stone}
+        reed={scene.pond.reed}
+        cattail={scene.pond.cattail}
+        lily={scene.pond.lily}
+        ripple={scene.pond.ripple}
+        waterOpacity={t.opacity.scene.water}
+        frog={scene.frog}
+        fish1={scene.fish["1"]}
+        fish2={scene.fish["2"]}
         dark={scene.insect}
         reducedMotion={reducedMotion}
       />

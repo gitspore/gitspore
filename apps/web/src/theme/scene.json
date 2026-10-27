@@ -222,6 +222,61 @@
             "$description": "inside the ears, and the nose"
           }
         },
+        "pond": {
+          "reed": {
+            "$value": "#6f8f3a",
+            "$type": "color",
+            "$description": "the reeds at the back of the pond"
+          },
+          "cattail": {
+            "$value": "#6b4a2e",
+            "$type": "color",
+            "$description": "the reeds' brown heads"
+          },
+          "lily": {
+            "$value": "#5e9440",
+            "$type": "color",
+            "$description": "the lily pads on the water"
+          },
+          "ripple": {
+            "$value": "#eef7f4",
+            "$type": "color",
+            "$description": "rings spreading on the water"
+          }
+        },
+        "frog": {
+          "skin": {
+            "$value": "#6f9a3c",
+            "$type": "color",
+            "$description": "the frog sitting at the pond's rim"
+          },
+          "belly": {
+            "$value": "#e3dca6",
+            "$type": "color",
+            "$description": "belly, chin and the throat that puffs when it croaks"
+          },
+          "spot": {
+            "$value": "#4c6e2a",
+            "$type": "color",
+            "$description": "the dark spots on its back"
+          },
+          "eye": {
+            "$value": "#d9b23e",
+            "$type": "color",
+            "$description": "around its pupils"
+          }
+        },
+        "fish": {
+          "1": {
+            "$value": "#ef7a32",
+            "$type": "color",
+            "$description": "the two fish swimming in the pond"
+          },
+          "2": {
+            "$value": "#f6efe0",
+            "$type": "color"
+          }
+        },
         "dragonfly": {
           "$value": "#3d9db3",
           "$type": "color"
@@ -476,6 +531,23 @@
         "pebble": {
           "$value": "#a89e8c",
           "$type": "color"
+        },
+        "pond": {
+          "water": {
+            "$value": "#6fa8ad",
+            "$type": "color",
+            "$description": "the pond's water, see-through so the fish show"
+          },
+          "bed": {
+            "$value": "#4a5a3a",
+            "$type": "color",
+            "$description": "the pond's bottom under the water"
+          },
+          "stone": {
+            "$value": "#9d9586",
+            "$type": "color",
+            "$description": "the stones around its rim"
+          }
         }
       },
       "light": {
@@ -604,6 +676,11 @@
         "glass": {
           "$value": "0.08",
           "$type": "opacity"
+        },
+        "water": {
+          "$value": "0.6",
+          "$type": "opacity",
+          "$description": "how much of the pond's water hides what is under it"
         }
       }
     }
@@ -662,6 +739,20 @@
         "pebble": {
           "$value": "#4a453d",
           "$type": "color"
+        },
+        "pond": {
+          "water": {
+            "$value": "#2a4560",
+            "$type": "color"
+          },
+          "bed": {
+            "$value": "#12160f",
+            "$type": "color"
+          },
+          "stone": {
+            "$value": "#47433b",
+            "$type": "color"
+          }
         }
       },
       "light": {
@@ -786,6 +877,10 @@
       "scene": {
         "glass": {
           "$value": "0.05",
+          "$type": "opacity"
+        },
+        "water": {
+          "$value": "0.5",
           "$type": "opacity"
         }
       }

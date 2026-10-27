@@ -121,6 +121,7 @@ export const tokens = {
       scene: {
         wing: 0.45,
         glass: 0.08,
+        water: 0.6,
       },
     },
     font: {
@@ -304,6 +305,25 @@ export const tokens = {
           fur: "#a08468",
           pale: "#efe6d6",
           pink: "#e8a59c",
+        },
+        pond: {
+          reed: "#6f8f3a",
+          cattail: "#6b4a2e",
+          lily: "#5e9440",
+          ripple: "#eef7f4",
+          water: "#6fa8ad",
+          bed: "#4a5a3a",
+          stone: "#9d9586",
+        },
+        frog: {
+          skin: "#6f9a3c",
+          belly: "#e3dca6",
+          spot: "#4c6e2a",
+          eye: "#d9b23e",
+        },
+        fish: {
+          "1": "#ef7a32",
+          "2": "#f6efe0",
         },
         dragonfly: "#3d9db3",
         snail: {
@@ -531,6 +551,7 @@ export const tokens = {
       scene: {
         wing: 0.45,
         glass: 0.05,
+        water: 0.5,
       },
     },
     font: {
@@ -714,6 +735,25 @@ export const tokens = {
           fur: "#a08468",
           pale: "#efe6d6",
           pink: "#e8a59c",
+        },
+        pond: {
+          reed: "#6f8f3a",
+          cattail: "#6b4a2e",
+          lily: "#5e9440",
+          ripple: "#eef7f4",
+          water: "#2a4560",
+          bed: "#12160f",
+          stone: "#47433b",
+        },
+        frog: {
+          skin: "#6f9a3c",
+          belly: "#e3dca6",
+          spot: "#4c6e2a",
+          eye: "#d9b23e",
+        },
+        fish: {
+          "1": "#ef7a32",
+          "2": "#f6efe0",
         },
         dragonfly: "#3d9db3",
         snail: {

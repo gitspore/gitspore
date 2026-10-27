@@ -2,7 +2,14 @@ import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 
-import { FLOOR_Y, TABLE_BACK, TABLE_FRONT, TABLE_HALF_WIDTH } from "./layout";
+import {
+  FLOOR_Y,
+  POND_RADIUS,
+  POND_SPOT,
+  TABLE_BACK,
+  TABLE_FRONT,
+  TABLE_HALF_WIDTH,
+} from "./layout";
 import { perches, pointer, seeded } from "./life";
 import { WIND_GLSL, windUniforms } from "./wind";
 
@@ -74,16 +81,26 @@ function meadow(x: number, z: number) {
   return (0.15 + 0.85 * trodden) * patches * far;
 }
 
+// Whether (x, z) is within `margin` of the pond's water, where no grass
+// grows and no pebble lies (the pond shows with garden life, like the
+// grass; see Pond)
+function byPond(x: number, z: number, margin: number) {
+  return Math.hypot(x - POND_SPOT[0], z - POND_SPOT[1]) < POND_RADIUS + margin;
+}
+
 type Tuft = { x: number; z: number; size: number };
 
-// The tufts: random places, each kept as often as the meadow there says
+// The tufts: random places, each kept as often as the meadow there says,
+// none in the pond (a few blades may lean over its rim)
 function makeTufts(random: () => number) {
   const tufts: Tuft[] = [];
   for (let i = 0; i < TUFT_TRIES; i++) {
     const x = (random() * 2 - 1) * AREA_X;
     const z = AREA_BACK + random() * (AREA_FRONT - AREA_BACK);
     const size = 0.6 + random() * 0.7;
-    if (random() < meadow(x, z)) tufts.push({ x, z, size });
+    if (random() < meadow(x, z) && !byPond(x, z, 0.3)) {
+      tufts.push({ x, z, size });
+    }
   }
   return tufts;
 }
@@ -344,7 +361,8 @@ function flowerInstances(
   };
 }
 
-// Pebbles on the trodden ground near the table, and the mushrooms: a few
+// Pebbles on the trodden ground near the table (none in the pond), and
+// the mushrooms: a few
 // at each front leg's foot (the back legs hide under the table) and a
 // ring in the meadow. [x, z, size] each
 function pebbleSpots(random: () => number) {
@@ -355,7 +373,7 @@ function pebbleSpots(random: () => number) {
     const outX = Math.max(Math.abs(x) - TABLE_HALF_WIDTH, 0);
     const outZ = Math.max(TABLE_BACK - z, z - TABLE_FRONT, 0);
     const from = Math.hypot(outX, outZ);
-    if (from > 0.1 && from < 3 && random() > from / 3) {
+    if (from > 0.1 && from < 3 && random() > from / 3 && !byPond(x, z, 0.2)) {
       spots.push([x, z, 0.04 + random() * 0.07]);
     }
   }
