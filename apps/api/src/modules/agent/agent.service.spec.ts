@@ -1145,6 +1145,20 @@ describe("AgentService.dispatch", () => {
       });
     });
 
+    it("writes settings.json with the statusline script as the statusline", async () => {
+      const written = JSON.parse(
+        await readFile(join(path(), ".gitspore", "settings.json"), "utf8"),
+      );
+
+      expect(written.statusLine).toEqual({
+        type: "command",
+        command: expect.stringMatching(
+          /^node '[^'\\]*statusline-script\.mjs'$/,
+        ),
+        padding: 0,
+      });
+    });
+
     it("follows the hooks, and sends a status only when it changes", async () => {
       await send({ hook_event_name: "SessionStart" });
       await send({ hook_event_name: "UserPromptSubmit" });

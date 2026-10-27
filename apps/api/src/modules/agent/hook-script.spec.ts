@@ -1,61 +1,19 @@
-import { spawn } from "node:child_process";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
-import {
-  createServer,
-  type IncomingHttpHeaders,
-  type Server,
-  type ServerResponse,
-} from "node:http";
-import type { AddressInfo } from "node:net";
+import type { Server } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  runScript,
+  startDaemon,
+  stopDaemon,
+  type Run,
+} from "../../../test/stand-in-daemon";
 
 const SCRIPT = join(__dirname, "hook-script.mjs");
 const EVENT = '{"hook_event_name":"PreToolUse","tool_name":"Bash"}';
 
-type Received = { url?: string; headers: IncomingHttpHeaders; body: string };
-type Run = { code: number | null; stdout: string; stderr: string; ms: number };
-
 function runHook(projectDir: string, stdin = EVENT): Promise<Run> {
-  return new Promise((resolve, reject) => {
-    const started = Date.now();
-    const child = spawn(process.execPath, [SCRIPT], {
-      env: { ...process.env, CLAUDE_PROJECT_DIR: projectDir },
-    });
-    let stdout = "";
-    let stderr = "";
-    child.stdout.on("data", (data) => (stdout += data));
-    child.stderr.on("data", (data) => (stderr += data));
-    child.on("error", reject);
-    child.on("close", (code) =>
-      resolve({ code, stdout, stderr, ms: Date.now() - started }),
-    );
-    child.stdin.end(stdin);
-  });
-}
-
-async function startDaemon(
-  answer: (res: ServerResponse) => void,
-): Promise<{ server: Server; url: string; received: Received[] }> {
-  const received: Received[] = [];
-  const server = createServer((req, res) => {
-    let body = "";
-    req.on("data", (chunk) => (body += chunk));
-    req.on("end", () => {
-      received.push({ url: req.url, headers: req.headers, body });
-      answer(res);
-    });
-  });
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const { port } = server.address() as AddressInfo;
-  return { server, url: `http://127.0.0.1:${port}`, received };
-}
-
-function stopDaemon(server: Server): Promise<void> {
-  // A request that never got an answer keeps its socket open, and close()
-  // would wait for it.
-  server.closeAllConnections();
-  return new Promise((resolve) => server.close(() => resolve()));
+  return runScript(SCRIPT, { CLAUDE_PROJECT_DIR: projectDir }, stdin);
 }
 
 async function writeHookFile(dir: string, url: string): Promise<void> {
