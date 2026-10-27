@@ -1,4 +1,7 @@
 import type { Agent, PatchOp } from "@gitspore/shared";
+import { appendFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { HookService } from "../hooks/hook.service";
 import { StateStore } from "../state/state.store";
 import { UsageService } from "./usage.service";
@@ -38,13 +41,15 @@ const statusline = (overrides: Record<string, unknown> = {}) => ({
 describe("UsageService", () => {
   let store: StateStore;
   let hooks: HookService;
+  let service: UsageService;
   let ops: PatchOp[];
 
   beforeEach(() => {
     jest.useFakeTimers({ now: NOW });
     store = new StateStore();
     hooks = new HookService();
-    new UsageService(store, hooks).onModuleInit();
+    service = new UsageService(store, hooks);
+    service.onModuleInit();
     store.apply([{ type: "agent:upsert", agent: agent("a1") }]);
     ops = [];
     store.onPatch((patch) => ops.push(...patch.ops));
@@ -203,6 +208,128 @@ describe("UsageService", () => {
       ]);
 
       expect(usageOf("a1")?.contextPercent).toBe(22);
+    });
+  });
+
+  describe("tokens from the session log", () => {
+    const USAGE = {
+      input_tokens: 2,
+      output_tokens: 300,
+      cache_read_input_tokens: 40_000,
+      cache_creation_input_tokens: 1_000,
+    };
+    const answer = (requestId: string) =>
+      JSON.stringify({
+        type: "assistant",
+        requestId,
+        message: { usage: USAGE },
+      }) + "\n";
+    let projects: string;
+    let log: string;
+
+    // File reads need real timers: fake ones hold back process.nextTick.
+    beforeEach(async () => {
+      jest.useRealTimers();
+      projects = await mkdtemp(join(tmpdir(), "gitspore-projects-"));
+      await mkdir(join(projects, "repo"));
+      log = join(projects, "repo", "session-1.jsonl");
+      service.projectsDir = projects;
+    });
+
+    afterEach(async () => {
+      await rm(projects, { recursive: true, force: true });
+    });
+
+    const sendWithLog = async (path = log) => {
+      send("a1", statusline({ transcript_path: path }));
+      await service.idle();
+    };
+
+    it("puts the tokens of the session log on the agent", async () => {
+      await writeFile(log, answer("req-1") + answer("req-1") + answer("req-2"));
+
+      await sendWithLog();
+
+      expect(usageOf("a1")).toEqual({
+        contextPercent: 22,
+        model: "Opus",
+        tokens: {
+          input: 4,
+          output: 600,
+          cacheRead: 80_000,
+          cacheWrite: 2_000,
+          total: 82_604,
+        },
+      });
+    });
+
+    it("adds what was written since the last statusline", async () => {
+      await writeFile(log, answer("req-1"));
+      await sendWithLog();
+
+      await appendFile(log, answer("req-2"));
+      await sendWithLog();
+
+      expect(usageOf("a1")?.tokens.total).toBe(2 * 41_302);
+    });
+
+    it("keeps the tokens when the next statusline changes the context", async () => {
+      await writeFile(log, answer("req-1"));
+      await sendWithLog();
+
+      send("a1", statusline({ context_window: { used_percentage: 30 } }));
+
+      expect(usageOf("a1")).toMatchObject({
+        contextPercent: 30,
+        tokens: { total: 41_302 },
+      });
+    });
+
+    it("reads one more time for a statusline that came during a read", async () => {
+      await writeFile(log, answer("req-1"));
+      send("a1", statusline({ transcript_path: log }));
+      await appendFile(log, answer("req-2"));
+      send("a1", statusline({ transcript_path: log }));
+
+      await service.idle();
+
+      expect(usageOf("a1")?.tokens.total).toBe(2 * 41_302);
+    });
+
+    it("waits for a log that doesn't exist yet", async () => {
+      await sendWithLog();
+
+      expect(usageOf("a1")?.tokens.total).toBe(0);
+
+      await writeFile(log, answer("req-1"));
+      await sendWithLog();
+
+      expect(usageOf("a1")?.tokens.total).toBe(41_302);
+    });
+
+    it("reads no file outside Claude Code's projects folder", async () => {
+      const outside = join(tmpdir(), `gitspore-outside-${process.pid}.jsonl`);
+      await writeFile(outside, answer("req-1"));
+
+      try {
+        await sendWithLog(outside);
+        expect(usageOf("a1")?.tokens.total).toBe(0);
+      } finally {
+        await rm(outside, { force: true });
+      }
+    });
+
+    it("starts over for an agent that was removed", async () => {
+      await writeFile(log, answer("req-1"));
+      await sendWithLog();
+      store.apply([{ type: "agent:remove", agentId: "a1" }]);
+      store.apply([{ type: "agent:upsert", agent: agent("a1") }]);
+
+      await sendWithLog();
+
+      // A fresh count from the start, not 0 because the old counter has
+      // already read the file.
+      expect(usageOf("a1")?.tokens.total).toBe(41_302);
     });
   });
 
