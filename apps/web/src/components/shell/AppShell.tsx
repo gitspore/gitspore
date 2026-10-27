@@ -16,6 +16,7 @@ import { ConnectScreen } from "../attention/ConnectScreen";
 import { NotificationStack } from "../attention/NotificationStack";
 import { Hotbar } from "../main/Hotbar";
 import { Window } from "../main/Window";
+import { SettingsPanel } from "../side-panel/SettingsPanel";
 import { SidePanel } from "../side-panel/SidePanel";
 import { ToolRail } from "./ToolRail";
 import { TopBar } from "./TopBar";
@@ -115,14 +116,18 @@ export function AppShell() {
           </div>
         </section>
 
-        {/* Side Panel */}
+        {/* Side Panel, or the settings in its place (#111) */}
         {layout.sidePanel && (
           <aside className="pointer-events-auto overflow-y-auto rounded-xl bg-panel p-2 text-ink shadow-lg [grid-area:panel]">
-            <SidePanel
-              tab={layout.sidePanel}
-              onTabChange={setSidePanel}
-              onClose={() => setSidePanel(null)}
-            />
+            {layout.sidePanel === "settings" ? (
+              <SettingsPanel onClose={() => setSidePanel(null)} />
+            ) : (
+              <SidePanel
+                tab={layout.sidePanel}
+                onTabChange={setSidePanel}
+                onClose={() => setSidePanel(null)}
+              />
+            )}
           </aside>
         )}
 

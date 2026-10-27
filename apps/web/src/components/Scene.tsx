@@ -3,9 +3,11 @@
 // React Three Fiber must be a Client Component.
 
 import { useEffect, useRef, useState, type RefObject } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { StatsGl } from "@react-three/drei";
 import { useTheme } from "next-themes";
+import * as THREE from "three";
+import { useSceneSettings } from "@/lib/sceneSettings";
 import { tokens } from "@/theme/tokens";
 
 import { CameraRig } from "./scene/CameraRig";
@@ -50,22 +52,39 @@ function DrawCalls() {
   return null;
 }
 
+// Shadows switched in the settings (#111). R3F turns the shadow map on or
+// off, but three.js doesn't rebuild the shaders for it: switched off, the
+// last shadows stay frozen; switched on, none appear. needsUpdate makes
+// every material compile again on the next frame
+function ShadowSwitch({ on }: { on: boolean }) {
+  const scene = useThree((s) => s.scene);
+  useEffect(() => {
+    scene.traverse((object) => {
+      if (object instanceof THREE.Mesh) {
+        for (const material of [object.material].flat()) {
+          material.needsUpdate = true;
+        }
+      }
+    });
+  }, [on, scene]);
+  return null;
+}
+
 export function Scene({
   sceneArea,
 }: {
   sceneArea: RefObject<HTMLDivElement | null>;
 }) {
   // The mode: next-themes puts "light" (day) or "dark" (night) on <html>.
-  // URL flags, read once: ?shadows=off for weak GPUs, ?orbit=0 for a fixed
-  // camera (orbiting is on by default), ?testing=1 for the plant test keys
-  // (see Pots), ?fx=off without post-processing (no bloom)
+  // Shadows, glow (bloom), camera motion (orbiting) and fog come from the
+  // settings; their URL flags (?shadows=off, ?fx=off, ?orbit=0) override
+  // them (#111). ?testing=1, read once, turns on the plant test keys (see Pots)
   const { resolvedTheme } = useTheme();
   const t = resolvedTheme === "light" ? tokens.day : tokens.night;
-  const [flags] = useState(() => new URLSearchParams(window.location.search));
-  const shadowsOn = flags.get("shadows") !== "off";
-  const orbitOn = flags.get("orbit") !== "0";
-  const testingOn = flags.get("testing") === "1";
-  const fxOn = flags.get("fx") !== "off";
+  const { scene } = useSceneSettings();
+  const [testingOn] = useState(
+    () => new URLSearchParams(window.location.search).get("testing") === "1",
+  );
 
   // The canvas is created once; a mode change only changes props.
   // - shadows: "percentage" is PCFShadowMap; three 0.186 dropped the soft one
@@ -75,7 +94,7 @@ export function Scene({
   return (
     <Canvas
       dpr={[1, 2]}
-      shadows={shadowsOn ? "percentage" : false}
+      shadows={scene.shadows ? "percentage" : false}
       gl={{ toneMappingExposure: t.scene.exposure }}
       onCreated={({ gl }) => {
         if (DEV) {
@@ -85,15 +104,19 @@ export function Scene({
     >
       {/* Sky colour behind everything; distant things fade into the fog
           colour between near and far. Fog's type wants a colour for
-          new Fog(), so args holds a dummy; the props set the real one */}
+          new Fog(), so args holds a dummy; the props set the real one.
+          Low power drops the fog; three.js rebuilds the shaders for that */}
       <color attach="background" args={[t.color.scene["sky-horizon"]]} />
-      <fog
-        attach="fog"
-        args={["#000000"]}
-        color={t.color.scene.fog}
-        near={t.scene.fog.near}
-        far={t.scene.fog.far}
-      />
+      {scene.fog && (
+        <fog
+          attach="fog"
+          args={["#000000"]}
+          color={t.color.scene.fog}
+          near={t.scene.fog.near}
+          far={t.scene.fog.far}
+        />
+      )}
+      <ShadowSwitch on={scene.shadows} />
 
       {/* Light, all from the tokens:
           - RoomLight: soft environment light from all around
@@ -159,10 +182,10 @@ export function Scene({
 
       <Table wood={t.color.wood} floor={t.color.scene.floor} />
 
-      <CameraRig sceneArea={sceneArea} orbit={orbitOn} />
+      <CameraRig sceneArea={sceneArea} orbit={scene.cameraMotion} />
       {/* Bloom only when it shows: by day its strength is 0, so the
           composer would cost a full extra pass for nothing */}
-      {fxOn && t.scene.bloom.strength > 0 && (
+      {scene.glow && t.scene.bloom.strength > 0 && (
         <Effects
           strength={t.scene.bloom.strength}
           threshold={t.scene.bloom.threshold}

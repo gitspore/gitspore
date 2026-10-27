@@ -5,7 +5,7 @@ import {
   SeedPacketIcon,
   SproutIcon,
 } from "@/components/icons/RailIcons";
-import type { MainMode, SidePanelTab } from "@/lib/layout";
+import type { MainMode, SidePanelTab, SidePanelView } from "@/lib/layout";
 import { RailBookmark } from "./RailBookmark";
 
 // The bookmarks on the left edge: the three side panel tabs and scene/focus.
@@ -19,7 +19,8 @@ const TABS: { tab: SidePanelTab; label: string; icon: ReactNode }[] = [
 ];
 
 type ToolRailProps = {
-  sidePanel: SidePanelTab | null;
+  // With the settings open no bookmark is open; a click replaces them
+  sidePanel: SidePanelView | null;
   // Clicking the open bookmark again closes the panel (null)
   onSidePanelChange: (tab: SidePanelTab | null) => void;
   mode: MainMode;
