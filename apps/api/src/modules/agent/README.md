@@ -16,7 +16,7 @@ Turns an issue into a running agent and stops it again: `agent:dispatch` makes a
 | `agent.module.ts`          | Provides `AgentService` and `AgentGateway`; imports State, GitHub, Terminal, Worktree, Hook |
 | `agent.e2e.spec.ts`        | Acceptance tests with real git, real PTYs, the fake claude and its hooks                    |
 
-The hook endpoint itself (`POST /hooks/:agentId`, secrets) is in `modules/hooks/`. It only checks and passes events on; what they mean is decided here.
+The hook endpoint itself (`POST /hooks/:agentId`, secrets) is in `modules/hooks/`. It only checks and passes events on; what they mean is decided here. The statusline goes to `POST /hooks/:agentId/statusline` with the same checks and secret, and on to `HookService.onStatusline`; `modules/usage/` reads it (#42).
 
 The gateway lives here and not in `GatewayModule`, so the gateway specs there don't start the worktree service. It is still guarded: every gateway on the port shares one Socket.io server, and the middleware in `StateGateway.afterInit` checks every connection.
 
