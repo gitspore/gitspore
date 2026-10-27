@@ -121,7 +121,7 @@ export const tokens = {
       scene: {
         wing: 0.45,
         glass: 0.08,
-        water: 0.6,
+        water: 0.45,
       },
     },
     font: {
@@ -311,8 +311,8 @@ export const tokens = {
           cattail: "#6b4a2e",
           lily: "#5e9440",
           ripple: "#eef7f4",
-          water: "#6fa8ad",
-          bed: "#4a5a3a",
+          water: "#4d8790",
+          bed: "#3a4630",
           stone: "#9d9586",
         },
         frog: {
@@ -551,7 +551,7 @@ export const tokens = {
       scene: {
         wing: 0.45,
         glass: 0.05,
-        water: 0.5,
+        water: 0.45,
       },
     },
     font: {

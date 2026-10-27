@@ -534,12 +534,12 @@
         },
         "pond": {
           "water": {
-            "$value": "#6fa8ad",
+            "$value": "#4d8790",
             "$type": "color",
             "$description": "the pond's water, see-through so the fish show"
           },
           "bed": {
-            "$value": "#4a5a3a",
+            "$value": "#3a4630",
             "$type": "color",
             "$description": "the pond's bottom under the water"
           },
@@ -678,7 +678,7 @@
           "$type": "opacity"
         },
         "water": {
-          "$value": "0.6",
+          "$value": "0.45",
           "$type": "opacity",
           "$description": "how much of the pond's water hides what is under it"
         }
@@ -880,7 +880,7 @@
           "$type": "opacity"
         },
         "water": {
-          "$value": "0.5",
+          "$value": "0.45",
           "$type": "opacity"
         }
       }

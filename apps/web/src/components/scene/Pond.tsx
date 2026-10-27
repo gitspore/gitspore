@@ -21,11 +21,16 @@ import { WIND_DIR, windAt, windUniforms } from "./wind";
 // on the floor at the pond's middle
 
 // Heights above the floor: the bed, the fish, the water's surface, and
-// the top of the flat stones the frog sits on
+// the top of the flat stones the frog sits on; how far a fish rises when
+// it touches the surface
 const BED_Y = 0.004;
-const FISH_Y = 0.035;
-const WATER_Y = 0.07;
-const SEAT_Y = 0.095;
+const FISH_Y = 0.038;
+const WATER_Y = 0.09;
+const SEAT_Y = 0.11;
+const FISH_RISE = 0.015;
+// How much longer and wider than their geometry the fish are (not
+// higher, they have to fit under the water)
+const FISH_SIZE: [number, number, number] = [1.4, 1, 1.4];
 // The stones around the rim, and where along it (angle from +x toward
 // +z, so negative is the back) the frog's flat seats lie
 const STONES = 24;
@@ -73,12 +78,12 @@ function stoneMatrices() {
     lay(
       angle,
       POND_RADIUS + 0.03 + random() * 0.04,
-      0.03,
+      0.05,
       new THREE.Vector3(size * (1 + random() * 0.5), size * 0.6, size),
     );
   }
   for (const angle of SEAT_ANGLES) {
-    lay(angle, POND_RADIUS + 0.05, 0.05, new THREE.Vector3(0.14, 0.05, 0.12));
+    lay(angle, POND_RADIUS + 0.05, 0.07, new THREE.Vector3(0.14, 0.05, 0.12));
   }
   return new Float32Array(out);
 }
@@ -317,7 +322,7 @@ export function Pond({
       }
       body.position.set(
         place.x,
-        place.y + Math.sin(rise * Math.PI) * (WATER_Y - FISH_Y - 0.012),
+        place.y + Math.sin(rise * Math.PI) * FISH_RISE,
         place.z,
       );
       body.rotation.y = Math.atan2(ahead.x - place.x, ahead.z - place.z);
@@ -354,7 +359,7 @@ export function Pond({
   return (
     <group position={[POND_SPOT[0], FLOOR_Y, POND_SPOT[1]]}>
       <mesh rotation-x={-Math.PI / 2} position-y={BED_Y} receiveShadow>
-        <circleGeometry args={[POND_RADIUS + 0.02, 24]} />
+        <circleGeometry args={[POND_RADIUS + 0.08, 24]} />
         <meshStandardMaterial color={bed} roughness={1} />
       </mesh>
       <mesh rotation-x={-Math.PI / 2} position-y={WATER_Y}>
@@ -364,8 +369,7 @@ export function Pond({
           transparent
           opacity={waterOpacity}
           depthWrite={false}
-          roughness={0.1}
-          metalness={0.2}
+          roughness={0.15}
         />
       </mesh>
       <mesh geometry={pads} position-y={WATER_Y + 0.003} receiveShadow>
@@ -403,6 +407,7 @@ export function Pond({
           ref={(body) => {
             fishBodies.current[index] = body;
           }}
+          scale={FISH_SIZE}
         >
           <mesh geometry={fishes[index]}>
             <meshStandardMaterial vertexColors roughness={0.4} />
