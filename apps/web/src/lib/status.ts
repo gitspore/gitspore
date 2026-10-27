@@ -1,5 +1,6 @@
 import type { AgentStatus } from "@gitspore/shared";
 import { Circle, Diamond, Flower, Triangle, X } from "lucide-react";
+import type { PlantKind } from "@/components/icons/Plant";
 
 // How each status shows in the interface (components.md, "The five states")
 
@@ -20,6 +21,17 @@ export const STATUS_ICON: Record<AgentStatus, typeof Circle> = {
   error: X,
   done: Diamond,
   merged: Flower,
+};
+
+// The plant drawn for each status (#101). Starting has none of its own in
+// the design: the pot is taken, so it shows the sprout
+export const STATUS_PLANT: Record<AgentStatus, PlantKind> = {
+  starting: "working",
+  working: "working",
+  needs_input: "waiting",
+  error: "wilted",
+  done: "review",
+  merged: "merged",
 };
 
 export const STATUS_COLOUR: Record<AgentStatus, string> = {
