@@ -145,7 +145,7 @@ Token usage, from Claude Code ([ADR 0009](../decisions/0009-show-token-usage.md)
 | Where | Label | Value | `usage-tip` shows |
 |---|---|---|---|
 | top bar | "5 h", "week" | share of the plan's 5-hour and 7-day limit | used, reset time, tokens of the running agents; at 100 % "All agents are paused until the reset." |
-| window header | "context" | how full the agent's context is, then "· 701k tokens" | input, output, cache read, cache write, total, context used, model; "Most of it is cache reads." |
+| window header | "context" | how full the agent's context is, then "· 701k tokens" | input, output, cache read, cache write, total, context used, model; when cache reads are more than half: "Most of it is cache reads: each answer reads the conversation so far again, mostly from the cache." |
 | panel title (optional) | none | "20.8M tokens" for the project | running agents, finished agents, total; where the number comes from |
 
 The plan limits apply to the whole Claude account, so they also count sessions outside gitspore; the tip says so. No money amounts: with a Pro or Max plan the user doesn't pay per token.
