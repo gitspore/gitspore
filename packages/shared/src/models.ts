@@ -168,6 +168,24 @@ export type TerminalSession = {
   agentId: AgentId;
 };
 
+export type GraphCommit = {
+  sha: string;
+  parents: string[];
+  author: string;
+  date: IsoTimestamp;
+  subject: string;
+};
+
+export type BranchHead = {
+  branch: string;
+  sha: string;
+};
+
+export type BranchGraph = {
+  commits: GraphCommit[];
+  heads: BranchHead[];
+};
+
 /** The repository gitspore works in. */
 export type RepoInfo = {
   /** Absolute path of the repo root on the user's machine. */

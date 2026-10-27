@@ -781,6 +781,21 @@ describe("createGreenhouseStore", () => {
       );
     });
 
+    it("loadBranchGraph emits branches:graph and resolves with the graph", async () => {
+      const { store, client, ack } = setup();
+      const graph = { commits: [], heads: [] };
+
+      const loaded = store.getState().loadBranchGraph();
+      ack("branches:graph", { graph });
+
+      await expect(loaded).resolves.toEqual({ graph });
+      expect(client.emit).toHaveBeenCalledWith(
+        "branches:graph",
+        {},
+        expect.any(Function),
+      );
+    });
+
     describe("when the daemon doesn't answer a repo request", () => {
       beforeEach(() => jest.useFakeTimers());
       afterEach(() => jest.useRealTimers());

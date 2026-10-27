@@ -20,6 +20,7 @@ import {
 import { UsageTip } from "@/components/shell/UsageTip";
 import { agentTokens, formatTokens, repoTip } from "@/lib/usageTip";
 import { AgentRow, FreeSlotRow } from "./AgentRow";
+import { BranchesTab } from "./BranchesTab";
 import { IssueRow } from "./IssueRow";
 
 // The side panel: title, counts, tabs. Spec: `side-panel` and `segmented-tabs`.
@@ -59,6 +60,9 @@ export function SidePanel({ tab, onTabChange, onClose }: SidePanelProps) {
   const repoTokens = useGreenhouseStore(selectRepoTokens);
 
   const planted = agents.filter((a) => a.slotIndex !== null).length;
+  const active = agents.filter(
+    (a) => a.slotIndex !== null && a.status !== "merged",
+  ).length;
   const freeSlot = slots[0];
 
   // The agent is gone: the stop went through, the dialog closes.
@@ -97,40 +101,49 @@ export function SidePanel({ tab, onTabChange, onClose }: SidePanelProps) {
 
   return (
     <div className="flex flex-col gap-3">
-      <header className="flex items-start justify-between px-1 pt-1">
-        <div>
-          <h2 className="font-title text-title-panel">Your pots</h2>
-          <p className="text-ui-meta text-muted-foreground">
-            {planted} of {MAX_SLOTS} planted
-            {/* Summary from #18: hidden when nobody waits */}
-            {waiting > 0 && (
-              <span className="font-semibold text-status-waiting">
-                {" "}
-                · {waiting} {waiting === 1 ? "needs" : "need"} you
-              </span>
-            )}
-            {/* The repo's total (#42), once something is counted */}
-            {repoTokens !== null && repoTokens > 0 && (
-              <>
-                {" · "}
-                <UsageTip
-                  content={repoTip(repoTokens, agentTokens(agents, issues))}
-                  trigger={
-                    <span
-                      tabIndex={0}
-                      className="rounded-md px-1 outline-none hover:bg-ink/20 focus-visible:ring-3 focus-visible:ring-ring/50"
-                    >
-                      <span className="text-mono-key font-mono tabular-nums">
-                        {formatTokens(repoTokens)}
-                      </span>{" "}
-                      tokens
-                    </span>
-                  }
-                />
-              </>
-            )}
-          </p>
-        </div>
+      <header className="flex items-start justify-between px-2 pt-1">
+        {tab === "branches" ? (
+          <div>
+            <h2 className="font-title text-title-panel">Branches</h2>
+            <p className="text-ui-meta text-muted-foreground">
+              {active} active
+            </p>
+          </div>
+        ) : (
+          <div>
+            <h2 className="font-title text-title-panel">Your pots</h2>
+            <p className="text-ui-meta text-muted-foreground">
+              {planted} of {MAX_SLOTS} planted
+              {/* Summary from #18: hidden when nobody waits */}
+              {waiting > 0 && (
+                <span className="font-semibold text-status-waiting">
+                  {" "}
+                  · {waiting} {waiting === 1 ? "needs" : "need"} you
+                </span>
+              )}
+              {/* The repo's total (#42), once something is counted */}
+              {repoTokens !== null && repoTokens > 0 && (
+                <>
+                  {" · "}
+                  <UsageTip
+                    content={repoTip(repoTokens, agentTokens(agents, issues))}
+                    trigger={
+                      <span
+                        tabIndex={0}
+                        className="rounded-md px-1 outline-none hover:bg-ink/20 focus-visible:ring-3 focus-visible:ring-ring/50"
+                      >
+                        <span className="text-mono-key font-mono tabular-nums">
+                          {formatTokens(repoTokens)}
+                        </span>{" "}
+                        tokens
+                      </span>
+                    }
+                  />
+                </>
+              )}
+            </p>
+          </div>
+        )}
         <Button
           variant="ghost"
           size="icon"
@@ -200,8 +213,8 @@ export function SidePanel({ tab, onTabChange, onClose }: SidePanelProps) {
           )}
         </TabsContent>
 
-        <TabsContent value="branches" className="px-2 text-muted-foreground">
-          Branches later (should-have).
+        <TabsContent value="branches">
+          <BranchesTab />
         </TabsContent>
       </Tabs>
 
