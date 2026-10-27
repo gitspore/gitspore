@@ -30,5 +30,6 @@ Visual spec: "Usage" in [components.md](../design/components.md).
 
 - The limits cover the whole Claude account, so sessions outside gitspore count too; the hover says so.
 - The plan limits exist only for Pro and Max. With an API key the top-bar meters stay hidden.
+- Claude Code reports the limits only after a session's first answer. So the daemon keeps the last known limits in `~/.gitspore/plan.json` and shows them from its start; they can be lower than the real ones until the next answer, if sessions outside gitspore used more meanwhile.
 - The statusline JSON and the session log format can change with Claude Code updates; the daemon should tolerate missing fields.
 - The statusline command runs in a shell (Git Bash or PowerShell on Windows), not like a hook with its arguments, so it calls `node` from the PATH.

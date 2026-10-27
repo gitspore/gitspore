@@ -1,12 +1,14 @@
 import { RepoConfig } from "@/config/repo-config";
 import { Logger } from "@nestjs/common";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { initRepo } from "../../../test/git-repo";
+import { HookService } from "../hooks/hook.service";
 import { StateStore } from "../state/state.store";
 import type { ClaudeLocator } from "../terminal/claude-locator";
 import type { TerminalService } from "../terminal/terminal.service";
+import type { WorktreeService } from "../worktree/worktree.service";
 import { OverviewAgentService } from "./overview-agent.service";
 
 //
@@ -33,11 +35,18 @@ class FakeLocator {
   readonly resolve = jest.fn(async () => "/bin/claude");
 }
 
+// Stands in for WorktreeService: records what is kept out of git.
+class FakeWorktrees {
+  readonly ensureExcluded = jest.fn().mockResolvedValue(undefined);
+}
+
 describe("OverviewAgentService", () => {
   let repo: string;
   let terminals: FakeTerminals;
   let locator: FakeLocator;
   let store: StateStore;
+  let hooks: HookService;
+  let worktrees: FakeWorktrees;
 
   beforeEach(async () => {
     repo = await mkdtemp(join(tmpdir(), "gitspore-overview-"));
@@ -45,6 +54,8 @@ describe("OverviewAgentService", () => {
     terminals = new FakeTerminals();
     locator = new FakeLocator();
     store = new StateStore();
+    hooks = new HookService();
+    worktrees = new FakeWorktrees();
   });
 
   afterEach(async () => {
@@ -59,6 +70,8 @@ describe("OverviewAgentService", () => {
       locator as unknown as ClaudeLocator,
       store,
       new RepoConfig(repo, "main"),
+      hooks,
+      worktrees as unknown as WorktreeService,
       enabled,
     ).onApplicationBootstrap();
 
@@ -70,6 +83,8 @@ describe("OverviewAgentService", () => {
       locator as unknown as ClaudeLocator,
       store,
       new RepoConfig(null, "main"),
+      hooks,
+      worktrees as unknown as WorktreeService,
       true,
     ).onApplicationBootstrap();
 
@@ -84,7 +99,65 @@ describe("OverviewAgentService", () => {
       agentId: "overview",
       cwd: repo,
       command: "claude",
-      args: ["--permission-mode", "plan"],
+      args: [
+        "--settings",
+        ".gitspore/settings.json",
+        "--permission-mode",
+        "plan",
+      ],
+    });
+  });
+
+  describe("statusline", () => {
+    const readJson = async (file: string) =>
+      JSON.parse(await readFile(join(repo, ".gitspore", file), "utf8"));
+
+    it("writes settings with only the statusline script", async () => {
+      await start(true);
+
+      const settings = await readJson("settings.json");
+      expect(Object.keys(settings)).toEqual(["statusLine"]);
+      expect(settings.statusLine.command).toMatch(
+        /^node '.*\/statusline-script\.mjs'$/,
+      );
+    });
+
+    it("writes hook.json with a secret the endpoint accepts", async () => {
+      await start(true);
+
+      const hook = await readJson("hook.json");
+      expect(hook).toMatchObject({ url: hooks.url(), agentId: "overview" });
+      expect(hooks.isValid("overview", hook.secret)).toBe(true);
+    });
+
+    it("keeps .gitspore/ out of git", async () => {
+      await start(true);
+
+      expect(worktrees.ensureExcluded).toHaveBeenCalledWith(".gitspore/");
+    });
+
+    it("starts without it when the files can't be written", async () => {
+      const warn = jest
+        .spyOn(Logger.prototype, "warn")
+        .mockImplementation(() => {});
+      worktrees.ensureExcluded.mockRejectedValue(new Error("read-only"));
+
+      await start(true);
+
+      expect(terminals.spawn).toHaveBeenCalledWith(
+        expect.objectContaining({ args: ["--permission-mode", "plan"] }),
+      );
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("read-only"));
+      expect(store.snapshot().agents).toHaveLength(1);
+    });
+
+    it("revokes the secret when the shell exits", async () => {
+      await start(true);
+      const { secret } = await readJson("hook.json");
+
+      terminals.exit("overview");
+
+      expect(hooks.isValid("overview", secret)).toBe(false);
     });
   });
 
@@ -177,6 +250,8 @@ describe("OverviewAgentService", () => {
         locator as unknown as ClaudeLocator,
         store,
         config,
+        hooks,
+        worktrees as unknown as WorktreeService,
         true,
       );
       const other = await mkdtemp(join(tmpdir(), "gitspore-overview-other-"));
@@ -185,11 +260,16 @@ describe("OverviewAgentService", () => {
       await service.stop();
       config.set(other, "main");
       await service.start();
+      const secret = JSON.parse(
+        await readFile(join(other, ".gitspore", "hook.json"), "utf8"),
+      ).secret;
 
       expect(terminals.stop).toHaveBeenCalledWith("overview");
       expect(terminals.spawn).toHaveBeenCalledWith(
         expect.objectContaining({ cwd: other }),
       );
+      // A new secret for the new repo's hook.json.
+      expect(hooks.isValid("overview", secret)).toBe(true);
       await rm(other, { recursive: true, force: true });
     });
   });

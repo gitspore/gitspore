@@ -1,3 +1,9 @@
+import { join } from "node:path";
+
+// nest build copies both next to the compiled code (nest-cli.json assets).
+export const HOOK_SCRIPT = join(__dirname, "hook-script.mjs");
+export const STATUSLINE_SCRIPT = join(__dirname, "statusline-script.mjs");
+
 export const HOOK_EVENTS = [
   "SessionStart",
   "UserPromptSubmit",
@@ -43,6 +49,15 @@ export function hookSettings(
     hooks: Object.fromEntries(
       HOOK_EVENTS.map((event) => [event, [{ hooks: [handler] }]]),
     ),
+    ...statuslineSettings(statuslinePath),
+  };
+}
+
+/** Only the statusline, for the overview agent, which has no hooks yet. */
+export function statuslineSettings(statuslinePath: string): {
+  statusLine: StatusLine;
+} {
+  return {
     statusLine: {
       type: "command",
       command: statusLineCommand(statuslinePath),
