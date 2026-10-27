@@ -52,7 +52,7 @@ const GATE_HALF = 0.09;
 // The props: the shed behind the fence at the back left (its front turned
 // to the table), the wheelbarrow inside the fence at the back right, the
 // potting corner close to the table's back left corner
-const SHED_SPOT = spot(-2.25, 15.5);
+export const SHED_SPOT = spot(-2.25, 15.5);
 const BARROW_SPOT: [number, number] = [5.8, -9.2];
 const POTS_SPOT: [number, number] = [-5.7, -4.9];
 
@@ -299,7 +299,6 @@ type PropColors = {
   roof: string;
   door: string;
   trim: string;
-  glass: string;
   metal: string;
   pot: string;
   soil: string;
@@ -392,11 +391,16 @@ function pathParts(colors: PropColors, random: () => number): Part[] {
 
 // The shed: plank walls, a gable roof with a ridge, white corners, a
 // door with its frame and knob, a cross-barred window with a flower box,
-// a round window in the gable, a step, and a rain barrel at its side
+// a round window in the gable, a step, and a rain barrel at its side.
+// The panes are apart (shedWindows), so they can light up at night
+const SHED_W = 3;
+const SHED_D = 2.4;
+const SHED_H = 2.2;
+
 function shedParts(colors: PropColors): Part[] {
-  const W = 3;
-  const D = 2.4;
-  const H = 2.2;
+  const W = SHED_W;
+  const D = SHED_D;
+  const H = SHED_H;
   const RISE = 1;
   const front = D / 2;
   const parts: Part[] = [];
@@ -450,16 +454,9 @@ function shedParts(colors: PropColors): Part[] {
       colors.metal,
     ],
     [box(0.82, 0.72, 0.04, 0.72, 1.4, front + 0.02), colors.trim],
-    [box(0.66, 0.56, 0.05, 0.72, 1.4, front + 0.03), colors.glass],
     [box(0.04, 0.56, 0.07, 0.72, 1.4, front + 0.03), colors.trim],
     [box(0.66, 0.04, 0.07, 0.72, 1.4, front + 0.03), colors.trim],
     [box(0.88, 0.2, 0.24, 0.72, 0.94, front + 0.12), colors.pot],
-    [
-      new THREE.CylinderGeometry(0.19, 0.19, 0.04, 16)
-        .rotateX(Math.PI / 2)
-        .translate(0, H + 0.38, front + 0.02),
-      colors.glass,
-    ],
     [
       new THREE.TorusGeometry(0.2, 0.035, 6, 16).translate(
         0,
@@ -512,6 +509,41 @@ function shedParts(colors: PropColors): Part[] {
   }
   return parts;
 }
+
+// The shed's two panes, in the shed's own place (its front toward +z)
+function shedWindows(glass: string) {
+  const front = SHED_D / 2;
+  return paintedParts([
+    [box(0.66, 0.56, 0.05, 0.72, 1.4, front + 0.03), glass],
+    [
+      new THREE.CylinderGeometry(0.19, 0.19, 0.04, 16)
+        .rotateX(Math.PI / 2)
+        .translate(0, SHED_H + 0.38, front + 0.02),
+      glass,
+    ],
+  ]);
+}
+
+// The lamplight falling out of the window onto the grass: a soft round
+// glow, added onto the ground
+const SPILL_VERTEX = /* glsl */ `
+varying vec2 vUv;
+void main() {
+  vUv = uv;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+`;
+
+const SPILL_FRAGMENT = /* glsl */ `
+uniform vec3 uColor;
+uniform float uOpacity;
+varying vec2 vUv;
+void main() {
+  float fade = 1.0 - smoothstep(0.0, 1.0, length(vUv - 0.5) * 2.0);
+  gl_FragColor = vec4(uColor * fade * fade * uOpacity, 1.0);
+  #include <colorspace_fragment>
+}
+`;
 
 // The wheelbarrow: a tub with a heap of soil and a trowel stuck in it,
 // a wheel in front, two handles and two legs at the back
@@ -710,7 +742,6 @@ export function Surroundings({ t }: { t: ModeTokens }) {
       roof: scene.shed.roof,
       door: scene.shed.door,
       trim: scene.shed.trim,
-      glass: scene.glass,
       metal: scene.metal,
       pot: scene.pot,
       soil: scene.soil,
@@ -738,6 +769,30 @@ export function Surroundings({ t }: { t: ModeTokens }) {
     },
     [props],
   );
+
+  // At night (when the string lights are on) the shed's lamp is lit: its
+  // panes glow, skipping tone mapping so they bloom, and its light falls
+  // on the grass in front
+  const lit = t.scene.lamps;
+  const lamp = t.color.light["lamp-glow"];
+  const windows = useMemo(() => shedWindows(scene.glass), [scene.glass]);
+  useEffect(() => () => windows.dispose(), [windows]);
+  const spill = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        vertexShader: SPILL_VERTEX,
+        fragmentShader: SPILL_FRAGMENT,
+        uniforms: {
+          uColor: { value: new THREE.Color(lamp) },
+          uOpacity: { value: 0.35 },
+        },
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      }),
+    [lamp],
+  );
+  useEffect(() => () => spill.dispose(), [spill]);
 
   // Instanced meshes get new keys when their counts change, like the grass
   return (
@@ -780,6 +835,29 @@ export function Surroundings({ t }: { t: ModeTokens }) {
         />
       </instancedMesh>
 
+      <group
+        position={[SHED_SPOT[0], FLOOR_Y, SHED_SPOT[1]]}
+        rotation-y={facingMiddle(SHED_SPOT)}
+      >
+        <mesh geometry={windows}>
+          <meshStandardMaterial
+            vertexColors
+            roughness={0.2}
+            emissive={lamp}
+            emissiveIntensity={t.scene.glow * 3 * lit}
+            toneMapped={lit === 0}
+          />
+        </mesh>
+        {lit > 0 && (
+          <mesh
+            material={spill}
+            rotation-x={-Math.PI / 2}
+            position={[0.4, 0.03, SHED_D / 2 + 1.3]}
+          >
+            <planeGeometry args={[3.2, 2.6]} />
+          </mesh>
+        )}
+      </group>
       <mesh geometry={props.far}>
         <meshStandardMaterial vertexColors roughness={0.85} />
       </mesh>

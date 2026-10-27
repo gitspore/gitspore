@@ -290,6 +290,11 @@
           "$value": "#5b5f63",
           "$type": "color",
           "$description": "hoops, hinges and the wheelbarrow's legs"
+        },
+        "eye": {
+          "$value": "#e4f27a",
+          "$type": "color",
+          "$description": "the eyes that shine in the woods at night"
         }
       },
       "light": {
@@ -529,7 +534,7 @@
       "lamps": {
         "$value": "0",
         "$type": "number",
-        "$description": "1 = string lights on"
+        "$description": "1 = string lights on, and the light in the shed"
       },
       "stars": {
         "$value": "0",
@@ -565,6 +570,11 @@
         "$value": "0",
         "$type": "number",
         "$description": "1 = moths around the string lights"
+      },
+      "eyes": {
+        "$value": "0",
+        "$type": "number",
+        "$description": "1 = eyes shine now and then in the woods"
       },
       "steam": {
         "$value": "0.55",
@@ -745,6 +755,10 @@
         "$value": "1",
         "$type": "number",
         "$description": "1 = moths around the string lights"
+      },
+      "eyes": {
+        "$value": "1",
+        "$type": "number"
       },
       "steam": {
         "$value": "0.3",

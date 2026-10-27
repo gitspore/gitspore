@@ -27,13 +27,13 @@ export type GardenColors = {
   mushroomStem: string;
 };
 
-// Where the garden grows, on the floor (x, z): wide to the sides and far
-// back, where the camera sees the floor; little in front, which it doesn't
+// Where the garden grows, on the floor (x, z): wide to the sides, far
+// back, and in front up to under the camera, which sees it when turned
 const AREA_X = 15;
 const AREA_BACK = -18;
-const AREA_FRONT = 6;
+const AREA_FRONT = 14;
 // How many tuft places to try; the meadow keeps a share of them
-const TUFT_TRIES = 2400;
+const TUFT_TRIES = 3200;
 // The floor plane's size, and the texture painted onto it (pixels a side)
 const FLOOR_SIZE = 40;
 const FLOOR_TEXTURE = 1024;

@@ -44,7 +44,7 @@ const SCENE_OPTIONS: {
 export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const repo = useGreenhouseStore(selectRepo);
   const agentCount = useGreenhouseStore(
-    (s) => selectAgents(s).filter((a) => a.id !== "overview").length,
+    (s) => selectAgents(s).filter(({ id }) => id !== "overview").length,
   );
   const openSetup = useGreenhouseStore((s) => s.openSetup);
   const { stored, flags, scene } = useSceneSettings();

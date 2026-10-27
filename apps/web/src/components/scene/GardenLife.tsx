@@ -5,6 +5,7 @@ import type { Mode, tokens } from "@/theme/tokens";
 import { Bumblebee } from "./Bumblebee";
 import { Butterflies } from "./Butterflies";
 import { Dragonfly } from "./Dragonfly";
+import { Eyes } from "./Eyes";
 import { Ladybug } from "./Ladybug";
 import { DUST, FIREFLIES, Motes } from "./Motes";
 import { Robin } from "./Robin";
@@ -22,7 +23,7 @@ import { Teacup } from "./Teacup";
 // - beams of sun by day, of moon at night, with dust drifting in them
 // - fireflies at night
 // - by day butterflies, a bumblebee, a dragonfly and a robin in the
-//   grass; at night moths around the bulbs
+//   grass; at night moths around the bulbs, and eyes in the woods
 // - day and night: a ladybug on the table, a steaming cup of tea, a snail
 //   on a table leg
 // Mounted only with garden life on (the settings; off in low power)
@@ -114,6 +115,7 @@ export function GardenLife({
           reducedMotion={reducedMotion}
         />
       )}
+      {t.scene.eyes > 0 && !reducedMotion && <Eyes color={scene.eye} />}
       <Ladybug
         red={scene.ladybug}
         dark={scene.insect}
