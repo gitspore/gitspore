@@ -1,9 +1,11 @@
-import type { Agent, PatchOp } from "@gitspore/shared";
+import type { Agent, PatchOp, PlanUsage } from "@gitspore/shared";
+import { Logger } from "@nestjs/common";
 import { appendFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { HookService } from "../hooks/hook.service";
 import { StateStore } from "../state/state.store";
+import type { PlanMemory } from "./plan-memory";
 import { UsageService } from "./usage.service";
 
 const NOW = Date.parse("2026-10-27T10:00:00.000Z");
@@ -38,18 +40,34 @@ const statusline = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
+// Stands in for PlanMemory: keeps the plan in memory, not in ~/.gitspore.
+class FakeMemory {
+  stored: PlanUsage | null = null;
+  readonly save = jest.fn(async (plan: PlanUsage) => {
+    this.stored = plan;
+  });
+  load = async () => this.stored;
+}
+
 describe("UsageService", () => {
   let store: StateStore;
   let hooks: HookService;
+  let memory: FakeMemory;
   let service: UsageService;
   let ops: PatchOp[];
 
-  beforeEach(() => {
+  // What Nest does at startup: build the service, then call the hook.
+  const startService = async () => {
+    service = new UsageService(store, hooks, memory as unknown as PlanMemory);
+    await service.onModuleInit();
+  };
+
+  beforeEach(async () => {
     jest.useFakeTimers({ now: NOW });
     store = new StateStore();
     hooks = new HookService();
-    service = new UsageService(store, hooks);
-    service.onModuleInit();
+    memory = new FakeMemory();
+    await startService();
     store.apply([{ type: "agent:upsert", agent: agent("a1") }]);
     ops = [];
     store.onPatch((patch) => ops.push(...patch.ops));
@@ -57,6 +75,7 @@ describe("UsageService", () => {
 
   afterEach(() => {
     jest.useRealTimers();
+    jest.restoreAllMocks();
   });
 
   const send = (agentId: string, payload: unknown = statusline()) =>
@@ -146,12 +165,127 @@ describe("UsageService", () => {
       expect(store.snapshot().plan).toEqual({ fiveHour: null, sevenDay: null });
     });
 
+    it("saves the limits each time they change", () => {
+      send("a1");
+      send("a1");
+      send(
+        "a1",
+        statusline({
+          rate_limits: {
+            five_hour: { used_percentage: 43, resets_at: inHours(2) },
+          },
+        }),
+      );
+
+      expect(memory.save).toHaveBeenCalledTimes(2);
+      expect(memory.stored).toEqual({
+        fiveHour: { usedPercent: 43, resetsAt: iso(inHours(2)) },
+        sevenDay: null,
+      });
+    });
+
+    it("saves a window dropped at its reset time", () => {
+      send("a1");
+
+      jest.advanceTimersByTime(2 * HOUR * 1000);
+
+      expect(memory.stored?.fiveHour).toBeNull();
+    });
+
+    it("logs a failed save and keeps the limits in the state", async () => {
+      const warn = jest
+        .spyOn(Logger.prototype, "warn")
+        .mockImplementation(() => {});
+      memory.save.mockRejectedValueOnce(new Error("disk full"));
+
+      send("a1");
+      await Promise.resolve();
+
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("disk full"));
+      expect(store.snapshot().plan?.fiveHour?.usedPercent).toBe(41);
+    });
+
     it("keeps the limits across a repo switch", () => {
       send("a1");
 
       store.setRepo({ path: "/other", baseBranch: "main", github: "off" });
 
       expect(store.snapshot().plan?.fiveHour?.usedPercent).toBe(41);
+    });
+  });
+
+  describe("limits from before the start", () => {
+    const saved: PlanUsage = {
+      fiveHour: { usedPercent: 41, resetsAt: iso(inHours(2)) },
+      sevenDay: { usedPercent: 12, resetsAt: iso(inHours(72)) },
+    };
+
+    // A fresh daemon: nothing in the state yet.
+    beforeEach(() => {
+      store = new StateStore();
+      hooks = new HookService();
+    });
+
+    it("are in the state before any statusline", async () => {
+      memory.stored = saved;
+
+      await startService();
+
+      expect(store.snapshot().plan).toEqual(saved);
+    });
+
+    it("leave out a window whose reset time passed meanwhile", async () => {
+      memory.stored = {
+        ...saved,
+        fiveHour: { ...saved.fiveHour!, resetsAt: iso(inHours(-1)) },
+      };
+
+      await startService();
+
+      expect(store.snapshot().plan).toEqual({
+        fiveHour: null,
+        sevenDay: saved.sevenDay,
+      });
+    });
+
+    it("stay away when both windows have passed", async () => {
+      memory.stored = {
+        fiveHour: { usedPercent: 41, resetsAt: iso(inHours(-1)) },
+        sevenDay: null,
+      };
+
+      await startService();
+
+      expect(store.snapshot().plan).toBeNull();
+    });
+
+    it("still drop a window at its reset time", async () => {
+      memory.stored = saved;
+      await startService();
+
+      jest.advanceTimersByTime(2 * HOUR * 1000);
+
+      expect(store.snapshot().plan?.fiveHour).toBeNull();
+    });
+
+    it("give way to the next statusline", async () => {
+      memory.stored = saved;
+      await startService();
+      store.apply([{ type: "agent:upsert", agent: agent("a1") }]);
+
+      send(
+        "a1",
+        statusline({
+          rate_limits: {
+            five_hour: { used_percentage: 60, resets_at: inHours(2) },
+          },
+        }),
+      );
+
+      expect(store.snapshot().plan).toEqual({
+        fiveHour: { usedPercent: 60, resetsAt: iso(inHours(2)) },
+        sevenDay: null,
+      });
     });
   });
 

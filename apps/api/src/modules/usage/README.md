@@ -5,9 +5,10 @@ Token usage from Claude Code (#42, [ADR 0009](../../../../../design-docs/decisio
 | File                   | Holds                                                                                    |
 | ---------------------- | ---------------------------------------------------------------------------------------- |
 | `statusline.ts`        | `parseStatusline`: the statusline JSON → what the daemon reads, pure and defensive       |
+| `plan-memory.ts`       | `PlanMemory`: the last known limits in `~/.gitspore/plan.json`, for the next start       |
 | `transcript-tokens.ts` | `TranscriptCounter`: the token counts of one agent from its session logs; `isSessionLog` |
 | `usage.service.ts`     | `UsageService`: listens to `HookService.onStatusline`, writes `plan` and `agent.usage`   |
-| `usage.module.ts`      | Provides `UsageService`; imports State and Hook                                          |
+| `usage.module.ts`      | Provides `UsageService` and `PlanMemory`; imports State and Hook                         |
 
 ## From the statusline into the state
 
@@ -35,12 +36,13 @@ The limits belong to the whole Claude account, so they are one `plan` on the sta
 | the same values as before                               | no patch                                 |
 
 - Claude Code drops a window only in its next statusline, and with no agent running there is none. So the daemon drops each window itself at its reset time: one timer for the earliest `resetsAt`, `unref()`ed so it doesn't keep the process alive.
-- `plan` stays `null` until a statusline with `rate_limits` comes, and with an API key for good. The web hides the meters then.
+- Every change is saved in `~/.gitspore/plan.json`. At the daemon's start the saved limits go into the state, without the windows whose reset time has passed meanwhile. So the top bar shows the last known limits before an agent has answered; what sessions outside gitspore used since shows with the next statusline. A failed save is logged, the state keeps the limits.
+- Without a saved plan, `plan` stays `null` until a statusline with `rate_limits` comes, and with an API key for good. The web hides the meters then.
 - A repo switch keeps `plan` (`StateStore.setRepo`).
 
 ### Agent usage
 
-`agent.usage` gets `contextPercent` and `model` from each statusline. `contextPercent` is `null` early in a session. The overview agent has no statusline, so its `usage` stays `null`.
+`agent.usage` gets `contextPercent` and `model` from each statusline. `contextPercent` is `null` early in a session. The overview agent has the statusline too (see the [agent README](../agent/README.md#statusline)), so its answers bring the limits as well; once it is restarted by hand in its shell, it has none.
 
 ### Tokens
 
@@ -58,5 +60,6 @@ The statusline names the session's log (`transcript_path`); the token counts com
 ## Tests
 
 - `statusline.spec.ts`: the parser with the example from Claude Code's docs and every missing or odd field.
+- `plan-memory.spec.ts`: saving and loading in a temp folder, the last of several saves, broken files and odd windows.
 - `transcript-tokens.spec.ts`: the counter on real files in a temp folder: duplicate lines, zeros, reading on, a half-written line, odd lines and numbers, subagents, `--continue`, a replaced file; `isSessionLog`.
-- `usage.service.spec.ts`: with the real `StateStore` and `HookService`, fake timers for the reset times, a temp folder as Claude Code's projects folder for the tokens.
+- `usage.service.spec.ts`: with the real `StateStore` and `HookService`, a `PlanMemory` stand-in, fake timers for the reset times, a temp folder as Claude Code's projects folder for the tokens.

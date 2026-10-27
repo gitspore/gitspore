@@ -33,7 +33,7 @@ import { PROMPT, taskFile } from "./task-file";
 import { TerminalError } from "../terminal/terminal-error";
 import { AgentError, toServerError } from "./agent-error";
 import { parseHookPayload, statusFromHook } from "./hook-status";
-import { hookSettings } from "./hook-files";
+import { HOOK_SCRIPT, hookSettings, STATUSLINE_SCRIPT } from "./hook-files";
 import { reactToPullRequest } from "./pull-request-reaction";
 import { RepoService } from "../repo/repo.service";
 
@@ -61,10 +61,6 @@ const RESTARTED_REASON: StatusReason = {
     "worktree. The worktree and the branch are kept. Stop the agent to free " +
     "the slot; planting the issue again continues on its branch.",
 };
-
-// nest build copies both next to the compiled service (nest-cli.json assets).
-const HOOK_SCRIPT = join(__dirname, "hook-script.mjs");
-const STATUSLINE_SCRIPT = join(__dirname, "statusline-script.mjs");
 
 type Running = {
   worktreePath: string;

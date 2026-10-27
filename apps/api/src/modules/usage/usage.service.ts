@@ -8,6 +8,7 @@ import type {
 import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { HookService } from "../hooks/hook.service";
 import { StateStore } from "../state/state.store";
+import { PlanMemory } from "./plan-memory";
 import { parseStatusline, type Limit, type Statusline } from "./statusline";
 import {
   claudeProjectsDir,
@@ -37,8 +38,8 @@ type Counting = {
 
 /**
  * Turns the agents' statuslines into the state (#42, ADR 0009): the plan's
- * limits into `plan`; context, model and the tokens from the session log
- * into the agent's `usage`.
+ * limits into `plan`, kept in PlanMemory for the next start; context, model
+ * and the tokens from the session log into the agent's `usage`.
  */
 @Injectable()
 export class UsageService implements OnModuleInit {
@@ -52,9 +53,10 @@ export class UsageService implements OnModuleInit {
   constructor(
     private readonly store: StateStore,
     private readonly hooks: HookService,
+    private readonly memory: PlanMemory,
   ) {}
 
-  onModuleInit(): void {
+  async onModuleInit(): Promise<void> {
     this.hooks.onStatusline((agentId, payload) => {
       this.handleStatusline(agentId, payload);
     });
@@ -65,6 +67,17 @@ export class UsageService implements OnModuleInit {
       }
     });
     this.store.onReset(() => this.counting.clear());
+    await this.restorePlan();
+  }
+
+  // The limits from before the daemon's start, so the top bar shows them
+  // before an agent has answered. Sessions outside gitspore may have used
+  // more since; the next statusline brings that.
+  private async restorePlan(): Promise<void> {
+    const saved = await this.memory.load();
+    if (!saved || this.store.snapshot().plan) return;
+    const plan = withoutPast(saved, Date.now());
+    if (plan.fiveHour || plan.sevenDay) this.setPlan(plan);
   }
 
   /** Resolves once no session log is being read. For tests. */
@@ -167,6 +180,10 @@ export class UsageService implements OnModuleInit {
     const current = this.store.snapshot().plan;
     if (!current || !samePlan(current, plan)) {
       this.store.apply([{ type: "plan:set", plan }]);
+      this.memory.save(plan).catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        this.logger.warn(`Could not save the plan limits: ${message}`);
+      });
     }
     this.scheduleReset(plan);
   }
