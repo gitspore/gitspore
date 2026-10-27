@@ -2,6 +2,7 @@ import type {
   Agent,
   AgentDispatchAck,
   AgentStatus,
+  BranchGraphAck,
   GreenhouseState,
   RepoCheckAck,
   RepoChooseAck,
@@ -193,6 +194,26 @@ describe("MockClient", () => {
           code: "agent_not_found",
           context: { agentId: "nope" },
         }),
+      ]);
+    });
+  });
+
+  describe("branches:graph", () => {
+    it("answers with a graph that has a branch for each agent", () => {
+      const { client } = setup();
+      const acks: BranchGraphAck[] = [];
+
+      client.emit("branches:graph", {}, (ack) => acks.push(ack));
+
+      expect(acks).toEqual([
+        {
+          graph: expect.objectContaining({
+            heads: [
+              expect.objectContaining({ branch: "main" }),
+              expect.objectContaining({ branch: agent.branch }),
+            ],
+          }),
+        },
       ]);
     });
   });
