@@ -11,8 +11,11 @@ import {
   focusedAgent,
   issueTitle,
   needsInputCount,
+  selectAgents,
+  selectIssues,
   selectPlan,
 } from "@/lib/store/selectors";
+import { agentTokens, limitTip } from "@/lib/usageTip";
 import { ConnectionStatus, type Connection } from "./ConnectionStatus";
 import { Logo } from "./Logo";
 import { SettingsButton } from "./SettingsButton";
@@ -45,6 +48,9 @@ export function TopBar({ children }: TopBarProps) {
   // The mock client knows which scenario it plays
   const mockScenario = useMockClient()?.scenarioName;
   const plan = useGreenhouseStore(selectPlan);
+  const agents = useGreenhouseStore(selectAgents);
+  const issues = useGreenhouseStore(selectIssues);
+  const tokens = agentTokens(agents, issues);
 
   return (
     <div className="flex h-full items-center gap-4 px-4">
@@ -74,6 +80,7 @@ export function TopBar({ children }: TopBarProps) {
           label="5 h"
           percent={plan.fiveHour.usedPercent}
           resetsAt={plan.fiveHour.resetsAt}
+          tip={limitTip("fiveHour", plan.fiveHour, tokens)}
         />
       )}
       {plan?.sevenDay && (
@@ -81,6 +88,7 @@ export function TopBar({ children }: TopBarProps) {
           label="week"
           percent={plan.sevenDay.usedPercent}
           resetsAt={plan.sevenDay.resetsAt}
+          tip={limitTip("sevenDay", plan.sevenDay, tokens)}
         />
       )}
       <ConnectionStatus status={connection} />

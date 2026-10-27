@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 // import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { UsageMeter } from "@/components/shell/UsageMeter";
+import { contextTip } from "@/lib/usageTip";
 import { agentName } from "@/lib/agentName";
 import { STATUS_COLOUR, STATUS_ICON, STATUS_WORD } from "@/lib/status";
 import { cn } from "@/lib/utils";
@@ -46,8 +47,8 @@ export function Window({
   const theme = terminalTheme ?? (resolvedTheme === "dark" ? "dark" : "light");
   const name = agentName(agent, issueTitle);
 
-  const contextPercent = agent.usage?.contextPercent ?? null;
-  const tokens = agent.usage?.tokens.total ?? 0;
+  const usage = agent.usage;
+  const tokens = usage?.tokens.total ?? 0;
 
   // The title, the header's gaps and the padding have nothing focusable, so
   // a click there would leave the keys where they were (or drop them on the
@@ -90,11 +91,12 @@ export function Window({
           <span className="text-muted-foreground"> · {agent.branch}</span>
         </p>
 
-        {contextPercent !== null && (
+        {usage && usage.contextPercent !== null && (
           <UsageMeter
             label="context"
-            percent={contextPercent}
+            percent={usage.contextPercent}
             tokens={tokens > 0 ? tokens : undefined}
+            tip={contextTip(usage)}
           />
         )}
 
