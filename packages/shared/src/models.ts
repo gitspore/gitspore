@@ -113,6 +113,8 @@ export type Issue = {
   url: string;
   /** Label names. */
   labels: string[];
+  /** The issue's text as GitHub Markdown; empty when it has none. */
+  body: string;
 };
 
 /**

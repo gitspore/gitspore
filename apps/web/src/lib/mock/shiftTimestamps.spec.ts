@@ -26,7 +26,9 @@ function scenario(events: Scenario["events"] = []): Scenario {
       version: 1,
       repo: { path: "/mock/repo", baseBranch: "main", github: "on" },
       agents: [agent],
-      issues: [{ number: 1, title: "Issue", url: "u", labels: ["bug"] }],
+      issues: [
+        { number: 1, title: "Issue", url: "u", labels: ["bug"], body: "" },
+      ],
     },
     events,
   };
@@ -70,7 +72,7 @@ describe("shiftScenario", () => {
   });
 
   it("moves agent:upsert ops and leaves the other ops alone", () => {
-    const issue = { number: 2, title: "Other", url: "u", labels: [] };
+    const issue = { number: 2, title: "Other", url: "u", labels: [], body: "" };
     const [entry] = shiftScenario(
       scenario([
         {

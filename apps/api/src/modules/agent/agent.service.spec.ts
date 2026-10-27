@@ -41,6 +41,7 @@ const issue = (number: number): Issue => ({
   title: `Issue ${number}`,
   url: `https://github.com/owner/repo/issues/${number}`,
   labels: [],
+  body: "",
 });
 
 // Stands in for WorktreeService. create() makes a real folder, so the

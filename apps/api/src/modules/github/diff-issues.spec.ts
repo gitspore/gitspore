@@ -7,6 +7,7 @@ function issue(number: number, overrides: Partial<Issue> = {}): Issue {
     title: `Issue ${number}`,
     url: `https://github.com/owner/repo/issues/${number}`,
     labels: [],
+    body: "",
     ...overrides,
   };
 }
@@ -48,6 +49,14 @@ describe("diffIssues", () => {
   it("upserts an issue that got an additional label", () => {
     const previous = [issue(1, { labels: ["bug"] })];
     const next = [issue(1, { labels: ["bug", "feature"] })];
+
+    const ops = diffIssues(previous, next);
+
+    expect(ops).toEqual([{ type: "issue:upsert", issue: next[0] }]);
+  });
+  it("upserts an issue whose body changed", () => {
+    const previous = [issue(1, { body: "Old text" })];
+    const next = [issue(1, { body: "New text" })];
 
     const ops = diffIssues(previous, next);
 
