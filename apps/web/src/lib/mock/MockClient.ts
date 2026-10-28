@@ -314,9 +314,11 @@ export class MockClient implements GreenhouseClient {
         return;
       }
       // xterm reports Enter as \r; a terminal shows it as \r\n.
+      // Backspace arrives as DEL (\x7f), which xterm rejects as output;
+      // a shell answers with \b \b (back, blank, back) instead.
       this.deliver("terminal:data", {
         sessionId,
-        chunk: data.replace(/\r/g, "\r\n"),
+        chunk: data.replace(/\r/g, "\r\n").replace(/\x7f/g, "\b \b"),
       });
     },
     // Detaches the session. Pending greeting lines are dropped.
