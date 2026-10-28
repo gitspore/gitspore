@@ -64,7 +64,9 @@ ensureExcluded(pattern): Promise<void>
 3. `dirty`: `git status` shows modified or untracked files. Skipped with `force`, and when the folder was already deleted by hand.
 4. `unmerged`: only with `deleteBranch`. The branch has commits that are not in the base branch (`rev-list --count <base>..<branch>`). Skipped with `force`.
 
-Then `git worktree remove` (`--force` with `force`) and, with `deleteBranch`, `git branch -D`. Without `deleteBranch` the branch is always kept. A folder deleted by hand is fine: `git worktree remove` cleans up its registration.
+Then Node deletes the folder (`fs.rm`, recursive, with retries), `git worktree prune` drops its registration and, with `deleteBranch`, `git branch -D` deletes the branch. Without `deleteBranch` the branch is always kept. A folder deleted by hand is fine: `rm` has nothing to do and `prune` cleans up the registration.
+
+Not `git worktree remove`: after an agent's `npm install` the worktree holds tens of thousands of files, which git deletes without any output, on Windows for longer than the 60 s timeout. The npm workspace junctions in `node_modules` stop it too (#149). `fs.rm` removes a junction or symlink as a link and never touches its target. `prune` is repo-wide like at startup, so it also drops other registrations whose folder is gone.
 
 **Startup.** `onModuleInit()` runs `git worktree prune` (registrations of folders that no longer exist, repo-wide; branches stay) and logs what `list()` finds. It doesn't rebuild agents; the agent module takes the worktrees over (#102).
 
