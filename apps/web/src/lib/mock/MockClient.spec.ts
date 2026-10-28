@@ -384,6 +384,15 @@ describe("MockClient", () => {
       expect(chunks).toEqual(["ls\r\n"]);
     });
 
+    it("shows Backspace as erasing the last character", () => {
+      const { client, chunks } = setup();
+      const sessionId = sessionOf(openTerminal(client, agent.id));
+
+      client.emit("terminal:input", { sessionId, data: "ab\x7f" });
+
+      expect(chunks).toEqual(["ab\b \b"]);
+    });
+
     it("reports input to an unknown session as an error", () => {
       const { client, errors, chunks } = setup();
 
