@@ -22,6 +22,7 @@ function issue(number: number, overrides: Partial<Issue> = {}): Issue {
     title: `Issue ${number}`,
     url: `https://github.com/owner/repo/issues/${number}`,
     labels: [],
+    body: "",
     ...overrides,
   };
 }

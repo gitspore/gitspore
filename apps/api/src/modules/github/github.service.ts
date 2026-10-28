@@ -1,4 +1,5 @@
 import {
+  type Issue,
   issueNumberFromBranch,
   MAX_SLOTS,
   type PullRequest,
@@ -7,7 +8,7 @@ import {
 import { Injectable, Logger, OnModuleDestroy } from "@nestjs/common";
 import { StateStore } from "../state/state.store";
 import { diffIssues } from "./diff-issues";
-import type { GitHubApi, IssueDetails } from "./github-api";
+import type { GitHubApi } from "./github-api";
 import { GitHubError, type GitHubErrorCode } from "./github-error";
 import { GitHubSource } from "./github-source";
 
@@ -151,7 +152,7 @@ export class GitHubService implements OnModuleDestroy {
    * GitHubError: `issue_not_found` for a closed or missing issue,
    * `github_sync_disabled` when sync is off.
    */
-  getIssue(issueNumber: number): Promise<IssueDetails> {
+  getIssue(issueNumber: number): Promise<Issue> {
     if (!this.api) {
       return Promise.reject(
         new GitHubError(

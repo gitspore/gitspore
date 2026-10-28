@@ -57,6 +57,7 @@ const issueSchema = z.object({
   title: z.string(),
   url: z.string(),
   labels: z.array(z.string()),
+  body: z.string(),
 }) satisfies z.ZodType<Issue>;
 
 const repoSchema = z.object({
