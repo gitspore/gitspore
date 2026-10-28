@@ -62,8 +62,8 @@ const KEYS = [
   { keys: ["F"], text: "focus this terminal, or back to the scene" },
   { keys: ["A", "I", "G"], text: "agents, issues, branches tab" },
   {
-    keys: ["Ctrl", "`"],
-    text: "leave the terminal. Esc stays with Claude Code, it interrupts",
+    keys: ["Ctrl", "` ^"],
+    text: "the key left of 1: leave the terminal for its hotbar slot. Esc stays with Claude Code, it interrupts",
   },
 ];
 

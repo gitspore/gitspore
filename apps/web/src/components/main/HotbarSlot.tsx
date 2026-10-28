@@ -67,6 +67,8 @@ export function HotbarSlot({
             aria-pressed={selected}
             // Not `disabled`: it stays focusable, so the tooltip says why
             aria-disabled={off || undefined}
+            // Leaving a terminal puts the focus here (#120)
+            data-agent-id={agent?.id}
             // A click leaves the focus where it was: no focus ring, and the
             // opened terminal takes it. Tab still reaches the slot.
             onMouseDown={(e) => e.preventDefault()}
