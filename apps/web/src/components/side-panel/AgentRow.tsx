@@ -55,7 +55,9 @@ export function AgentRow({
     // agent's terminal and the ⋯ menu
     <div
       className={cn(
-        "group flex h-row w-full items-center gap-1 rounded-lg pr-1 pl-2 odd:bg-hover",
+        "group flex h-row w-full items-center gap-1 rounded-lg pr-1 pl-2",
+        // odd: is more specific than bg-wait, so a waiting row gets no stripe
+        waitStage === 0 && "odd:bg-hover",
         waitStage >= 1 && "bg-wait text-wait-ink",
         waitStage === 2 && "h-row-wait rounded-xl",
         selected && "outline-2 outline-line",

@@ -99,7 +99,7 @@ The Penpot name comes first, the code name second. Sizes in px at a 1440 × 900 
 
 **`segmented-tabs` / `SegmentedTabs`.** Track `color.panel-2`, `radius.lg`, padding `space.1`; tabs `size.9` high, `radius.sm`; active tab `color.plate` with `color.plate-ink`. Agents · Issues · Branches.
 
-**`panel-row` / `AgentRow`.** `size.row`, `radius.lg`, padding `space.2` left and `space.3` right, gap `space.3`. Plant (`size.6`) in a circle (`size.9`) filled with the agent colour at `opacity.agent-circle`, then the name, the status word in `color.muted` (error in its status colour) and the growth track. Odd rows `color.hover`. The focused agent's row has a 2 px `color.line` outline. Variant `state`: one per state. The `waiting` variant is `size.row-wait` high, `radius.xl`, filled `color.wait`, the timer in `font.mono` instead of the word, and the plant wiggles. Rows stay in slot order.
+**`panel-row` / `AgentRow`.** `size.row`, `radius.lg`, padding `space.2` left and `space.3` right, gap `space.3`. Plant (`size.6`) in a circle (`size.9`) filled with the agent colour at `opacity.agent-circle`, then the name, the status word in `color.muted` (error in its status colour) and the growth track. Odd rows `color.hover`, except waiting ones. The focused agent's row has a 2 px `color.line` outline. Variant `state`: one per state. The `waiting` variant is `size.row-wait` high, `radius.xl`, filled `color.wait`, the timer in `font.mono` instead of the word, and the plant wiggles. Rows stay in slot order.
 
 **`growth-track`.** Five squares, `size.2`, `radius.xs`, gap `space.1`, filled in the status colour, empty ones at `opacity.track-empty`.
 
