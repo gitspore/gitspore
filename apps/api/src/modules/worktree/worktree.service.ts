@@ -8,7 +8,7 @@ import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { basename, dirname, join, resolve } from "node:path";
 import { simpleGit, SimpleGit } from "simple-git";
 import { WorktreeError } from "./worktree-error";
-import { access, appendFile, mkdir, readFile } from "node:fs/promises";
+import { access, appendFile, mkdir, readFile, rm } from "node:fs/promises";
 
 export type Worktree = { branch: string; path: string };
 
@@ -357,12 +357,13 @@ export class WorktreeService implements OnModuleInit {
       }
     }
 
-    await this.run([
-      "worktree",
-      "remove",
-      ...(options.force ? ["--force"] : []),
-      options.path,
-    ]);
+    // Node deletes the folder, not git worktree remove: an agent's npm install
+    // leaves tens of thousands of files, which git deletes without output for
+    // longer than GIT_TIMEOUT_MS on Windows, and the workspace junctions in
+    // node_modules stop it. rm removes a junction as a link, never its target.
+    // prune then drops the registration of the folder that is gone.
+    await rm(worktree.path, { recursive: true, force: true, maxRetries: 5 });
+    await this.run(["worktree", "prune"]);
 
     if (options.deleteBranch) {
       await this.run(["branch", "-D", worktree.branch]);

@@ -15,6 +15,7 @@ import {
   realpath,
   rm,
   readFile,
+  symlink,
   writeFile,
 } from "node:fs/promises";
 import { simpleGit } from "simple-git";
@@ -427,6 +428,46 @@ describe("WorktreeService", () => {
       expect(existsSync(path)).toBe(false);
       const branches = await simpleGit(repo).branchLocal();
       expect(branches.all).not.toContain(branch);
+    });
+
+    // What an agent's npm install leaves: npm workspaces link node_modules to
+    // folders inside the worktree (junctions on Windows, symlinks elsewhere).
+    it("removes a worktree with workspace links in node_modules, and its branch", async () => {
+      const { branch, path } = await service.create({
+        issueNumber: 42,
+        issueTitle: "Fix bug",
+      });
+      await mkdir(join(path, "apps", "web"), { recursive: true });
+      await writeFile(join(path, "apps", "web", "page.tsx"), "agent work");
+      await mkdir(join(path, "node_modules", "@gitspore"), { recursive: true });
+      await symlink(
+        join(path, "apps", "web"),
+        join(path, "node_modules", "@gitspore", "web"),
+        "junction",
+      );
+
+      await service.remove({ path, force: true, deleteBranch: true });
+
+      expect(existsSync(path)).toBe(false);
+      expect(await service.list()).toEqual([]);
+      const branches = await simpleGit(repo).branchLocal();
+      expect(branches.all).not.toContain(branch);
+    });
+
+    it("leaves the target of a link that points out of the worktree alone", async () => {
+      const { path } = await service.create({
+        issueNumber: 42,
+        issueTitle: "Fix bug",
+      });
+      const outside = join(parent, "outside");
+      await mkdir(outside);
+      await writeFile(join(outside, "keep.txt"), "mine");
+      await symlink(outside, join(path, "linked"), "junction");
+
+      await service.remove({ path, force: true });
+
+      expect(existsSync(path)).toBe(false);
+      expect(await readFile(join(outside, "keep.txt"), "utf8")).toBe("mine");
     });
 
     it("refuses a path that is not a registered worktree, and leaves it alone", async () => {
