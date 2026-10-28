@@ -1,5 +1,5 @@
 import { io } from "socket.io-client";
-import { SocketClient, TOKEN_MISSING } from "./SocketClient";
+import { SocketClient, TOKEN_MISSING, TOKEN_REJECTED } from "./SocketClient";
 
 jest.mock("socket.io-client", () => ({ io: jest.fn() }));
 
@@ -184,7 +184,7 @@ describe("SocketClient", () => {
 
       expect(client.getStatus()).toEqual({
         kind: "offline",
-        reason: "Session token invalid – reopen GitSpore from the daemon",
+        reason: TOKEN_REJECTED,
       });
     });
 

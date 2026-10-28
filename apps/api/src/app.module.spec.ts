@@ -14,7 +14,10 @@ import type {
 } from "@gitspore/shared";
 import { initRepo } from "../test/git-repo";
 import { FakePty } from "../test/fake-pty";
-import { SessionAuth } from "./modules/gateway/session-auth.service";
+import {
+  SESSION_TOKEN,
+  SessionAuth,
+} from "./modules/gateway/session-auth.service";
 import { START_OVERVIEW } from "./modules/overview/overview-agent.service";
 import { SPAWN_PTY } from "./modules/terminal/terminal.service";
 import { LOCATOR_DEPS } from "./modules/terminal/claude-locator";
@@ -58,6 +61,9 @@ describe("AppModule", () => {
     })
       .overrideProvider(RepoConfig)
       .useValue(new RepoConfig(repo, "main"))
+      // Never the real token file in the home folder.
+      .overrideProvider(SESSION_TOKEN)
+      .useValue("a".repeat(64))
       .compile();
 
     expect(moduleRef.get(AppModule)).toBeInstanceOf(AppModule);
@@ -82,6 +88,9 @@ describe("AppModule", () => {
         exists: async () => true,
         checkVersion: async () => true,
       })
+      // Never the real token file in the home folder.
+      .overrideProvider(SESSION_TOKEN)
+      .useValue("a".repeat(64))
       .compile();
     app = moduleRef.createNestApplication();
     await app.listen(0, "127.0.0.1");

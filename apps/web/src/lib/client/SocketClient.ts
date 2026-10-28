@@ -7,9 +7,9 @@ import type { ConnectionStatus, GreenhouseClient } from "./GreenhouseClient";
 import { ConnectionStatusSource } from "./ConnectionStatusSource";
 
 export const TOKEN_MISSING =
-  "Session token missing – open GitSpore from the daemon";
+  "Session token missing – open the link from the daemon log";
 export const TOKEN_REJECTED =
-  "Session token invalid – reopen GitSpore from the daemon";
+  "Session token invalid – open the new link from the daemon log";
 
 /**
  * The GreenhouseClient for the real daemon (apps/api): a thin wrapper around
@@ -26,7 +26,7 @@ export class SocketClient implements GreenhouseClient {
 
   /**
    * @param url Where the daemon listens, e.g. http://localhost:3001.
-   * @param token The session token the daemon printed on start. It goes into
+   * @param token The session token from the link the daemon logs. It goes into
    *   the Socket.io handshake `auth`, the daemon rejects the connection
    *   without it. Null if the page was opened without one: the client then
    *   stays offline with a message and connect() does nothing, instead of
