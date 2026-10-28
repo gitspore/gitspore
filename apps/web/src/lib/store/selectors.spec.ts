@@ -12,6 +12,7 @@ import {
   focusedAgent,
   agentBySlot,
   freeSlots,
+  hasVisibleWindow,
   issueTitle,
   needsInputCount,
   openIssuesWithoutAgent,
@@ -175,6 +176,40 @@ describe("selectors", () => {
       });
 
       expect(needsInputCount(state)).toBe(2);
+    });
+  });
+
+  describe("hasVisibleWindow", () => {
+    // A store whose windows are open for a1 and a2, with only a1 still there
+    function withWindows(minimiseA1 = false) {
+      const client = {
+        getStatus: () => ({ kind: "connected" }) as const,
+      } as GreenhouseClient;
+      const store = createGreenhouseStore(client, "live");
+      store.getState().applySnapshot({
+        version: 1,
+        repo: null,
+        agents: [agent({ id: "a1", slotIndex: 0 })],
+        issues: [],
+        plan: null,
+        repoTokens: null,
+      });
+      store.getState().openWindow("a1");
+      store.getState().openWindow("a2");
+      if (minimiseA1) store.getState().toggleMinimised("a1");
+      return store.getState();
+    }
+
+    it("is true for an open window of an agent that exists", () => {
+      expect(hasVisibleWindow(withWindows())).toBe(true);
+    });
+
+    it("skips minimised windows and windows whose agent is gone", () => {
+      expect(hasVisibleWindow(withWindows(true))).toBe(false);
+    });
+
+    it("is false without windows", () => {
+      expect(hasVisibleWindow(storeWith({ agents: [agent()] }))).toBe(false);
     });
   });
 

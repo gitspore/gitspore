@@ -1,7 +1,13 @@
 "use client";
 
 import type { Agent } from "@gitspore/shared";
-import { useEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useGreenhouseStore } from "@/lib/client/GreenhouseClientProvider";
 import type { MainMode } from "@/lib/layout";
@@ -32,6 +38,20 @@ const CHROME = {
 // in: right after a mode switch the area still has the old size for a frame
 type Measured = { width: number; height: number; mode: MainMode; cell: Cell };
 
+function measureArea(
+  area: HTMLElement,
+  mode: MainMode,
+  cellRef: RefObject<Cell | null>,
+): Measured {
+  return {
+    width: area.clientWidth,
+    height: area.clientHeight,
+    mode,
+    // Once: the font doesn't change while the page is open
+    cell: (cellRef.current ??= measureCell()),
+  };
+}
+
 export function WindowGrid() {
   const mode = useGreenhouseStore((s) => s.layout.mode);
   const focusedAgentId = useGreenhouseStore((s) => s.focusedAgentId);
@@ -54,32 +74,35 @@ export function WindowGrid() {
   const modeRef = useRef(mode);
   const cellRef = useRef<Cell | null>(null);
   const [measured, setMeasured] = useState<Measured | null>(null);
-  useEffect(() => {
+  // Before paint and before the ResizeObserver, so a size is never stamped
+  // with the old mode; and measured right away, as the area may keep its
+  // size across the switch and the observer never fire
+  useLayoutEffect(() => {
     modeRef.current = mode;
+    if (areaRef.current) {
+      setMeasured(measureArea(areaRef.current, mode, cellRef));
+    }
   }, [mode]);
   useEffect(() => {
     const area = areaRef.current;
     if (!area) return;
-    const observer = new ResizeObserver(([entry]) =>
-      setMeasured({
-        width: entry.contentRect.width,
-        height: entry.contentRect.height,
-        mode: modeRef.current,
-        // Once: the font doesn't change while the page is open
-        cell: (cellRef.current ??= measureCell()),
-      }),
+    const observer = new ResizeObserver(() =>
+      setMeasured(measureArea(area, modeRef.current, cellRef)),
     );
     observer.observe(area);
     return () => observer.disconnect();
   }, []);
 
+  // Tiled in the mode the size was measured in: right after a switch the
+  // new mode with the old size would drop windows that still fit, and
+  // unmounting them closes their terminal sessions
   const current = measured !== null && measured.mode === mode;
   const tiling: Tiling | null =
     measured &&
     tileWindows(
       agents.map((a) => a.id),
       focusedAgentId,
-      mode,
+      measured.mode,
       { ...measured, gap: GAP, chrome: CHROME },
     );
 

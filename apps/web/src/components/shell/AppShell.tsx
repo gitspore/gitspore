@@ -3,7 +3,11 @@
 import { useRef, useState } from "react";
 import { useGreenhouseStore } from "@/lib/client/GreenhouseClientProvider";
 import { mainGrid, shellGrid } from "@/lib/layout";
-import { needsInputCount, showSetup } from "@/lib/store/selectors";
+import {
+  hasVisibleWindow,
+  needsInputCount,
+  showSetup,
+} from "@/lib/store/selectors";
 import { useHotbarKeys } from "@/lib/hotbarKeys";
 import { useSceneEnabled } from "@/lib/scene";
 import { Scene } from "../Scene";
@@ -33,14 +37,13 @@ export function AppShell() {
   // The scene's free part of the main area; the camera frames the table
   // into it. Focus mode with a window open has no scene area, so it hides
   const sceneArea = useRef<HTMLDivElement>(null);
-  const sceneHidden =
-    layout.mode === "focus" && layout.windows.some((w) => !w.minimised);
+  // The windows themselves are WindowGrid's (#109)
+  const windowsVisible = useGreenhouseStore(hasVisibleWindow);
+  const sceneHidden = layout.mode === "focus" && windowsVisible;
   // Until the scene has drawn its first frames a veil covers it, with a
   // growing seedling in its free area
   const [sceneReady, setSceneReady] = useState(false);
 
-  // The windows themselves are WindowGrid's (#109)
-  const hasVisibleWindow = layout.windows.some((w) => !w.minimised);
   const waitingCount = useGreenhouseStore(needsInputCount);
 
   return (
@@ -90,7 +93,7 @@ export function AppShell() {
             {showScene && <SceneLoader ready={sceneReady} />}
           </div>
 
-          {hasVisibleWindow && (
+          {windowsVisible && (
             <div className="pointer-events-auto min-h-0 min-w-0 [grid-area:windows]">
               <WindowGrid />
             </div>
