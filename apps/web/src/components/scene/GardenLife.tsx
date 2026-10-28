@@ -23,9 +23,9 @@ import { Teacup } from "./Teacup";
 // - the string lights, glowing at night
 // - beams of sun by day, of moon at night, with dust drifting in them
 // - fireflies at night
-// - by day butterflies, a bumblebee, a dragonfly, and a robin and a
-//   rabbit in the grass; at night moths around the bulbs, and eyes in
-//   the woods
+// - by day butterflies (a rare one with rainbow wings), a bumblebee, a
+//   dragonfly, and a robin and a rabbit in the grass; at night moths
+//   around the bulbs, and eyes in the woods
 // - day and night: a ladybug on the table, a steaming cup of tea, a snail
 //   on a table leg
 // Mounted only with garden life on (the settings; off in low power)
@@ -53,7 +53,10 @@ export function GardenLife({
     [t],
   );
   const bulbs = useMemo(() => bulbSpots(), []);
-  const butterflies = useMemo(() => Object.values(scene.butterfly), [scene]);
+  const butterflies = useMemo(() => {
+    const { rainbow, ...plain } = scene.butterfly;
+    return [...Object.values(plain), Object.values(rainbow)];
+  }, [scene]);
   const moths = useMemo(
     () => [scene.moth, scene.moth, scene.moth, scene.moth],
     [scene],

@@ -166,6 +166,33 @@
           "3": {
             "$value": "#79b2ea",
             "$type": "color"
+          },
+          "rainbow": {
+            "1": {
+              "$value": "#e8524a",
+              "$type": "color",
+              "$description": "the one rare rainbow butterfly's wing, from hinge to tip"
+            },
+            "2": {
+              "$value": "#f29a38",
+              "$type": "color"
+            },
+            "3": {
+              "$value": "#f5dc5e",
+              "$type": "color"
+            },
+            "4": {
+              "$value": "#6cc06a",
+              "$type": "color"
+            },
+            "5": {
+              "$value": "#4f9be0",
+              "$type": "color"
+            },
+            "6": {
+              "$value": "#9a6ad0",
+              "$type": "color"
+            }
           }
         },
         "moth": {
