@@ -45,7 +45,8 @@ export function AgentRow({
       : STATUS_WORD[agent.status];
 
   return (
-    // Two buttons side by side (a button can't hold another): select and the ⋯ menu
+    // Two buttons side by side (a button can't hold another): open the
+    // agent's terminal and the ⋯ menu
     <div
       className={cn(
         "group flex h-row w-full items-center gap-1 rounded-lg pr-1 pl-2 odd:bg-hover",
@@ -58,6 +59,8 @@ export function AgentRow({
         type="button"
         onClick={onSelect}
         aria-pressed={selected}
+        // The name is the row's text; the title adds what a click does
+        title="Open terminal"
         className="flex h-full min-w-0 flex-1 items-center gap-3 text-left"
       >
         <span className="w-3 font-mono text-ui-meta">

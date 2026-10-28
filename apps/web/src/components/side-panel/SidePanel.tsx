@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { MAX_SLOTS, type Agent, type ErrorCode } from "@gitspore/shared";
+import {
+  MAX_SLOTS,
+  type Agent,
+  type AgentId,
+  type ErrorCode,
+} from "@gitspore/shared";
 import { X } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { Button } from "@/components/ui/button";
@@ -40,6 +45,7 @@ export function SidePanel({ tab, onTabChange, onClose }: SidePanelProps) {
   const waiting = useGreenhouseStore(needsInputCount);
   const selectedSlot = useGreenhouseStore((s) => s.selectedSlot);
   const selectSlot = useGreenhouseStore((s) => s.selectSlot);
+  const openWindow = useGreenhouseStore((s) => s.openWindow);
   const slots = useGreenhouseStore(useShallow(freeSlots));
   // Open issues without a running agent
   const unplanted = useGreenhouseStore(useShallow(openIssuesWithoutAgent));
@@ -77,6 +83,13 @@ export function SidePanel({ tab, onTabChange, onClose }: SidePanelProps) {
   function plant(issueNumber: number) {
     if (freeSlot === undefined) return;
     dispatchAgent(issueNumber, freeSlot);
+  }
+
+  // Like a click on the plant: the agent's window shows and takes the focus.
+  // An open one is un-minimised, never added twice.
+  function openAgent(agentId: AgentId, slotIndex: number) {
+    selectSlot(slotIndex);
+    openWindow(agentId);
   }
 
   function openStop(agent: Agent) {
@@ -164,7 +177,7 @@ export function SidePanel({ tab, onTabChange, onClose }: SidePanelProps) {
                   ""
                 }
                 selected={selectedSlot === slotIndex}
-                onSelect={() => selectSlot(slotIndex)}
+                onSelect={() => openAgent(agent.id, slotIndex)}
                 onStop={() => openStop(agent)}
               />
             );
