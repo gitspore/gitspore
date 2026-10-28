@@ -12,6 +12,7 @@ import {
   useGreenhouseStore,
 } from "@/lib/client/GreenhouseClientProvider";
 import { TERMINAL_FONT } from "@/lib/terminal/font";
+import { leavesTerminal } from "@/lib/terminal/leaveKey";
 import { TerminalSession } from "@/lib/terminal/TerminalSession";
 //
 //
@@ -64,6 +65,16 @@ export function TerminalPanel({
     // on every open. Answer would
     // reach shell as typed text ("1;2c").
     terminal.parser.registerCsiHandler({ final: "c" }, () => true);
+    // Ctrl + the key left of 1 leaves the terminal for its hotbar slot
+    // (#120); the shell never gets it. The window stays the focused one
+    terminal.attachCustomKeyEventHandler((event) => {
+      if (!leavesTerminal(event)) return true;
+      if (event.type === "keydown") {
+        event.preventDefault();
+        leaveTerminal(terminal, agentId);
+      }
+      return false;
+    });
 
     const fitAddon = new FitAddon();
     terminal.loadAddon(fitAddon);
@@ -104,4 +115,14 @@ export function TerminalPanel({
     if (focused) terminalRef.current?.focus();
   }, [focused]);
   return <div ref={containerRef} className="size-full" />;
+}
+
+// Focus the agent's hotbar slot, with the keyboard focus ring, so Tab and
+// keys 0–6 work from there. Without a slot the focus just leaves
+function leaveTerminal(terminal: Terminal, agentId: AgentId) {
+  const slot = document.querySelector<HTMLElement>(
+    `.hotbar-slot[data-agent-id="${agentId}"]`,
+  );
+  if (slot) slot.focus({ focusVisible: true });
+  else terminal.blur();
 }

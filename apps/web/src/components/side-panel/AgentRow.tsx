@@ -9,7 +9,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useNow } from "@/lib/client/GreenhouseClientProvider";
-import { STATUS_COLOUR, STATUS_ICON, STATUS_WORD } from "@/lib/status";
+import { Plant } from "@/components/icons/Plant";
+import {
+  STATUS_COLOUR,
+  STATUS_ICON,
+  STATUS_PLANT,
+  STATUS_WORD,
+} from "@/lib/status";
 import { wiltStage } from "@/lib/store/wilting";
 import { formatSeconds, useSecondsSince } from "@/lib/time";
 import { cn } from "@/lib/utils";
@@ -68,11 +74,19 @@ export function AgentRow({
           {slot}
         </span>
 
-        {/* Agent colour circle; the plant goes inside later */}
-        <span
-          className="size-9 shrink-0 rounded-full opacity-35"
-          style={{ backgroundColor: `var(--color-agent-${slot})` }}
-        />
+        {/* The plant in a circle of the agent colour; only the circle is see-through */}
+        <span className="relative grid size-9 shrink-0 place-items-center">
+          <span
+            className="absolute inset-0 rounded-full opacity-(--opacity-agent-circle)"
+            style={{ backgroundColor: `var(--color-agent-${slot})` }}
+          />
+          <Plant
+            kind={STATUS_PLANT[agent.status]}
+            pot={false}
+            wiggle={waiting}
+            className="relative size-6"
+          />
+        </span>
 
         <span className="min-w-0 flex-1">
           <span className="block truncate text-ui-row font-semibold">
