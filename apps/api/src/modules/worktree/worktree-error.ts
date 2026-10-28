@@ -5,6 +5,7 @@ export type WorktreeErrorCode =
   | "dirty"
   | "unmerged"
   | "not_found"
+  | "in_use"
   | "push_failed"
   | "not_ours"
   | "no_repo";
