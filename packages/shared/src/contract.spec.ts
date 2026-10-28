@@ -1,6 +1,7 @@
 import {
   applyPatch,
   type AgentDispatchAck,
+  type BranchGraphAck,
   type ClientToServerEvents,
   type GreenhouseState,
   type JsonValue,
@@ -58,12 +59,14 @@ const snapshot: GreenhouseState = {
       title: "Login fails with umlauts in the password",
       url: "https://github.com/gitspore/gitspore/issues/42",
       labels: ["bug"],
+      body: "Typing ü in the password field breaks the login.",
     },
     {
       number: 43,
       title: "Dark mode",
       url: "https://github.com/gitspore/gitspore/issues/43",
       labels: [],
+      body: "",
     },
   ],
 };
@@ -87,6 +90,7 @@ const ops: { [T in PatchOp["type"]]: Extract<PatchOp, { type: T }> } = {
       title: "Flaky test",
       url: "https://github.com/gitspore/gitspore/issues/44",
       labels: ["ci", "good first issue"],
+      body: "",
     },
   },
   "issue:remove": { type: "issue:remove", issueNumber: 43 },
@@ -103,6 +107,7 @@ const clientPayloads: {
   "state:request": {},
   "repo:choose": { path: "/home/dev/repo", baseBranch: "main" },
   "repo:check": { path: "/home/dev/repo", baseBranch: "main" },
+  "branches:graph": {},
   "terminal:open": { agentId: "agent-1" },
   "terminal:input": { sessionId: "session-1", data: "y\r" },
   "terminal:resize": { sessionId: "session-1", cols: 80, rows: 24 },
@@ -117,6 +122,8 @@ const acks: {
   repoOk: RepoChooseAck;
   repoProblems: RepoChooseAck;
   repoChecks: RepoCheckAck;
+  branchGraph: BranchGraphAck;
+  branchGraphError: BranchGraphAck;
 } = {
   dispatchOk: { agentId: "agent-2" },
   dispatchError: {
@@ -154,6 +161,29 @@ const acks: {
       { item: "github", result: "warn", detail: "No GitHub remote" },
       { item: "claude", result: "ok", detail: "found" },
     ],
+  },
+  branchGraph: {
+    graph: {
+      commits: [
+        {
+          sha: "a41c9e2f0c1d4b6e8f7a9b0c1d2e3f4a5b6c7d8e",
+          parents: ["3fa61d8e0c1d4b6e8f7a9b0c1d2e3f4a5b6c7d8e"],
+          author: "Claude",
+          date: "2026-10-23T09:15:00.000Z",
+          subject: "session check",
+        },
+      ],
+      heads: [
+        { branch: "main", sha: "3fa61d8e0c1d4b6e8f7a9b0c1d2e3f4a5b6c7d8e" },
+        {
+          branch: "spore/12-login-redirect",
+          sha: "a41c9e2f0c1d4b6e8f7a9b0c1d2e3f4a5b6c7d8e",
+        },
+      ],
+    },
+  },
+  branchGraphError: {
+    error: { code: "repo_unavailable", message: "No repository chosen yet." },
   },
 };
 

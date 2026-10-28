@@ -7,6 +7,7 @@ const issue = (number: number, title = `Issue ${number}`): Issue => ({
   title,
   url: `https://github.com/gitspore/gitspore/issues/${number}`,
   labels: [],
+  body: "",
 });
 
 const agent = (id: string, slotIndex: number | null = 0): Agent => ({

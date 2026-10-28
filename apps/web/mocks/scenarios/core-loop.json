@@ -3,44 +3,54 @@
   "anchor": "2026-10-09T09:30:00.000Z",
   "snapshot": {
     "version": 1,
-    "repo": { "path": "/mock/repo", "baseBranch": "main", "github": "on" },
+    "repo": {
+      "path": "/mock/repo",
+      "baseBranch": "main",
+      "github": "on"
+    },
     "agents": [],
     "issues": [
       {
         "number": 301,
         "title": "Login fails with umlauts in the password",
         "url": "https://github.com/gitspore/gitspore/issues/301",
-        "labels": ["bug"]
+        "labels": ["bug"],
+        "body": "## Steps to reproduce\n\n1. Set a password with an umlaut, e.g. `Müller123!`\n2. Log out and log in again\n\n## Expected\n\nThe login works.\n\n## Actual\n\n> Invalid credentials\n\nThe password is probably encoded as Latin-1 somewhere before hashing."
       },
       {
         "number": 302,
         "title": "Dark mode",
         "url": "https://github.com/gitspore/gitspore/issues/302",
-        "labels": ["enhancement"]
+        "labels": ["enhancement"],
+        "body": "Add a dark theme that follows the system setting.\n\n- [x] Pick the night colours\n- [ ] Switch with `prefers-color-scheme`\n- [ ] Toggle in the settings"
       },
       {
         "number": 303,
         "title": "Flaky checkout test fails on CI only under load",
         "url": "https://github.com/gitspore/gitspore/issues/303",
-        "labels": ["ci"]
+        "labels": ["ci"],
+        "body": "`checkout.spec.ts` fails on CI roughly every fifth run, never locally.\n\n```\nTimeoutError: payment mock did not answer within 5000 ms\n    at PaymentMock.waitFor (payment-mock.ts:41)\n```\n\nThe mock probably starts too late when the runner is busy. Ideas:\n\n- wait for the mock's ready signal instead of a fixed delay\n- raise the timeout on CI only"
       },
       {
         "number": 304,
         "title": "Export the issue list as CSV",
         "url": "https://github.com/gitspore/gitspore/issues/304",
-        "labels": ["enhancement"]
+        "labels": ["enhancement"],
+        "body": "Add an **Export** button above the issue list that downloads the open issues as CSV.\n\n| Column | Source |\n| ------ | ------ |\n| number | `issue.number` |\n| title | `issue.title` |\n| labels | joined with `;` |"
       },
       {
         "number": 305,
         "title": "Update the README",
         "url": "https://github.com/gitspore/gitspore/issues/305",
-        "labels": []
+        "labels": [],
+        "body": "The setup section still mentions Node 20. Update it and add a short *Troubleshooting* part."
       },
       {
         "number": 306,
         "title": "Rename the settings page",
         "url": "https://github.com/gitspore/gitspore/issues/306",
-        "labels": ["chore"]
+        "labels": ["chore"],
+        "body": ""
       }
     ]
   },

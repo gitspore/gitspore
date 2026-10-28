@@ -439,7 +439,7 @@ export class AgentService implements OnModuleInit {
       // Before kill(): the exit may come at once.
       this.exitWaiters.set(agentId, done);
       try {
-        this.terminals.kill(agentId);
+        void this.terminals.kill(agentId);
       } catch {
         // The terminal is already gone: nothing to wait for.
         done();

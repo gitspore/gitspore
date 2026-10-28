@@ -23,7 +23,8 @@ import { WIND_GLSL, windUniforms } from "./wind";
 // little in the wind and fading into the fog.
 // Everything stands out of the camera's usual view (it looks down on the
 // table) and comes into sight when the view is turned flatter. Trees and
-// bushes are instanced, the props one mesh each: about ten draw calls
+// bushes are instanced, some bushes with berries or blossoms, the props
+// one mesh each: about a dozen draw calls
 
 type ModeTokens = (typeof tokens)[Mode];
 
@@ -149,21 +150,23 @@ function pineGeometry() {
 }
 
 // A bush: three balls, the middle one biggest, a little flattened
-function bushGeometry() {
-  const balls: [number, number, number, number][] = [
-    [0.5, 0, 0.35, 0],
-    [0.38, 0.42, 0.25, 0.1],
-    [0.36, -0.38, 0.24, -0.08],
-  ];
-  return shaded(
-    balls.map(([radius, x, y, z], i) =>
-      lumpyBall(radius, 1, i * 2.3 + 5)
-        .scale(1, 0.85, 1)
-        .translate(x, y, z),
-    ),
-    0,
-    0.8,
+const BUSH_BALLS: [number, number, number, number][] = [
+  [0.5, 0, 0.35, 0],
+  [0.38, 0.42, 0.25, 0.1],
+  [0.36, -0.38, 0.24, -0.08],
+];
+const BUSH_FLAT = 0.85;
+
+function bushBalls() {
+  return BUSH_BALLS.map(([radius, x, y, z], i) =>
+    lumpyBall(radius, 1, i * 2.3 + 5)
+      .scale(1, BUSH_FLAT, 1)
+      .translate(x, y, z),
   );
+}
+
+function bushGeometry() {
+  return shaded(bushBalls(), 0, 0.8);
 }
 
 // A trunk: 1 unit tall, 1 unit wide at the foot, narrower at the top;
@@ -262,18 +265,22 @@ function instances(
 // Crowns, pines and bushes sway in the shared wind: each point moves
 // downwind by how far above the trunk's top it is (shape units over
 // 0.4), times the tree's height, plus a slow rocking of its own. Lambert,
-// with the shades and instance colours
-const SWAY_VERTEX = /* glsl */ `
+// with the shades and instance colours.
+// root, height and y are GLSL: a tree reads them from its instance and
+// the point, a berry or blossom from its bush (aBush), so it moves with
+// the bush's surface where it sits
+function swayVertex(root: string, height: string, y: string) {
+  return /* glsl */ `
 vec4 mvPosition = instanceMatrix * vec4(transformed, 1.0);
-vec2 root = instanceMatrix[3].xz;
-float height = length(instanceMatrix[1].xyz);
+vec2 root = ${root};
 float wind = windAt(root, uWindTime);
 float rock = sin(uWindTime * 1.1 + root.x * 0.37 + root.y * 0.23);
-float bend = max(position.y - 0.4, 0.0) * height * 0.12;
+float bend = max(${y} - 0.4, 0.0) * ${height} * 0.12;
 mvPosition.xz += WIND_DIR * (wind * 0.35 + rock * 0.08) * bend * uWindMotion;
 mvPosition = modelViewMatrix * mvPosition;
 gl_Position = projectionMatrix * mvPosition;
 `;
+}
 
 function swayingMaterial() {
   const material = new THREE.MeshLambertMaterial({ vertexColors: true });
@@ -281,10 +288,219 @@ function swayingMaterial() {
     Object.assign(shader.uniforms, windUniforms);
     shader.vertexShader = shader.vertexShader
       .replace("#include <common>", `#include <common>\n${WIND_GLSL}`)
-      .replace("#include <project_vertex>", SWAY_VERTEX);
+      .replace(
+        "#include <project_vertex>",
+        swayVertex(
+          "instanceMatrix[3].xz",
+          "length(instanceMatrix[1].xyz)",
+          "position.y",
+        ),
+      );
   };
   material.customProgramCacheKey = () => "tree";
   return material;
+}
+
+//
+// Berries and blossoms on some of the bushes: small shapes on the bush's
+// outside, each instance placed by its bush's matrix times its own spot,
+// swaying with the bush (see swayVertex). Two draw calls for all of them
+//
+
+const BERRIED = 0.2;
+const BLOOMING = 0.2;
+const BERRY_CLUSTERS = 16;
+const BLOSSOMS = 22;
+
+// A place on a bush's outside, in the bush's own units: the point and
+// the way out of the surface there
+type Spot = { at: THREE.Vector3; out: THREE.Vector3 };
+
+// Points on the bush's balls that are inside no other ball, not too low
+// and not facing the ground, a little apart from each other
+function bushSpots(count: number, random: () => number) {
+  const balls = bushBalls();
+  const spots: Spot[] = [];
+  const corners = [0, 1, 2].map(() => new THREE.Vector3());
+  const triangle = new THREE.Triangle();
+  const other = new THREE.Vector3();
+  for (let i = 0; spots.length < count && i < count * 60; i++) {
+    const ball = Math.floor(random() * balls.length);
+    const position = balls[ball].attributes.position;
+    const index = balls[ball].index!;
+    const face = Math.floor((random() * index.count) / 3);
+    corners.forEach((corner, k) =>
+      corner.fromBufferAttribute(position, index.getX(face * 3 + k)),
+    );
+    triangle.set(corners[0], corners[1], corners[2]);
+    let u = random();
+    let v = random();
+    if (u + v > 1) [u, v] = [1 - u, 1 - v];
+    const at = corners[0]
+      .clone()
+      .addScaledVector(other.subVectors(corners[1], corners[0]), u)
+      .addScaledVector(other.subVectors(corners[2], corners[0]), v);
+    const out = triangle.getNormal(new THREE.Vector3());
+    if (at.y < 0.2 || out.y < -0.15) continue;
+    const covered = BUSH_BALLS.some(([radius, x, y, z], j) => {
+      if (j === ball) return false;
+      other.set(x, y, z).sub(at);
+      other.y /= BUSH_FLAT;
+      return other.length() < radius * 1.12;
+    });
+    if (covered || spots.some((spot) => spot.at.distanceTo(at) < 0.12)) {
+      continue;
+    }
+    spots.push({ at, out });
+  }
+  balls.forEach((ball) => ball.dispose());
+  return spots;
+}
+
+// Three berries in a little cluster, around +y (the way out)
+function berryGeometry() {
+  const parts = [
+    [0, 0.03, 0.045, 0.042],
+    [0.06, 0.025, -0.02, 0.036],
+    [-0.055, 0.02, -0.03, 0.036],
+  ].map(([x, y, z, radius]) =>
+    new THREE.IcosahedronGeometry(radius, 1).translate(x, y, z),
+  );
+  const merged = mergeGeometries(parts);
+  parts.forEach((part) => part.dispose());
+  return merged;
+}
+
+// A five-pointed blossom facing +y, cupped a little, with a round heart
+// in its middle; aHeart marks the heart, coloured apart from the petals
+function blossomGeometry() {
+  const star = new THREE.Shape(
+    Array.from({ length: 10 }, (_, i) => {
+      const angle = (i / 10) * Math.PI * 2;
+      const radius = i % 2 === 0 ? 0.11 : 0.05;
+      return new THREE.Vector2(
+        Math.cos(angle) * radius,
+        Math.sin(angle) * radius,
+      );
+    }),
+  );
+  const petals = new THREE.ShapeGeometry(star).rotateX(-Math.PI / 2);
+  const position = petals.attributes.position;
+  for (let i = 0; i < position.count; i++) {
+    const reach = Math.hypot(position.getX(i), position.getZ(i));
+    position.setY(i, reach * reach * 2);
+  }
+  petals.computeVertexNormals();
+  const heart = new THREE.CircleGeometry(0.035, 7)
+    .rotateX(-Math.PI / 2)
+    .translate(0, 0.01, 0);
+  const parts = [petals, heart].map((part, i) => {
+    part.deleteAttribute("uv");
+    const marks = new Float32Array(part.attributes.position.count).fill(i);
+    return part.setAttribute("aHeart", new THREE.BufferAttribute(marks, 1));
+  });
+  const merged = mergeGeometries(parts);
+  parts.forEach((part) => part.dispose());
+  return merged;
+}
+
+// Lambert with instance colours, swaying with the bush from aBush (its
+// root x and z, its size, and how high on it the spot is); with a heart,
+// the points marked by aHeart take the heart's colour
+function bushDecorMaterial(heart: { value: THREE.Color } | null) {
+  const material = new THREE.MeshLambertMaterial({
+    side: heart ? THREE.DoubleSide : THREE.FrontSide,
+  });
+  material.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, windUniforms, heart && { uHeart: heart });
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        "#include <common>",
+        `#include <common>\n${WIND_GLSL}\nattribute vec4 aBush;\n` +
+          (heart ? "attribute float aHeart;\nuniform vec3 uHeart;\n" : ""),
+      )
+      .replace(
+        "#include <color_vertex>",
+        heart
+          ? "#include <color_vertex>\nvColor.rgb = mix(vColor.rgb, uHeart, aHeart);"
+          : "#include <color_vertex>",
+      )
+      .replace(
+        "#include <project_vertex>",
+        swayVertex("aBush.xy", "aBush.z", "aBush.w"),
+      );
+  };
+  material.customProgramCacheKey = () =>
+    heart ? "bush-blossom" : "bush-berry";
+  return material;
+}
+
+type Decor = { bush: Bush; spot: Spot; spin: number; tint: number };
+
+// Which bushes bear berries and which bloom (from their own seed, so the
+// bushes stay where they are), and the spots on each. A bush's berries
+// are each their own shade, its blossoms all one colour
+function decorateBushes(bushes: Bush[], random: () => number) {
+  const berries: Decor[] = [];
+  const blossoms: Decor[] = [];
+  const picks = bushes.map(() => [random(), random()]);
+  for (const [i, bush] of bushes.entries()) {
+    const [pick, tint] = picks[i];
+    if (pick >= BERRIED + BLOOMING) continue;
+    const berried = pick < BERRIED;
+    const spots = bushSpots(berried ? BERRY_CLUSTERS : BLOSSOMS, random);
+    for (const spot of spots) {
+      (berried ? berries : blossoms).push({
+        bush,
+        spot,
+        spin: random() * Math.PI * 2,
+        tint: berried ? random() : tint,
+      });
+    }
+  }
+  return { berries, blossoms };
+}
+
+// Instance matrices and colours for berries or blossoms: the bush's
+// matrix times the spot's, the shape lifted off the surface
+function decorInstances(items: Decor[], colors: THREE.Color[], lift: number) {
+  const matrices = new Float32Array(items.length * 16);
+  const tints = new Float32Array(items.length * 3);
+  const bushMatrix = new THREE.Matrix4();
+  const spotMatrix = new THREE.Matrix4();
+  const turn = new THREE.Quaternion();
+  const spin = new THREE.Quaternion();
+  const up = new THREE.Vector3(0, 1, 0);
+  const one = new THREE.Vector3(1, 1, 1);
+  items.forEach(({ bush, spot, ...item }, i) => {
+    bushMatrix.compose(
+      new THREE.Vector3(bush.x, FLOOR_Y, bush.z),
+      turn.setFromAxisAngle(up, bush.turn),
+      new THREE.Vector3().setScalar(bush.size),
+    );
+    spotMatrix.compose(
+      spot.at.clone().addScaledVector(spot.out, lift),
+      turn
+        .setFromUnitVectors(up, spot.out)
+        .multiply(spin.setFromAxisAngle(up, item.spin)),
+      one,
+    );
+    bushMatrix.multiply(spotMatrix).toArray(matrices, i * 16);
+    colors[Math.floor(item.tint * colors.length)].toArray(tints, i * 3);
+  });
+  return { matrices, tints, count: items.length };
+}
+
+// The shape for berries or blossoms with each instance's aBush
+function decorGeometry(shape: THREE.BufferGeometry, items: Decor[]) {
+  const bushes = new Float32Array(items.length * 4);
+  items.forEach(({ bush, spot }, i) =>
+    bushes.set([bush.x, bush.z, bush.size, spot.at.y], i * 4),
+  );
+  return shape.setAttribute(
+    "aBush",
+    new THREE.InstancedBufferAttribute(bushes, 4),
+  );
 }
 
 //
@@ -688,6 +904,33 @@ export function Surroundings({ t }: { t: ModeTokens }) {
     [crown, pine, bush, swaying],
   );
 
+  // Berries and blossoms on some of the bushes; the blossoms' heart
+  // colour is a uniform, set from the mode
+  const decor = useMemo(() => decorateBushes(bushes, seeded(92)), [bushes]);
+  const berry = useMemo(
+    () => decorGeometry(berryGeometry(), decor.berries),
+    [decor],
+  );
+  const blossom = useMemo(
+    () => decorGeometry(blossomGeometry(), decor.blossoms),
+    [decor],
+  );
+  const heart = useMemo(() => ({ value: new THREE.Color() }), []);
+  const berrying = useMemo(() => bushDecorMaterial(null), []);
+  const blooming = useMemo(() => bushDecorMaterial(heart), [heart]);
+  useEffect(() => {
+    heart.value.set(scene.blossom.heart);
+  }, [heart, scene.blossom.heart]);
+  useEffect(
+    () => () => {
+      berry.dispose();
+      blossom.dispose();
+      berrying.dispose();
+      blooming.dispose();
+    },
+    [berry, blossom, berrying, blooming],
+  );
+
   // Instances: each round tree a crown and a trunk, each pine a pine and
   // a shorter trunk, each bush a bush; their colours from the mode
   const planted = useMemo(() => {
@@ -729,8 +972,18 @@ export function Surroundings({ t }: { t: ModeTokens }) {
         })),
         bushes.map((b) => leafy[Math.floor(b.tint * leafy.length)]),
       ),
+      berries: decorInstances(
+        decor.berries,
+        Object.values(scene.berry).map((c) => new THREE.Color(c)),
+        0.01,
+      ),
+      blossoms: decorInstances(
+        decor.blossoms,
+        Object.values(scene.blossom.petal).map((c) => new THREE.Color(c)),
+        0.015,
+      ),
     };
-  }, [trees, bushes, scene]);
+  }, [trees, bushes, decor, scene]);
 
   // The props, rebuilt with the mode's colours
   const props = useMemo(() => {
@@ -802,6 +1055,8 @@ export function Surroundings({ t }: { t: ModeTokens }) {
           ["crowns", crown, swaying, planted.crowns],
           ["pines", pine, swaying, planted.pines],
           ["bushes", bush, swaying, planted.bushes],
+          ["berries", berry, berrying, planted.berries],
+          ["blossoms", blossom, blooming, planted.blossoms],
         ] as const
       ).map(([name, geometry, material, set]) => (
         <instancedMesh

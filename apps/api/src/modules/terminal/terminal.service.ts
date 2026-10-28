@@ -1,5 +1,5 @@
 import type { AgentId, SessionId } from "@gitspore/shared";
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, OnApplicationShutdown } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import {
   AgentTerminal,
@@ -17,6 +17,8 @@ import { MAX_SLOTS } from "@gitspore/shared";
 const MAX_TERMINALS = MAX_SLOTS + 1;
 // How long stop() waits for a shell to exit, like AgentService's.
 const STOP_TIMEOUT_MS = 10_000;
+// For all terminals together when the daemon stops; they stop in parallel.
+const SHUTDOWN_TIMEOUT_MS = 10_000;
 
 // parameter is a function type and types don't exist at runtime,
 // so Nest has nothing to look up.
@@ -44,7 +46,7 @@ type Reviver = (agentId: AgentId) => Promise<void>;
 //
 //
 @Injectable()
-export class TerminalService {
+export class TerminalService implements OnApplicationShutdown {
   private readonly terminals = new Map<AgentId, AgentTerminal>();
   private readonly sessions = new Map<SessionId, Session>();
   private readonly exitListeners: ExitListener[] = [];
@@ -88,8 +90,10 @@ export class TerminalService {
     this.terminalOfSession(sessionId, ownerId).write(data);
   }
 
-  kill(agentId: AgentId): void {
-    this.terminalOfAgent(agentId).kill();
+  // Ends the agent's process and everything it started. Throws at once for
+  // an unknown agent; resolves once the kill is done, onExited follows.
+  kill(agentId: AgentId): Promise<void> {
+    return this.terminalOfAgent(agentId).kill();
   }
 
   resize(
@@ -146,8 +150,19 @@ export class TerminalService {
         ...(this.stopping.get(agentId) ?? []),
         exited,
       ]);
-      terminal.kill();
+      void terminal.kill();
     });
+  }
+
+  // The daemon stops (enableShutdownHooks in main.ts): end every terminal
+  // and what it started, all at once, so the whole stop takes at most
+  // SHUTDOWN_TIMEOUT_MS and leaves no orphans.
+  async onApplicationShutdown(): Promise<void> {
+    await Promise.all(
+      [...this.terminals.keys()].map((agentId) =>
+        this.stop(agentId, SHUTDOWN_TIMEOUT_MS),
+      ),
+    );
   }
 
   onExited(listener: ExitListener): void {

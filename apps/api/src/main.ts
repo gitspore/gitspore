@@ -11,6 +11,9 @@ import {
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  // On Ctrl+C or SIGTERM, Nest calls onApplicationShutdown: TerminalService
+  // ends every agent and what it started, so nothing outlives the daemon.
+  app.enableShutdownHooks();
 
   // The daemon runs as its own process next to the Next.js app, so the
   // browser calls it cross-origin.

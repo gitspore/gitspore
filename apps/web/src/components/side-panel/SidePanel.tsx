@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { MAX_SLOTS, type Agent, type ErrorCode } from "@gitspore/shared";
+import {
+  MAX_SLOTS,
+  type Agent,
+  type AgentId,
+  type ErrorCode,
+} from "@gitspore/shared";
 import { X } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { Button } from "@/components/ui/button";
@@ -17,6 +22,7 @@ import {
   selectIssues,
 } from "@/lib/store/selectors";
 import { AgentRow, FreeSlotRow } from "./AgentRow";
+import { BranchesTab } from "./BranchesTab";
 import { IssueRow } from "./IssueRow";
 
 // The side panel: title, counts, tabs. Spec: `side-panel` and `segmented-tabs`.
@@ -39,6 +45,7 @@ export function SidePanel({ tab, onTabChange, onClose }: SidePanelProps) {
   const waiting = useGreenhouseStore(needsInputCount);
   const selectedSlot = useGreenhouseStore((s) => s.selectedSlot);
   const selectSlot = useGreenhouseStore((s) => s.selectSlot);
+  const openWindow = useGreenhouseStore((s) => s.openWindow);
   const slots = useGreenhouseStore(useShallow(freeSlots));
   // Open issues without a running agent
   const unplanted = useGreenhouseStore(useShallow(openIssuesWithoutAgent));
@@ -54,6 +61,9 @@ export function SidePanel({ tab, onTabChange, onClose }: SidePanelProps) {
   const [stopSent, setStopSent] = useState(false);
 
   const planted = agents.filter((a) => a.slotIndex !== null).length;
+  const active = agents.filter(
+    (a) => a.slotIndex !== null && a.status !== "merged",
+  ).length;
   const freeSlot = slots[0];
 
   // The agent is gone: the stop went through, the dialog closes.
@@ -75,6 +85,13 @@ export function SidePanel({ tab, onTabChange, onClose }: SidePanelProps) {
     dispatchAgent(issueNumber, freeSlot);
   }
 
+  // Like a click on the plant: the agent's window shows and takes the focus.
+  // An open one is un-minimised, never added twice.
+  function openAgent(agentId: AgentId, slotIndex: number) {
+    selectSlot(slotIndex);
+    openWindow(agentId);
+  }
+
   function openStop(agent: Agent) {
     setStopping(agent);
     setRemoveWorktree(false);
@@ -92,20 +109,29 @@ export function SidePanel({ tab, onTabChange, onClose }: SidePanelProps) {
 
   return (
     <div className="flex flex-col gap-3">
-      <header className="flex items-start justify-between px-1 pt-1">
-        <div>
-          <h2 className="font-title text-title-panel">Your pots</h2>
-          <p className="text-ui-meta text-muted-foreground">
-            {planted} of {MAX_SLOTS} planted
-            {/* Summary from #18: hidden when nobody waits */}
-            {waiting > 0 && (
-              <span className="font-semibold text-status-waiting">
-                {" "}
-                · {waiting} {waiting === 1 ? "needs" : "need"} you
-              </span>
-            )}
-          </p>
-        </div>
+      <header className="flex items-start justify-between px-2 pt-1">
+        {tab === "branches" ? (
+          <div>
+            <h2 className="font-title text-title-panel">Branches</h2>
+            <p className="text-ui-meta text-muted-foreground">
+              {active} active
+            </p>
+          </div>
+        ) : (
+          <div>
+            <h2 className="font-title text-title-panel">Your pots</h2>
+            <p className="text-ui-meta text-muted-foreground">
+              {planted} of {MAX_SLOTS} planted
+              {/* Summary from #18: hidden when nobody waits */}
+              {waiting > 0 && (
+                <span className="font-semibold text-status-waiting">
+                  {" "}
+                  · {waiting} {waiting === 1 ? "needs" : "need"} you
+                </span>
+              )}
+            </p>
+          </div>
+        )}
         <Button
           variant="ghost"
           size="icon"
@@ -151,7 +177,7 @@ export function SidePanel({ tab, onTabChange, onClose }: SidePanelProps) {
                   ""
                 }
                 selected={selectedSlot === slotIndex}
-                onSelect={() => selectSlot(slotIndex)}
+                onSelect={() => openAgent(agent.id, slotIndex)}
                 onStop={() => openStop(agent)}
               />
             );
@@ -175,8 +201,8 @@ export function SidePanel({ tab, onTabChange, onClose }: SidePanelProps) {
           )}
         </TabsContent>
 
-        <TabsContent value="branches" className="px-2 text-muted-foreground">
-          Branches later (should-have).
+        <TabsContent value="branches">
+          <BranchesTab />
         </TabsContent>
       </Tabs>
 

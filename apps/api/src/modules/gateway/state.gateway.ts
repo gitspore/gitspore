@@ -8,12 +8,14 @@ import {
   WebSocketGateway,
 } from "@nestjs/websockets";
 import { allowedOrigins, SessionAuth } from "./session-auth.service";
+import { BranchesService } from "../branches/branches.service";
 import { StateStore } from "../state/state.store";
 import { GitHubService } from "../github/github.service";
 import { parseRepoPayload } from "../repo/repo-payload";
 import { RepoService } from "../repo/repo.service";
 import { Server, Socket } from "socket.io";
 import type {
+  BranchGraphAck,
   ClientToServerEvents,
   RepoCheckAck,
   RepoChooseAck,
@@ -43,6 +45,7 @@ export class StateGateway implements OnGatewayInit, OnGatewayConnection {
     private readonly store: StateStore,
     private readonly github: GitHubService,
     private readonly repo: RepoService,
+    private readonly branches: BranchesService,
   ) {}
 
   afterInit(server: GreenhouseServer) {
@@ -124,6 +127,16 @@ export class StateGateway implements OnGatewayInit, OnGatewayConnection {
     } catch (error) {
       this.logger.error(error);
       ack({ problems: [{ code: "switch_failed", message: FAILED }] });
+    }
+  }
+
+  @SubscribeMessage("branches:graph")
+  async handleBranchesGraph(@Ack() ack: (response: BranchGraphAck) => void) {
+    try {
+      ack(await this.branches.graph());
+    } catch (error) {
+      this.logger.error(error);
+      ack({ error: { code: "internal", message: FAILED } });
     }
   }
 }

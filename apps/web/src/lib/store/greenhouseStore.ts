@@ -1,6 +1,7 @@
 import {
   applyPatch as applyStatePatch,
   type AgentId,
+  type BranchGraphAck,
   type GreenhouseState,
   type RepoCheckAck,
   type RepoChooseAck,
@@ -82,6 +83,7 @@ export type GreenhouseStoreState = {
   chooseRepo: (path: string, baseBranch: string) => Promise<RepoChooseAck>;
   /** Resolves with what the daemon found; chooses nothing. Can reject too. */
   checkRepo: (path: string, baseBranch: string) => Promise<RepoCheckAck>;
+  loadBranchGraph: () => Promise<BranchGraphAck>;
 
   dispatchAgent: (issueNumber: number, slotIndex: number) => void;
   stopAgent: (agentId: AgentId, removeWorktree: boolean) => void;
@@ -214,6 +216,10 @@ export function createGreenhouseStore(
     checkRepo: (path, baseBranch) =>
       askDaemon<RepoCheckAck>(client, (answer) =>
         client.emit("repo:check", { path, baseBranch }, answer),
+      ),
+    loadBranchGraph: () =>
+      askDaemon<BranchGraphAck>(client, (answer) =>
+        client.emit("branches:graph", {}, answer),
       ),
     // Terminal traffic touches no state: input goes straight out, output
     // (terminal:data) goes straight to xterm.js and never through the store.

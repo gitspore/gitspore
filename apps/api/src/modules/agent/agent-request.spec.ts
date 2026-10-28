@@ -6,6 +6,7 @@ const issue = (number: number): Issue => ({
   title: `Issue ${number}`,
   url: `https://github.com/owner/repo/issues/${number}`,
   labels: [],
+  body: "",
 });
 
 const agent = (overrides: Partial<Agent>): Agent => ({

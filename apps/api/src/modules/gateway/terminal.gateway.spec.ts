@@ -36,7 +36,7 @@ describe("TerminalGateway", () => {
     })
       .overrideProvider(SPAWN_PTY)
       .useValue(() => {
-        const pty = new FakePty();
+        const pty = new FakePty().exitingOnKill();
         ptys.push(pty);
         return pty;
       })

@@ -205,6 +205,23 @@
             "$type": "color"
           }
         },
+        "rabbit": {
+          "fur": {
+            "$value": "#a08468",
+            "$type": "color",
+            "$description": "the rabbit hopping in the grass by day"
+          },
+          "pale": {
+            "$value": "#efe6d6",
+            "$type": "color",
+            "$description": "chest, muzzle, front paws and tail"
+          },
+          "pink": {
+            "$value": "#e8a59c",
+            "$type": "color",
+            "$description": "inside the ears, and the nose"
+          }
+        },
         "dragonfly": {
           "$value": "#3d9db3",
           "$type": "color"
@@ -459,6 +476,34 @@
         "pebble": {
           "$value": "#a89e8c",
           "$type": "color"
+        },
+        "berry": {
+          "1": {
+            "$value": "#c8363d",
+            "$type": "color",
+            "$description": "berries on some of the bushes, each a shade of these"
+          },
+          "2": {
+            "$value": "#8e2a4a",
+            "$type": "color"
+          }
+        },
+        "blossom": {
+          "petal": {
+            "1": {
+              "$value": "#fbf4ea",
+              "$type": "color",
+              "$description": "small blossoms on some of the bushes, one colour per bush"
+            },
+            "2": {
+              "$value": "#f4b3c8",
+              "$type": "color"
+            }
+          },
+          "heart": {
+            "$value": "#f2c14a",
+            "$type": "color"
+          }
         }
       },
       "light": {
@@ -564,7 +609,7 @@
       "butterflies": {
         "$value": "1",
         "$type": "number",
-        "$description": "1 = the day animals: butterflies, bumblebee, dragonfly, robin"
+        "$description": "1 = the day animals: butterflies, bumblebee, dragonfly, robin, rabbit"
       },
       "moths": {
         "$value": "0",
@@ -645,6 +690,32 @@
         "pebble": {
           "$value": "#4a453d",
           "$type": "color"
+        },
+        "berry": {
+          "1": {
+            "$value": "#d4545a",
+            "$type": "color"
+          },
+          "2": {
+            "$value": "#a3475f",
+            "$type": "color"
+          }
+        },
+        "blossom": {
+          "petal": {
+            "1": {
+              "$value": "#ffffff",
+              "$type": "color"
+            },
+            "2": {
+              "$value": "#f8c9d8",
+              "$type": "color"
+            }
+          },
+          "heart": {
+            "$value": "#e9c45c",
+            "$type": "color"
+          }
         }
       },
       "light": {
@@ -749,7 +820,7 @@
       "butterflies": {
         "$value": "0",
         "$type": "number",
-        "$description": "1 = the day animals: butterflies, bumblebee, dragonfly, robin"
+        "$description": "1 = the day animals: butterflies, bumblebee, dragonfly, robin, rabbit"
       },
       "moths": {
         "$value": "1",

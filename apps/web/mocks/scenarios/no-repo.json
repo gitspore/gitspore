@@ -10,37 +10,43 @@
         "number": 201,
         "title": "Password reset email is not sent",
         "url": "https://github.com/gitspore/gitspore/issues/201",
-        "labels": ["bug"]
+        "labels": ["bug"],
+        "body": "Since the last deploy, **no** password reset emails arrive. The mail log shows nothing either, so the job is probably never queued."
       },
       {
         "number": 202,
         "title": "Add keyboard shortcuts for switching between agents",
         "url": "https://github.com/gitspore/gitspore/issues/202",
-        "labels": ["enhancement", "good first issue"]
+        "labels": ["enhancement", "good first issue"],
+        "body": "Switching between agents needs the mouse right now.\n\n### Proposal\n\n- `Alt+1` … `Alt+6` jump to the plant in that pot\n- `Alt+←` / `Alt+→` go to the previous/next agent\n\nSee also the [WAI-ARIA keyboard guide](https://www.w3.org/WAI/ARIA/apg/practices/keyboard-interface/)."
       },
       {
         "number": 203,
         "title": "Search results page shows duplicate entries when the query contains special characters such as umlauts, quotes or a trailing slash",
         "url": "https://github.com/gitspore/gitspore/issues/203",
-        "labels": ["bug", "search", "regression", "needs triage"]
+        "labels": ["bug", "search", "regression", "needs triage"],
+        "body": "Searching for `café`, `\"quoted\"` or `docs/` lists some results twice.\n\n1. Search for `docs/`\n2. Scroll down: the first three hits come again"
       },
       {
         "number": 204,
         "title": "Typo in footer",
         "url": "https://github.com/gitspore/gitspore/issues/204",
-        "labels": []
+        "labels": [],
+        "body": ""
       },
       {
         "number": 205,
         "title": "Upgrade to the latest Node LTS",
         "url": "https://github.com/gitspore/gitspore/issues/205",
-        "labels": ["chore"]
+        "labels": ["chore"],
+        "body": "Node 24 is the new LTS.\n\n- [ ] Update `.nvmrc` and the CI matrix\n- [ ] Check that `node-pty` still builds\n- [ ] Update the README"
       },
       {
         "number": 206,
         "title": "Document the deployment process",
         "url": "https://github.com/gitspore/gitspore/issues/206",
-        "labels": ["documentation"]
+        "labels": ["documentation"],
+        "body": "Write down how a release gets deployed, step by step, so that more than one person can do it."
       }
     ]
   },

@@ -113,6 +113,8 @@ export type Issue = {
   url: string;
   /** Label names. */
   labels: string[];
+  /** The issue's text as GitHub Markdown; empty when it has none. */
+  body: string;
 };
 
 /**
@@ -122,6 +124,24 @@ export type Issue = {
 export type TerminalSession = {
   id: SessionId;
   agentId: AgentId;
+};
+
+export type GraphCommit = {
+  sha: string;
+  parents: string[];
+  author: string;
+  date: IsoTimestamp;
+  subject: string;
+};
+
+export type BranchHead = {
+  branch: string;
+  sha: string;
+};
+
+export type BranchGraph = {
+  commits: GraphCommit[];
+  heads: BranchHead[];
 };
 
 /** The repository gitspore works in. */

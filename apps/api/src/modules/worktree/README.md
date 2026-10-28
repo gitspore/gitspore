@@ -64,7 +64,18 @@ ensureExcluded(pattern): Promise<void>
 3. `dirty`: `git status` shows modified or untracked files. Skipped with `force`, and when the folder was already deleted by hand.
 4. `unmerged`: only with `deleteBranch`. The branch has commits that are not in the base branch (`rev-list --count <base>..<branch>`). Skipped with `force`.
 
-Then `git worktree remove` (`--force` with `force`) and, with `deleteBranch`, `git branch -D`. Without `deleteBranch` the branch is always kept. A folder deleted by hand is fine: `git worktree remove` cleans up its registration.
+Then:
+
+1. The folder is renamed to `.removing-<folder>` next to it. Branch folders never start with a dot, so the name can't collide.
+2. `git worktree prune` drops its registration.
+3. Node deletes the renamed folder (`fs.rm`, recursive, with retries).
+4. With `deleteBranch`, `git branch -D` deletes the branch.
+
+Without `deleteBranch` the branch is always kept. A folder deleted by hand is fine: there is nothing to rename, and `prune` cleans up the registration.
+
+The rename comes first because Windows refuses it at once while a process works in the folder, for example a dev server the agent started that outlived Claude. `rm` alone would get halfway, delete `.git` and leave a broken worktree (#156). A refused rename is retried for about a second (antivirus, the search indexer), then it is `in_use` and nothing is deleted. Once the rename has worked, the worktree is gone for git, so an `rm` that still fails only logs a warning. The next removal of the same folder deletes the leftover `.removing-<folder>` first. On macOS and Linux nothing blocks a rename or a delete.
+
+Not `git worktree remove`: after an agent's `npm install` the worktree holds tens of thousands of files, which git deletes without any output, on Windows for longer than the 60 s timeout. The npm workspace junctions in `node_modules` stop it too (#149). `fs.rm` removes a junction or symlink as a link and never touches its target. `prune` is repo-wide like at startup, so it also drops other registrations whose folder is gone.
 
 **Startup.** `onModuleInit()` runs `git worktree prune` (registrations of folders that no longer exist, repo-wide; branches stay) and logs what `list()` finds. It doesn't rebuild agents; the agent module takes the worktrees over (#102).
 
@@ -80,6 +91,7 @@ All refusals are a `WorktreeError` with a `code`. The agent module maps `push_fa
 | `not_found`     | `remove`                                | Not one of our registered worktrees                     |
 | `dirty`         | `remove`                                | Uncommitted changes, including untracked files          |
 | `unmerged`      | `remove`                                | `deleteBranch` on a branch with commits not in the base |
+| `in_use`        | `remove`                                | A program works in the folder (Windows); nothing gone   |
 | `push_failed`   | `publish`                               | The push to origin failed; the message says why         |
 | `not_ours`      | `publish`, `deleteRemoteBranch`, `open` | The branch does not start with `BRANCH_PREFIX`          |
 

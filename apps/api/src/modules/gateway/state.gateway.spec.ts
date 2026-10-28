@@ -250,4 +250,17 @@ describe("StateGateway", () => {
       logError.mockRestore();
     });
   });
+
+  describe("branches", () => {
+    it("answers branches:graph with repo_unavailable while no repo is chosen", async () => {
+      const socket = connect({ token: auth.token, origin: ORIGIN });
+      await expect(outcome(socket)).resolves.toBe("snapshot");
+
+      const ack = await socket.emitWithAck("branches:graph", {});
+
+      expect(ack).toEqual({
+        error: expect.objectContaining({ code: "repo_unavailable" }),
+      });
+    });
+  });
 });
