@@ -52,12 +52,14 @@ function create(): Created {
       search: window.location.search,
     });
     // Only the daemon needs the token. Reading it also takes it out of the
-    // address bar, so the mock leaves the URL alone.
+    // address bar, so the mock leaves the URL alone. Local storage, not session
+    // storage: the daemon keeps its token across restarts, so the link from
+    // its log is clicked once and new tabs connect too.
     const token =
       mode.kind === "socket"
         ? resolveSessionToken({
             search: window.location.search,
-            storage: window.sessionStorage,
+            storage: window.localStorage,
             replaceSearch: (search) =>
               window.history.replaceState(
                 null,
