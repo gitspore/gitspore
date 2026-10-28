@@ -27,7 +27,7 @@ function scenario(events: Scenario["events"] = []): Scenario {
       version: 1,
       repo: { path: "/mock/repo", baseBranch: "main", github: "on" },
       agents: [agent],
-      issues: [{ number: 1, title: "Issue", url: "u", labels: ["bug"] }],
+      issues: [{ number: 1, title: "Issue", url: "u", labels: ["bug"], body: "" }],
       plan: null,
       repoTokens: null,
     },

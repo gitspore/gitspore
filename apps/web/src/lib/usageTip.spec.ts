@@ -37,6 +37,7 @@ const issue = (number: number, title: string): Issue => ({
   title,
   url: `https://x/${number}`,
   labels: [],
+  body: "",
 });
 
 const RESETS_AT = "2026-10-27T13:30:00.000Z";
