@@ -74,9 +74,11 @@ export function HotbarSlot({
                 ? "text-wait-ink [--slot-fill:var(--color-wait)] hover:[--slot-fill:color-mix(in_srgb,var(--color-wait)_80%,var(--color-panel))] motion-safe:animate-bob"
                 : off
                   ? // Disabled (components.md, States): no hover, fill and
-                    // content at opacity.disabled. Not `opacity` on the
-                    // button, which would fade the focus line too (#114)
-                    "cursor-not-allowed text-[color-mix(in_srgb,var(--color-ink)_calc(var(--opacity-disabled)*100%),transparent)] [--slot-fill:color-mix(in_srgb,var(--color-panel-2)_calc(var(--opacity-disabled)*100%),transparent)]"
+                    // content at opacity.disabled, mixed over color.panel
+                    // (the hotbar) so overlapping shapes stay flat. Not
+                    // `opacity` on the button, which would fade the focus
+                    // line too (#114)
+                    "cursor-not-allowed text-[color-mix(in_srgb,var(--color-ink)_calc(var(--opacity-disabled)*100%),var(--color-panel))] [--slot-fill:color-mix(in_srgb,var(--color-panel-2)_calc(var(--opacity-disabled)*100%),var(--color-panel))]"
                   : "text-ink [--slot-fill:var(--color-panel-2)] hover:[--slot-fill:color-mix(in_srgb,var(--color-panel-2)_80%,var(--color-panel))]",
             )}
           />
