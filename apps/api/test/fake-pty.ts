@@ -1,8 +1,9 @@
 import type { Pty } from "@/modules/terminal/agent-terminal";
 
 export class FakePty implements Pty {
-  // killTree() ignores 0, so a fake never signals a real process.
-  readonly pid = 0;
+  // killTree() ignores 0, so a fake never signals a real process. A test
+  // that sets another pid also passes its own killTree and startedAt.
+  pid = 0;
   readonly write = jest.fn();
   readonly resize = jest.fn();
   readonly kill = jest.fn();

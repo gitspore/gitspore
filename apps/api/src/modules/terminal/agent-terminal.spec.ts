@@ -435,8 +435,77 @@ describe("kill", () => {
 
     await terminal.kill();
 
-    expect(killTree).toHaveBeenCalledWith(pty.pid, "win32");
+    expect(killTree).toHaveBeenCalledWith(pty.pid, "win32", undefined);
     expect(pty.kill).toHaveBeenCalledTimes(1);
+  });
+
+  // Windows hands out a pid again at once, so kill() checks the start time.
+  describe("start time on Windows", () => {
+    function windowsTerminal(started: (seen: number) => number) {
+      const pty = new FakePty();
+      pty.pid = 4242;
+      const killTree = jest.fn(async () => {});
+      const startedAt = jest.fn(async () => started(Date.now()));
+      const terminal = new AgentTerminal(() => pty, {
+        ...OPTIONS,
+        platform: "win32",
+        killTree,
+        startedAt,
+      });
+      return { pty, killTree, startedAt, terminal };
+    }
+
+    it("looks it up at the first output and passes it to killTree", async () => {
+      const { pty, killTree, startedAt, terminal } = windowsTerminal(
+        (seen) => seen - 50,
+      );
+
+      pty.output("PS C:\\repo> ");
+      pty.output("more");
+      await terminal.kill();
+
+      expect(startedAt).toHaveBeenCalledTimes(1);
+      expect(startedAt).toHaveBeenCalledWith(4242, "win32");
+      expect(killTree).toHaveBeenCalledWith(4242, "win32", expect.any(Number));
+    });
+
+    it("passes none when the pid belongs to a process that started later", async () => {
+      const { pty, killTree, terminal } = windowsTerminal(
+        (seen) => seen + 5_000,
+      );
+
+      pty.output("x");
+      await terminal.kill();
+
+      expect(killTree).toHaveBeenCalledWith(4242, "win32", undefined);
+    });
+
+    it("waits for output that comes with a pid", async () => {
+      const { pty, startedAt } = windowsTerminal((seen) => seen);
+      pty.pid = 0;
+
+      pty.output("ConPTY's first bytes");
+      expect(startedAt).not.toHaveBeenCalled();
+
+      pty.pid = 4242;
+      pty.output("the program's output");
+      expect(startedAt).toHaveBeenCalledWith(4242, "win32");
+    });
+
+    it("is not looked up on Unix", async () => {
+      const pty = new FakePty();
+      pty.pid = 4242;
+      const startedAt = jest.fn(async () => 1);
+      new AgentTerminal(() => pty, {
+        ...OPTIONS,
+        killTree: async () => {},
+        startedAt,
+      });
+
+      pty.output("$ ");
+
+      expect(startedAt).not.toHaveBeenCalled();
+    });
   });
 
   it("ends the tree once when kill comes again before it is done", async () => {

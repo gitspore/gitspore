@@ -113,7 +113,10 @@ node-pty: shell exited
 
 `pty.kill()` ends only the one process in the PTY. What Claude Code started would live on: a dev server an agent started kept its worktree busy, so the merge cleanup couldn't remove it (#156), and kept its port. So `kill()` first runs `killTree(pid)`, then `pty.kill()`:
 
-- **Windows:** `taskkill /T /F /PID <pid>`. `/T` follows the parent chain, so it has to run while the process still lives. Once it is gone, its children are orphans, and `/T` doesn't find them any more.
+- **Windows:** the tree is built from the process table (`Get-CimInstance Win32_Process`: pid, parent pid, start time), and every process in it is ended with `process.kill`. It has to run while the process still lives: once it is gone, the parent chain to its children is broken. Not `taskkill /T`. Windows hands out a pid again at once and never updates a parent pid, so `/T` also hit unrelated processes: in CI it killed `git` commands of parallel tests. So:
+  - At the first output that comes with a pid, `AgentTerminal` looks up when the process started (`startedAt`, about half a second). A start more than 1 s after that output means the pid already belongs to someone else, and it is dropped.
+  - `kill()` kills only if the pid still has that start time. A process counts as a child only if it started after its parent.
+  - Without a start time (lookup failed, or the process ended at once), there is no tree kill, only `pty.kill()`. In doubt, a process is left over rather than a stranger killed.
 - **macOS/Linux:** node-pty starts the process as a session leader, so its process group holds what it starts. Children that open their own session (`detached`) are found in the process table (`ps -A -o pid=,ppid=`) while their parent lives. `SIGTERM` goes to the group and to every pid found, and `SIGKILL` after 2 s to those still there.
 
 Not caught: a process that cut itself loose from its parent before the kill, for example with a double fork. `killTree` ignores pids 0 and 1, so a `FakePty` (pid 0) never signals anything.
@@ -162,6 +165,6 @@ Your own terminal plays one browser tab: keys go to `write`, the window size to 
 Three layers, all run with `npm run test:api`:
 
 - `ring-buffer.spec.ts`, `output-batcher.spec.ts`: the helpers, with Jest's fake timers.
-- `process-tree.spec.ts`: reading `ps` output, finding descendants, never signalling pid 0 or 1.
+- `process-tree.spec.ts`: reading the process table, finding descendants (not one that started before its parent), killing only a pid with the right start time, never signalling pid 0 or 1.
 - `agent-terminal.spec.ts`, `terminal.service.spec.ts`: the logic, with `FakePty` (`apps/api/test/fake-pty.ts`) instead of a real PTY. The tree is killed before the PTY, and the shutdown stops all terminals and gives up after 10 s.
 - `terminal.pty.spec.ts`: real shells through `TerminalService`, on Ubuntu, macOS and Windows in CI. A command comes back, a resize reaches the shell, colour codes and UTF-8 arrive unchanged (skipped on Windows until PowerShell outputs UTF-8, #158), 10,000 lines arrive in batches, a detached tab doesn't stop the shell, and `exit` makes the service forget the terminal. `kill()` also ends a program's child and its detached child, and the shutdown ends three running programs within 10 s. Each test kills its leftover shells in `afterEach`.

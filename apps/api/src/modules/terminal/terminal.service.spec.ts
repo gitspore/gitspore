@@ -272,7 +272,8 @@ describe("TerminalService", () => {
         stopped = true;
         return result;
       });
-      await Promise.resolve();
+      // The kill runs a few promise steps (tree first, then the PTY).
+      await jest.advanceTimersByTimeAsync(0);
 
       expect(ptys[0].kill).toHaveBeenCalled();
       expect(stopped).toBe(false);
