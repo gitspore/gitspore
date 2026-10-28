@@ -6,7 +6,13 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { STATUS_COLOUR, STATUS_ICON, STATUS_WORD } from "@/lib/status";
+import { Plant } from "@/components/icons/Plant";
+import {
+  STATUS_COLOUR,
+  STATUS_ICON,
+  STATUS_PLANT,
+  STATUS_WORD,
+} from "@/lib/status";
 import { formatSeconds, useSecondsSince } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { Beetle } from "../shell/Logo";
@@ -95,14 +101,12 @@ export function HotbarSlot({
 
         {overview ? (
           <Beetle variant="slot" className="size-10" />
-        ) : agent ? (
-          // Agent colour circle; the plant goes inside later
-          <span
-            className="size-11 rounded-full opacity-35"
-            style={{ backgroundColor: `var(--color-agent-${hotkey})` }}
-          />
         ) : (
-          <span className="size-9 rounded-full border-2 border-dashed border-current opacity-50" />
+          // The plant in its pot; an empty pot without an agent
+          <Plant
+            kind={agent ? STATUS_PLANT[agent.status] : "empty"}
+            className="size-11"
+          />
         )}
 
         {/* Marker: the status shape, top right */}
