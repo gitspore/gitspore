@@ -14,6 +14,28 @@ describe("validateScenario", () => {
     expect(validateScenario(scenario, "test.json")).toEqual(scenario);
   });
 
+  it("takes the repo's token total and its op, null when left out", () => {
+    const scenario = makeScenario([
+      {
+        at: 5,
+        event: "state:patch",
+        payload: {
+          version: 2,
+          ops: [{ type: "repoTokens:set", repoTokens: 21_000_000 }],
+        },
+      },
+    ]);
+    // A scenario from before the total.
+    const older: Record<string, unknown> = { ...scenario.snapshot };
+    delete older.repoTokens;
+
+    expect(validateScenario(scenario, "test.json")).toEqual(scenario);
+    expect(
+      validateScenario({ ...scenario, snapshot: older }, "old.json").snapshot
+        .repoTokens,
+    ).toBeNull();
+  });
+
   it("names the file in the error", () => {
     expect(() => validateScenario({}, "broken.json")).toThrow(
       'Invalid scenario "broken.json"',

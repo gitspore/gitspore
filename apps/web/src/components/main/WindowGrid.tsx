@@ -5,8 +5,6 @@ import { useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useGreenhouseStore } from "@/lib/client/GreenhouseClientProvider";
 import type { MainMode } from "@/lib/layout";
-// Stays mock until the daemon sends usage (#42)
-import { mockContext } from "@/lib/mock";
 import { issueTitle } from "@/lib/store/selectors";
 import { measureCell, type Cell } from "@/lib/terminal/font";
 import { tileWindows, type Placement, type Tiling } from "@/lib/windowGrid";
@@ -153,7 +151,6 @@ function Tile({
       <Window
         agent={agent}
         issueTitle={title}
-        context={mockContext[agent.id]}
         focused={focused}
         onFocus={onFocus}
         onMinimise={onMinimise}

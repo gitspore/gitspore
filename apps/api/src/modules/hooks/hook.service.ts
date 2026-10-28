@@ -9,6 +9,7 @@ type Listener = (agentId: AgentId, payload: unknown) => void;
 export class HookService {
   private readonly secrets = new Map<AgentId, string>();
   private listener: Listener = () => {};
+  private statuslineListener: Listener = () => {};
 
   issue(agentId: AgentId): string {
     const secret = randomBytes(32).toString("hex");
@@ -43,5 +44,13 @@ export class HookService {
 
   receive(agentId: AgentId, payload: unknown): void {
     this.listener(agentId, payload);
+  }
+
+  onStatusline(listener: Listener): void {
+    this.statuslineListener = listener;
+  }
+
+  receiveStatusline(agentId: AgentId, payload: unknown): void {
+    this.statuslineListener(agentId, payload);
   }
 }

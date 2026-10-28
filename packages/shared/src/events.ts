@@ -8,9 +8,11 @@
 import type {
   Agent,
   AgentId,
+  BranchGraph,
   GreenhouseState,
   Issue,
   JsonValue,
+  PlanUsage,
   RepoInfo,
   SessionId,
 } from "./models";
@@ -76,7 +78,10 @@ export type PatchOp =
   | { type: "issue:upsert"; issue: Issue }
   | { type: "issue:remove"; issueNumber: number }
   /** GitHub sync for the current repo turned on or off. Nothing without a repo. */
-  | { type: "repo:github"; github: RepoInfo["github"] };
+  | { type: "repo:github"; github: RepoInfo["github"] }
+  /** The plan's limits changed. Replaces `plan` as a whole. */
+  | { type: "plan:set"; plan: PlanUsage | null }
+  | { type: "repoTokens:set"; repoTokens: number | null };
 
 /**
  * Changes from version `version - 1` to `version`. Versions increase by
@@ -167,6 +172,8 @@ export type RepoCheck = {
 /** In the order above. Checks that need a git repo are left out without one. */
 export type RepoCheckAck = { checks: RepoCheck[] };
 
+export type BranchGraphAck = { graph: BranchGraph } | { error: ServerError };
+
 // --- Payloads: Server → Client --------------------------------------------
 
 export type TerminalDataPayload = {
@@ -248,6 +255,11 @@ export interface ClientToServerEvents {
   "repo:check": (
     payload: RepoChoosePayload,
     ack: (response: RepoCheckAck) => void,
+  ) => void;
+
+  "branches:graph": (
+    payload: EmptyPayload,
+    ack: (response: BranchGraphAck) => void,
   ) => void;
 
   /**

@@ -52,7 +52,7 @@ refresh(): Promise<void>                     // issues:refresh
 stop(): void
 currentProblem(): ServerError | null         // for clients that connect later
 pullRequestFor(branch): PullRequest | null   // last known, no request
-getIssue(number): Promise<IssueDetails>      // Issue + body, for dispatch
+getIssue(number): Promise<Issue>             // fresh from GitHub, for dispatch
 onError(listener: (error: ServerError) => void)
 onPullRequest(listener: (change: { branch, issueNumber, pullRequest }) => void)
 ```

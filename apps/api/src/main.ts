@@ -11,6 +11,9 @@ import {
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  // On Ctrl+C or SIGTERM, Nest calls onApplicationShutdown: TerminalService
+  // ends every agent and what it started, so nothing outlives the daemon.
+  app.enableShutdownHooks();
 
   // The daemon runs as its own process next to the Next.js app, so the
   // browser calls it cross-origin.
@@ -25,7 +28,13 @@ async function bootstrap() {
     "Bootstrap",
   );
 
-  Logger.log(`Session token: ${app.get(SessionAuth).token}`, "Bootstrap");
+  // The web client takes the token from the link and remembers it, so it is
+  // clicked once, not typed in.
+  const [webOrigin] = allowedOrigins();
+  Logger.log(
+    `Open ${PRODUCT_NAME}: ${webOrigin}/?token=${app.get(SessionAuth).token}`,
+    "Bootstrap",
+  );
 }
 
 // Nothing above can recover a failed boot, so surface it and exit non-zero

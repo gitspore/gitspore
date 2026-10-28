@@ -28,6 +28,7 @@ function sameIssue(a: Issue, b: Issue): boolean {
   return (
     a.title === b.title &&
     a.url === b.url &&
+    a.body === b.body &&
     a.labels.length === b.labels.length &&
     a.labels.every((label) => b.labels.includes(label))
   );

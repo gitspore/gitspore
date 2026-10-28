@@ -1,6 +1,7 @@
 import {
   applyPatch,
   type AgentDispatchAck,
+  type BranchGraphAck,
   type ClientToServerEvents,
   type GreenhouseState,
   type JsonValue,
@@ -38,6 +39,17 @@ const snapshot: GreenhouseState = {
         state: "open",
       },
       statusReason: null,
+      usage: {
+        contextPercent: 22,
+        model: "Opus",
+        tokens: {
+          input: 1_200,
+          output: 48_000,
+          cacheRead: 640_000,
+          cacheWrite: 11_800,
+          total: 701_000,
+        },
+      },
     },
     {
       id: "overview",
@@ -50,6 +62,7 @@ const snapshot: GreenhouseState = {
       startedAt: "2026-10-08T09:01:00.000Z",
       pullRequest: null,
       statusReason: null,
+      usage: null,
     },
   ],
   issues: [
@@ -58,14 +71,21 @@ const snapshot: GreenhouseState = {
       title: "Login fails with umlauts in the password",
       url: "https://github.com/gitspore/gitspore/issues/42",
       labels: ["bug"],
+      body: "Typing ü in the password field breaks the login.",
     },
     {
       number: 43,
       title: "Dark mode",
       url: "https://github.com/gitspore/gitspore/issues/43",
       labels: [],
+      body: "",
     },
   ],
+  plan: {
+    fiveHour: { usedPercent: 23.5, resetsAt: "2026-10-08T12:00:00.000Z" },
+    sevenDay: null,
+  },
+  repoTokens: 20_800_000,
 };
 
 // One sample per op type. A new PatchOp type is a compile error here until it
@@ -87,10 +107,19 @@ const ops: { [T in PatchOp["type"]]: Extract<PatchOp, { type: T }> } = {
       title: "Flaky test",
       url: "https://github.com/gitspore/gitspore/issues/44",
       labels: ["ci", "good first issue"],
+      body: "",
     },
   },
   "issue:remove": { type: "issue:remove", issueNumber: 43 },
   "repo:github": { type: "repo:github", github: "off" },
+  "plan:set": {
+    type: "plan:set",
+    plan: {
+      fiveHour: { usedPercent: 100, resetsAt: "2026-10-08T14:30:00.000Z" },
+      sevenDay: { usedPercent: 41.2, resetsAt: "2026-10-12T08:00:00.000Z" },
+    },
+  },
+  "repoTokens:set": { type: "repoTokens:set", repoTokens: 21_500_000 },
 };
 
 // One sample payload per event, so the event log can hold every one of them.
@@ -103,6 +132,7 @@ const clientPayloads: {
   "state:request": {},
   "repo:choose": { path: "/home/dev/repo", baseBranch: "main" },
   "repo:check": { path: "/home/dev/repo", baseBranch: "main" },
+  "branches:graph": {},
   "terminal:open": { agentId: "agent-1" },
   "terminal:input": { sessionId: "session-1", data: "y\r" },
   "terminal:resize": { sessionId: "session-1", cols: 80, rows: 24 },
@@ -117,6 +147,8 @@ const acks: {
   repoOk: RepoChooseAck;
   repoProblems: RepoChooseAck;
   repoChecks: RepoCheckAck;
+  branchGraph: BranchGraphAck;
+  branchGraphError: BranchGraphAck;
 } = {
   dispatchOk: { agentId: "agent-2" },
   dispatchError: {
@@ -154,6 +186,29 @@ const acks: {
       { item: "github", result: "warn", detail: "No GitHub remote" },
       { item: "claude", result: "ok", detail: "found" },
     ],
+  },
+  branchGraph: {
+    graph: {
+      commits: [
+        {
+          sha: "a41c9e2f0c1d4b6e8f7a9b0c1d2e3f4a5b6c7d8e",
+          parents: ["3fa61d8e0c1d4b6e8f7a9b0c1d2e3f4a5b6c7d8e"],
+          author: "Claude",
+          date: "2026-10-23T09:15:00.000Z",
+          subject: "session check",
+        },
+      ],
+      heads: [
+        { branch: "main", sha: "3fa61d8e0c1d4b6e8f7a9b0c1d2e3f4a5b6c7d8e" },
+        {
+          branch: "spore/12-login-redirect",
+          sha: "a41c9e2f0c1d4b6e8f7a9b0c1d2e3f4a5b6c7d8e",
+        },
+      ],
+    },
+  },
+  branchGraphError: {
+    error: { code: "repo_unavailable", message: "No repository chosen yet." },
   },
 };
 
@@ -270,6 +325,8 @@ describe("applyPatch", () => {
         repo: { ...snapshot.repo!, github: "off" },
         agents: [snapshot.agents[1]],
         issues: [snapshot.issues[0], ops["issue:upsert"].issue],
+        plan: ops["plan:set"].plan,
+        repoTokens: ops["repoTokens:set"].repoTokens,
       },
     });
   });

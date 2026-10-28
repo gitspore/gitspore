@@ -289,6 +289,14 @@ export const tokens = {
           "1": "#f28c38",
           "2": "#f5dc5e",
           "3": "#79b2ea",
+          rainbow: {
+            "1": "#e8524a",
+            "2": "#f29a38",
+            "3": "#f5dc5e",
+            "4": "#6cc06a",
+            "5": "#4f9be0",
+            "6": "#9a6ad0",
+          },
         },
         moth: "#e9dcc2",
         bee: "#f2b42e",
@@ -299,6 +307,11 @@ export const tokens = {
         robin: {
           body: "#8a6446",
           breast: "#e2733a",
+        },
+        rabbit: {
+          fur: "#a08468",
+          pale: "#efe6d6",
+          pink: "#e8a59c",
         },
         dragonfly: "#3d9db3",
         snail: {
@@ -342,6 +355,17 @@ export const tokens = {
         foliage: "#6f9356",
         moss: "#6a8a3c",
         pebble: "#a89e8c",
+        berry: {
+          "1": "#c8363d",
+          "2": "#8e2a4a",
+        },
+        blossom: {
+          petal: {
+            "1": "#fbf4ea",
+            "2": "#f4b3c8",
+          },
+          heart: "#f2c14a",
+        },
       },
       light: {
         fill: "#cfe0ff",
@@ -694,6 +718,14 @@ export const tokens = {
           "1": "#f28c38",
           "2": "#f5dc5e",
           "3": "#79b2ea",
+          rainbow: {
+            "1": "#e8524a",
+            "2": "#f29a38",
+            "3": "#f5dc5e",
+            "4": "#6cc06a",
+            "5": "#4f9be0",
+            "6": "#9a6ad0",
+          },
         },
         moth: "#e9dcc2",
         bee: "#f2b42e",
@@ -704,6 +736,11 @@ export const tokens = {
         robin: {
           body: "#8a6446",
           breast: "#e2733a",
+        },
+        rabbit: {
+          fur: "#a08468",
+          pale: "#efe6d6",
+          pink: "#e8a59c",
         },
         dragonfly: "#3d9db3",
         snail: {
@@ -747,6 +784,17 @@ export const tokens = {
         foliage: "#142019",
         moss: "#1e2512",
         pebble: "#4a453d",
+        berry: {
+          "1": "#d4545a",
+          "2": "#a3475f",
+        },
+        blossom: {
+          petal: {
+            "1": "#ffffff",
+            "2": "#f8c9d8",
+          },
+          heart: "#e9c45c",
+        },
       },
       light: {
         fill: "#cfe0ff",

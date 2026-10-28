@@ -29,6 +29,7 @@ function issue(number: number): Issue {
     title: `Issue ${number}`,
     url: `https://x/${number}`,
     labels: [],
+    body: "",
   };
 }
 
@@ -43,6 +44,8 @@ function storeWith(server: Partial<GreenhouseState> | null) {
       repo: null,
       agents: [],
       issues: [],
+      plan: null,
+      repoTokens: null,
       ...server,
     });
   return store.getState();
@@ -112,9 +115,14 @@ describe("selectors", () => {
         getStatus: () => ({ kind: "connected" }) as const,
       } as GreenhouseClient;
       const store = createGreenhouseStore(client, "live");
-      store
-        .getState()
-        .applySnapshot({ version: 1, agents: [a1], issues: [], repo: null });
+      store.getState().applySnapshot({
+        version: 1,
+        agents: [a1],
+        issues: [],
+        repo: null,
+        plan: null,
+        repoTokens: null,
+      });
       expect(focusedAgent(store.getState())).toBeNull();
 
       store.getState().openWindow("a1");

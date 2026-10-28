@@ -3,8 +3,10 @@ import {
   OVERVIEW_AGENT_ID,
   type Agent,
   type Issue,
+  type PlanUsage,
   type RepoInfo,
 } from "@gitspore/shared";
+
 import type { GreenhouseStoreState } from "./greenhouseStore";
 
 // Selectors for useGreenhouseStore. The ones that return a new array on each
@@ -28,6 +30,15 @@ export function selectIssues(state: GreenhouseStoreState): Issue[] {
 /** The repo gitspore works in, null before a snapshot and while none is chosen. */
 export function selectRepo(state: GreenhouseStoreState): RepoInfo | null {
   return state.server?.repo ?? null;
+}
+
+export function selectPlan(state: GreenhouseStoreState): PlanUsage | null {
+  return state.server?.plan ?? null;
+}
+
+/** The repo's token total; null without a repo. */
+export function selectRepoTokens(state: GreenhouseStoreState): number | null {
+  return state.server?.repoTokens ?? null;
 }
 
 /**

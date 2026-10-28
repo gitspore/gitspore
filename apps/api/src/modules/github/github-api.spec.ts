@@ -26,6 +26,7 @@ function gitHubIssue(number: number, overrides: Record<string, unknown> = {}) {
     url: `https://api.github.com/repos/owner/repo/issues/${number}`,
     html_url: `https://github.com/owner/repo/issues/${number}`,
     labels: [],
+    body: null,
     ...overrides,
   };
 }
@@ -60,6 +61,7 @@ describe("GitHubApi.openIssues", () => {
           url: "https://api.github.com/repos/owner/repo/issues/1",
           html_url: "https://github.com/owner/repo/issues/1",
           labels: [{ name: "bug" }],
+          body: "The button does nothing.",
         },
       ]),
     );
@@ -75,6 +77,7 @@ describe("GitHubApi.openIssues", () => {
           title: "Fix login",
           url: "https://github.com/owner/repo/issues/1",
           labels: ["bug"],
+          body: "The button does nothing.",
         },
       ],
     });

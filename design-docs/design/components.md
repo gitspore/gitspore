@@ -145,8 +145,8 @@ Token usage, from Claude Code ([ADR 0009](../decisions/0009-show-token-usage.md)
 | Where | Label | Value | `usage-tip` shows |
 |---|---|---|---|
 | top bar | "5 h", "week" | share of the plan's 5-hour and 7-day limit | used, reset time, tokens of the running agents; at 100 % "All agents are paused until the reset." |
-| window header | "context" | how full the agent's context is, then "· 701k tokens" | input, output, cache read, cache write, total, context used, model; "Most of it is cache reads." |
-| panel title (optional) | none | "20.8M tokens" for the project | running agents, finished agents, total; where the number comes from |
+| window header | "context" | how full the agent's context is, then "· 701k tokens" | input, output, cache read, cache write, total, context used, model; when cache reads are more than half: "Most of it is cache reads: each answer reads the conversation so far again, mostly from the cache." |
+| panel title (optional) | none | "20.8M tokens" for the project | running agents, earlier sessions (with agents that are gone), total; where the number comes from |
 
 The plan limits apply to the whole Claude account, so they also count sessions outside gitspore; the tip says so. No money amounts: with a Pro or Max plan the user doesn't pay per token.
 
@@ -197,7 +197,7 @@ Penpot shows all of these on the board "states (GS-34)" below the components, wi
 
 All motion stops under `prefers-reduced-motion`. In Penpot a layer named "(wiggles)", "(blinks)" or "(pulses)" carries it.
 
-**Garden life (scene).** Around the table: grass, flowers, pebbles and mushrooms on the floor, string lights between two posts, sun (or moon) beams with dust, a cup of steaming tea, a snail on a leg and a ladybug on the table (click it and it flies off). By day butterflies, a bumblebee, a dragonfly and a robin; at night fireflies, moths around the bulbs, and now and then a pair of eyes shining in the woods behind the fence (they open, look around, blink and are gone). A watering can pours over each working agent's plant. Insects avoid the pointer, fireflies drift toward it, grass bends away from it. Colours and what shows by day and at night are in `scene.json`; the settings switch it off ("Garden life"), and so does low power.
+**Garden life (scene).** Around the table: grass, flowers, pebbles and mushrooms on the floor, string lights between two posts, sun (or moon) beams with dust, a cup of steaming tea, a snail on a leg and a ladybug on the table (click it and it flies off). By day butterflies, a bumblebee, a dragonfly, a robin and a rabbit that hops about, nibbles the grass and sits up to look around; at night fireflies, moths around the bulbs, and now and then a pair of eyes shining in the woods behind the fence (they open, look around, blink and are gone). A watering can pours over each working agent's plant. Insects avoid the pointer, the robin flies off and the rabbit bounds away when it comes near, fireflies drift toward it, grass bends away from it. Colours and what shows by day and at night are in `scene.json`; the settings switch it off ("Garden life"), and so does low power.
 
 **Sky (scene).** Behind the garden, always on: a gradient from the horizon up, clouds drifting with the wind by day, stars and the moon at night, and a ring of far hills with a row of trees on the horizon, fading into the haze. The floor runs on into far ground that disappears in the fog.
 

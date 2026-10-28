@@ -2,15 +2,18 @@ import { z } from "zod";
 import type {
   Agent,
   AgentStatus,
+  AgentUsage,
   GreenhouseState,
   Issue,
   PatchOp,
+  PlanUsage,
   PullRequest,
   ServerError,
   StatePatch,
   StatusReason,
   TerminalDataPayload,
   TerminalExitPayload,
+  UsageLimit,
 } from "@gitspore/shared";
 import type { Scenario, ScenarioEntry } from "./scenario";
 
@@ -39,6 +42,28 @@ const statusReasonSchema = z.object({
   message: z.string(),
 }) satisfies z.ZodType<StatusReason>;
 
+const agentUsageSchema = z.object({
+  contextPercent: z.number().nullable(),
+  model: z.string().nullable(),
+  tokens: z.object({
+    input: z.number(),
+    output: z.number(),
+    cacheRead: z.number(),
+    cacheWrite: z.number(),
+    total: z.number(),
+  }),
+}) satisfies z.ZodType<AgentUsage>;
+
+const usageLimitSchema = z.object({
+  usedPercent: z.number(),
+  resetsAt: z.string(),
+}) satisfies z.ZodType<UsageLimit>;
+
+const planUsageSchema = z.object({
+  fiveHour: usageLimitSchema.nullable(),
+  sevenDay: usageLimitSchema.nullable(),
+}) satisfies z.ZodType<PlanUsage>;
+
 const agentSchema = z.object({
   id: z.string(),
   slotIndex: z.number().nullable(),
@@ -50,6 +75,8 @@ const agentSchema = z.object({
   worktreePath: z.string(),
   pullRequest: pullRequestSchema.nullable(),
   statusReason: statusReasonSchema.nullable(),
+  // Scenarios from before #42 have no usage.
+  usage: agentUsageSchema.nullable().default(null),
 }) satisfies z.ZodType<Agent>;
 
 const issueSchema = z.object({
@@ -57,6 +84,7 @@ const issueSchema = z.object({
   title: z.string(),
   url: z.string(),
   labels: z.array(z.string()),
+  body: z.string(),
 }) satisfies z.ZodType<Issue>;
 
 const repoSchema = z.object({
@@ -70,6 +98,8 @@ const greenhouseStateSchema = z.object({
   issues: z.array(issueSchema),
   version: z.number(),
   repo: repoSchema.nullable(),
+  plan: planUsageSchema.nullable().default(null),
+  repoTokens: z.number().nullable().default(null),
 }) satisfies z.ZodType<GreenhouseState>;
 
 const patchOpSchema = z.discriminatedUnion("type", [
@@ -78,6 +108,11 @@ const patchOpSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("issue:upsert"), issue: issueSchema }),
   z.object({ type: z.literal("issue:remove"), issueNumber: z.number() }),
   z.object({ type: z.literal("repo:github"), github: z.enum(["on", "off"]) }),
+  z.object({ type: z.literal("plan:set"), plan: planUsageSchema.nullable() }),
+  z.object({
+    type: z.literal("repoTokens:set"),
+    repoTokens: z.number().nullable(),
+  }),
 ]) satisfies z.ZodType<PatchOp>;
 
 const statePatchSchema = z.object({

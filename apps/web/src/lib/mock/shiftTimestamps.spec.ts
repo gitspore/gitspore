@@ -1,4 +1,4 @@
-import type { Agent } from "@gitspore/shared";
+import type { Agent, PlanUsage } from "@gitspore/shared";
 import { getScenario } from "../../../mocks/scenarios";
 import type { Scenario } from "./scenario";
 import { shiftScenario } from "./shiftTimestamps";
@@ -16,6 +16,7 @@ const agent: Agent = {
   startedAt: "2026-10-09T08:00:00.000Z",
   pullRequest: null,
   statusReason: null,
+  usage: null,
 };
 
 function scenario(events: Scenario["events"] = []): Scenario {
@@ -26,13 +27,60 @@ function scenario(events: Scenario["events"] = []): Scenario {
       version: 1,
       repo: { path: "/mock/repo", baseBranch: "main", github: "on" },
       agents: [agent],
-      issues: [{ number: 1, title: "Issue", url: "u", labels: ["bug"] }],
+      issues: [
+        { number: 1, title: "Issue", url: "u", labels: ["bug"], body: "" },
+      ],
+      plan: null,
+      repoTokens: null,
     },
     events,
   };
 }
 
 describe("shiftScenario", () => {
+  it("moves the reset times of the plan limits", () => {
+    const plan: PlanUsage = {
+      fiveHour: { usedPercent: 86, resetsAt: "2026-10-09T11:30:00.000Z" },
+      sevenDay: null,
+    };
+    const base = scenario();
+
+    const shifted = shiftScenario(
+      { ...base, snapshot: { ...base.snapshot, plan } },
+      5 * MINUTE,
+    );
+
+    expect(shifted.snapshot.plan).toEqual({
+      fiveHour: { usedPercent: 86, resetsAt: "2026-10-09T11:35:00.000Z" },
+      sevenDay: null,
+    });
+  });
+
+  it("moves the reset times in plan:set ops", () => {
+    const plan: PlanUsage = {
+      fiveHour: null,
+      sevenDay: { usedPercent: 34, resetsAt: "2026-10-13T09:30:00.000Z" },
+    };
+    const [entry] = shiftScenario(
+      scenario([
+        {
+          at: 10,
+          event: "state:patch",
+          payload: { version: 2, ops: [{ type: "plan:set", plan }] },
+        },
+      ]),
+      MINUTE,
+    ).events;
+
+    expect(entry.event === "state:patch" && entry.payload.ops[0]).toEqual({
+      type: "plan:set",
+      plan: {
+        fiveHour: null,
+        sevenDay: { usedPercent: 34, resetsAt: "2026-10-13T09:31:00.000Z" },
+      },
+    });
+  });
+
   it("moves both timestamps of an agent by exactly the offset", () => {
     const shifted = shiftScenario(scenario(), 5 * MINUTE);
 
@@ -70,7 +118,7 @@ describe("shiftScenario", () => {
   });
 
   it("moves agent:upsert ops and leaves the other ops alone", () => {
-    const issue = { number: 2, title: "Other", url: "u", labels: [] };
+    const issue = { number: 2, title: "Other", url: "u", labels: [], body: "" };
     const [entry] = shiftScenario(
       scenario([
         {

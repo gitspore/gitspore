@@ -1,6 +1,6 @@
 import { spawn, type IPty } from "node-pty";
 import { TerminalService } from "./terminal.service";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createFakeClaude } from "../../../test/fake-claude";
@@ -52,7 +52,7 @@ describe("TerminalService with a real PTY", () => {
     });
   });
 
-  // kill() from #53 doesn't exist yet, so the test kills its own shells.
+  // Whatever a test left running; most tests never end their shell.
   afterEach(async () => {
     for (const { pty, running } of ptys) {
       if (running) {
@@ -297,6 +297,98 @@ describe("TerminalService with a real PTY", () => {
       service.kill("agent-1");
 
       await expect(tab.exited).resolves.toEqual(expect.any(Number));
+    }, 60_000);
+
+    it("stops all terminals on shutdown within 10 s", async () => {
+      process.env.FAKE_CLAUDE_STAY = "1";
+      process.env.FAKE_CLAUDE_OUTPUT = "still-running";
+      const agents = ["agent-1", "agent-2", "agent-3"];
+      const tabs = agents.map((agentId) => {
+        service.spawn({
+          agentId,
+          cwd: process.cwd(),
+          mode: "exec",
+          command: fake,
+          args: [],
+        });
+        return attachTab(agentId);
+      });
+      await Promise.all(tabs.map((tab) => tab.waitForOutput("still-running")));
+
+      const started = Date.now();
+      await service.onApplicationShutdown();
+
+      expect(Date.now() - started).toBeLessThan(10_000);
+      expect(ptys.every(({ running }) => !running)).toBe(true);
+    }, 60_000);
+  });
+
+  // What an agent leaves when it starts a dev server (#53): a program with
+  // a child, and one that opened its own process group (detached).
+  describe("process tree", () => {
+    let dir: string;
+    let children: number[];
+
+    beforeEach(() => {
+      dir = mkdtempSync(join(tmpdir(), "gitspore pty tree"));
+      children = [];
+    });
+
+    afterEach(() => {
+      for (const pid of children) {
+        try {
+          process.kill(pid, "SIGKILL");
+        } catch {
+          // Gone, as the test expects.
+        }
+      }
+      rmSync(dir, { recursive: true, force: true });
+    });
+
+    const isAlive = (pid: number) => {
+      try {
+        process.kill(pid, 0);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    it("kills the program's children too, also a detached one", async () => {
+      const script = join(dir, "parent.js");
+      const pidsFile = join(dir, "pids.json");
+      writeFileSync(
+        script,
+        [
+          'const { spawn } = require("node:child_process");',
+          'const { writeFileSync } = require("node:fs");',
+          'const stay = ["-e", "setInterval(() => {}, 1000)"];',
+          'const child = spawn(process.execPath, stay, { stdio: "ignore" });',
+          "const detached = spawn(process.execPath, stay, {",
+          '  stdio: "ignore",',
+          "  detached: true,",
+          "});",
+          "writeFileSync(process.argv[2], JSON.stringify([child.pid, detached.pid]));",
+          'console.log("children-started");',
+          "setInterval(() => {}, 1000);",
+        ].join("\n"),
+      );
+      service.spawn({
+        agentId: "agent-1",
+        cwd: process.cwd(),
+        mode: "exec",
+        command: process.execPath,
+        args: [script, pidsFile],
+      });
+      const tab = attachTab("agent-1");
+      await tab.waitForOutput("children-started");
+      children = JSON.parse(readFileSync(pidsFile, "utf8")) as number[];
+      expect(children.every(isAlive)).toBe(true);
+
+      await service.kill("agent-1");
+      await tab.exited;
+
+      expect(children.filter(isAlive)).toEqual([]);
     }, 60_000);
   });
 });

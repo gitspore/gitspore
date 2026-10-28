@@ -3,8 +3,6 @@
 import { useRef, useState } from "react";
 import { useGreenhouseStore } from "@/lib/client/GreenhouseClientProvider";
 import { mainGrid, shellGrid } from "@/lib/layout";
-// Stays mock until the daemon sends usage (#42)
-import { mockUsage } from "@/lib/mock";
 import { needsInputCount, showSetup } from "@/lib/store/selectors";
 import { useHotbarKeys } from "@/lib/hotbarKeys";
 import { useSceneEnabled } from "@/lib/scene";
@@ -61,7 +59,7 @@ export function AppShell() {
       >
         {/* Header */}
         <header className="pointer-events-auto rounded-xl bg-panel text-ink [grid-area:topbar]">
-          <TopBar usage={mockUsage} />
+          <TopBar />
         </header>
 
         {/* Rail */}

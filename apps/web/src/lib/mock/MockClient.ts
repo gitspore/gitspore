@@ -16,6 +16,7 @@ import { ScenarioPlayer } from "./ScenarioPlayer";
 import { Scenario, ScenarioEntry } from "./scenario";
 import { Clock, realClock, TimerHandle } from "./clock";
 import { ConnectionStatusSource } from "../client/ConnectionStatusSource";
+import { mockBranchGraph } from "./mockBranchGraph";
 
 type AnyListener = ServerToClientEvents[keyof ServerToClientEvents];
 
@@ -46,7 +47,7 @@ type Handlers = {
  *   moment of connect(): an agent that waited 20 minutes before the anchor has
  *   waited 20 minutes when the UI connects.
  * - Commands are answered locally, see `handlers`: `agent:dispatch`,
- *   `agent:stop`, `repo:check`, `repo:choose`, `terminal:open`, `terminal:input`, `terminal:close`,
+ *   `agent:stop`, `repo:check`, `repo:choose`, `branches:graph`, `terminal:open`, `terminal:input`, `terminal:close`,
  *   `state:request` and `issues:refresh`. Every other command
  *   (`terminal:resize`) does nothing.
  * - Versions follow the contract: a patch is numbered after the one before.
@@ -77,6 +78,8 @@ export class MockClient implements GreenhouseClient {
     issues: [],
     version: 0,
     repo: null,
+    plan: null,
+    repoTokens: null,
   };
   // How far the mock's own patches have pushed the scenario's version
   // numbers. A scenario patch is sent as `version + versionOffset`.
@@ -120,6 +123,7 @@ export class MockClient implements GreenhouseClient {
         startedAt: now,
         pullRequest: null,
         statusReason: null,
+        usage: null,
       };
       ack({ agentId });
       this.sendPatch([{ type: "agent:upsert", agent }]);
@@ -263,6 +267,16 @@ export class MockClient implements GreenhouseClient {
         agents: [],
       };
       this.sendSnapshot();
+    },
+
+    "branches:graph": (_payload, ack) => {
+      ack({
+        graph: mockBranchGraph(
+          this.state.agents,
+          this.state.repo?.baseBranch ?? "main",
+          this.player.virtualNow(),
+        ),
+      });
     },
 
     // Acks with a session id for a known agent (from the scenario or from a

@@ -9,7 +9,7 @@ import { GitHubService } from "../github/github.service";
 import { RepoService } from "../repo/repo.service";
 import { StateStore } from "../state/state.store";
 import { GatewayModule } from "./gateway.module";
-import { SessionAuth } from "./session-auth.service";
+import { SESSION_TOKEN, SessionAuth } from "./session-auth.service";
 
 const ORIGIN = "http://localhost:3000";
 
@@ -69,6 +69,9 @@ describe("StateGateway", () => {
       // No repo: the worktree service runs no git either.
       .overrideProvider(RepoConfig)
       .useValue(new RepoConfig(null, "main"))
+      // Never the real token file in the home folder.
+      .overrideProvider(SESSION_TOKEN)
+      .useValue("a".repeat(64))
       .compile();
     app = moduleRef.createNestApplication();
     await app.listen(0, "127.0.0.1");
@@ -245,6 +248,19 @@ describe("StateGateway", () => {
         problems: [expect.objectContaining({ code: "switch_failed" })],
       });
       logError.mockRestore();
+    });
+  });
+
+  describe("branches", () => {
+    it("answers branches:graph with repo_unavailable while no repo is chosen", async () => {
+      const socket = connect({ token: auth.token, origin: ORIGIN });
+      await expect(outcome(socket)).resolves.toBe("snapshot");
+
+      const ack = await socket.emitWithAck("branches:graph", {});
+
+      expect(ack).toEqual({
+        error: expect.objectContaining({ code: "repo_unavailable" }),
+      });
     });
   });
 });

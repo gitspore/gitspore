@@ -22,6 +22,7 @@ function issue(number: number, overrides: Partial<Issue> = {}): Issue {
     title: `Issue ${number}`,
     url: `https://github.com/owner/repo/issues/${number}`,
     labels: [],
+    body: "",
     ...overrides,
   };
 }
@@ -38,6 +39,7 @@ function agent(branch: string, overrides: Partial<Agent> = {}): Agent {
     startedAt: "2026-10-15T10:00:00.000Z",
     pullRequest: null,
     statusReason: null,
+    usage: null,
     ...overrides,
   };
 }

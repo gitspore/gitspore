@@ -5,7 +5,8 @@ import { Minus, MoonIcon, SunIcon } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 // import { ThemeToggle } from "@/components/shell/ThemeToggle";
-import { UsageMeter, type ContextUsage } from "@/components/shell/UsageMeter";
+import { UsageMeter } from "@/components/shell/UsageMeter";
+import { contextTip } from "@/lib/usageTip";
 import { agentName } from "@/lib/agentName";
 import { STATUS_COLOUR, STATUS_ICON, STATUS_WORD } from "@/lib/status";
 import { cn } from "@/lib/utils";
@@ -24,11 +25,7 @@ const TerminalPanel = dynamic(
 type WindowProps = {
   agent: Agent;
   issueTitle: string;
-  // Missing until the daemon sends it (#42): the meter stays hidden
-  context?: ContextUsage;
-  // The window the user works in: full outline, and its terminal takes the keys
   focused: boolean;
-  // Focus moved into the window, e.g. a click into its terminal
   onFocus: () => void;
   onMinimise: () => void;
 };
@@ -36,7 +33,6 @@ type WindowProps = {
 export function Window({
   agent,
   issueTitle,
-  context,
   focused,
   onFocus,
   onMinimise,
@@ -50,6 +46,9 @@ export function Window({
   );
   const theme = terminalTheme ?? (resolvedTheme === "dark" ? "dark" : "light");
   const name = agentName(agent, issueTitle);
+
+  const usage = agent.usage;
+  const tokens = usage?.tokens.total ?? 0;
 
   // The title, the header's gaps and the padding have nothing focusable, so
   // a click there would leave the keys where they were (or drop them on the
@@ -92,11 +91,12 @@ export function Window({
           <span className="text-muted-foreground"> · {agent.branch}</span>
         </p>
 
-        {context && (
+        {usage && usage.contextPercent !== null && (
           <UsageMeter
             label="context"
-            percent={context.percent}
-            tokens={context.tokens}
+            percent={usage.contextPercent}
+            tokens={tokens > 0 ? tokens : undefined}
+            tip={contextTip(usage)}
           />
         )}
 

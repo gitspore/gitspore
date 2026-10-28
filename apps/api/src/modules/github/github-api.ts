@@ -14,7 +14,7 @@ type GitHubIssue = Awaited<
 // (getIssue) have them.
 type GitHubIssueFields = Pick<
   GitHubIssue,
-  "number" | "title" | "html_url" | "labels"
+  "number" | "title" | "html_url" | "labels" | "body"
 >;
 
 // GitHub sends at most 100 entries per answer; more need page 2, 3, ...
@@ -26,9 +26,6 @@ const PER_PAGE = 100;
 // answers 304 Not Modified (no body, doesn't count against the rate limit) as
 // long as the answer is the same.
 type CachedAnswer = { etag: string; data: unknown };
-
-/** An issue with its text, for starting an agent on it. */
-export type IssueDetails = Issue & { body: string };
 
 /**
  * The only place that talks to GitHub's REST API. Knows nothing about Nest,
@@ -149,7 +146,7 @@ export class GitHubApi {
    * Throws a GitHubError with `issue_not_found` when the number is missing,
    * closed or a pull request; other failures as in openIssues.
    */
-  async getIssue(issueNumber: number): Promise<IssueDetails> {
+  async getIssue(issueNumber: number): Promise<Issue> {
     let raw;
     try {
       const response = await this.octokit.rest.issues.get({
@@ -183,7 +180,7 @@ export class GitHubApi {
       );
     }
 
-    return { ...toIssue(raw), body: raw.body ?? "" };
+    return toIssue(raw);
   }
 
   // Asks GitHub with the ETag of the last answer to the same question (`key`)
@@ -235,6 +232,8 @@ function toIssue(raw: GitHubIssueFields): Issue {
     labels: raw.labels
       .map((label) => (typeof label === "string" ? label : label.name))
       .filter((name): name is string => Boolean(name)),
+    // null when the issue was opened without text.
+    body: raw.body ?? "",
   };
 }
 

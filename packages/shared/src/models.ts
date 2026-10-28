@@ -23,6 +23,45 @@ export type IsoTimestamp = string;
 export type AgentId = string;
 export type SessionId = string;
 
+/**
+ * One of the plan's usage limits (Claude Pro and Max), from Claude Code's
+ * statusline (ADR 0009).
+ */
+export type UsageLimit = {
+  /** 0 to 100, may have decimals. At 100 every agent waits for the reset. */
+  usedPercent: number;
+  resetsAt: IsoTimestamp;
+};
+
+/**
+ * The plan's limits. They apply to the whole Claude account, so sessions
+ * outside gitspore count too. A window is `null` while Claude Code doesn't
+ * report it: after its reset, or before the first answer.
+ */
+export type PlanUsage = {
+  fiveHour: UsageLimit | null;
+  sevenDay: UsageLimit | null;
+};
+
+/** Tokens of one agent, summed over its session log. */
+export type TokenCounts = {
+  input: number;
+  output: number;
+  cacheRead: number;
+  cacheWrite: number;
+  /** Always the sum of the four above. */
+  total: number;
+};
+
+/** One agent's usage, from its statusline and its session log. */
+export type AgentUsage = {
+  /** How full the context is, 0 to 100. `null` early in a session. */
+  contextPercent: number | null;
+  /** The model's display name, e.g. "Opus". `null` if not reported. */
+  model: string | null;
+  tokens: TokenCounts;
+};
+
 /** The pull request of an agent's branch. If there are several, the newest. */
 export type PullRequest = {
   number: number;
@@ -103,6 +142,11 @@ export type Agent = {
    * reason belongs to its status: the next status change clears it.
    */
   statusReason: StatusReason | null;
+  /**
+   * Tokens and context, once Claude Code has reported them (#42). `null`
+   * until then, and for agents without a statusline (the overview agent).
+   */
+  usage: AgentUsage | null;
 };
 
 /** An open GitHub issue in the repo. */
@@ -113,6 +157,8 @@ export type Issue = {
   url: string;
   /** Label names. */
   labels: string[];
+  /** The issue's text as GitHub Markdown; empty when it has none. */
+  body: string;
 };
 
 /**
@@ -122,6 +168,24 @@ export type Issue = {
 export type TerminalSession = {
   id: SessionId;
   agentId: AgentId;
+};
+
+export type GraphCommit = {
+  sha: string;
+  parents: string[];
+  author: string;
+  date: IsoTimestamp;
+  subject: string;
+};
+
+export type BranchHead = {
+  branch: string;
+  sha: string;
+};
+
+export type BranchGraph = {
+  commits: GraphCommit[];
+  heads: BranchHead[];
 };
 
 /** The repository gitspore works in. */
@@ -145,4 +209,17 @@ export type GreenhouseState = {
   agents: Agent[];
   /** Open issues, with or without an agent. */
   issues: Issue[];
+  /**
+   * The plan's limits, from the newest statusline of any agent. `null` until
+   * one reported them, and with an API key. Kept across a repo switch: the
+   * limits belong to the account, not to the repo.
+   */
+  plan: PlanUsage | null;
+  /**
+   * The repo's token total: every request of its agents once, also of agents
+   * that are gone and of sessions before the daemon's start. The daemon keeps
+   * it, so it outlives Claude Code deleting its logs. `null` without a repo;
+   * a repo switch resets it, and the daemon sends the new repo's.
+   */
+  repoTokens: number | null;
 };
