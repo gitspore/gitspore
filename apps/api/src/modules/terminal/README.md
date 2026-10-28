@@ -7,6 +7,7 @@ Gives every agent a real terminal: a shell in a PTY (pseudo-terminal) that runs 
 | `terminal.service.ts` | `TerminalService`: one terminal per agent, sessions per tab, ownership, limits, exit                     |
 | `agent-terminal.ts`   | `AgentTerminal`: one agent's PTY, scrollback, batcher and attached tabs; `startInShell`, `startDirectly` |
 | `claude-locator.ts`   | `ClaudeLocator`: finds Claude Code once at startup and caches the path                                   |
+| `process-tree.ts`     | `killTree(pid)`: ends a process and everything it started                                                |
 | `ring-buffer.ts`      | `RingBuffer`: the last 256 KB of output, never cut inside a UTF-8 character                              |
 | `output-batcher.ts`   | `OutputBatcher`: collects output and sends it every 16 ms or at 16 KB                                    |
 | `terminal-error.ts`   | `TerminalError` with a `code` (see [Errors](#errors))                                                    |
@@ -30,7 +31,8 @@ other browser tab            ─┼─ Socket.io ─ gateway                    
 spawn({ agentId, cwd, command, args, mode? }): void
 attach(agentId, { ownerId, onData, onExit }): { sessionId, scrollback }
 write(sessionId, ownerId, data): void
-kill(agentId): void
+kill(agentId): Promise<void>
+stop(agentId, timeoutMs?): Promise<boolean>
 resize(sessionId, ownerId, cols, rows): void
 detach(sessionId, ownerId): void
 detachOwner(ownerId): void
@@ -47,7 +49,11 @@ revive(agentId): Promise<void>
 
 **`detachOwner`** detaches every session of one owner. A closed tab sends no `terminal:close`, so **the gateway must call it when a socket disconnects**. Otherwise the terminal keeps sending output to a socket that no longer exists.
 
-**`kill`** ends an agent's process with `pty.kill()`. A kill on a process that has just exited is ignored. Process trees stay in #53.
+**`kill`** ends an agent's process **and everything it started** (dev servers, test watchers, MCP servers), see [Process tree](#process-tree). It throws `agent_not_found` at once for an unknown agent and resolves once the kill is done; `onExited` follows. A kill on a process that has just exited is ignored, and a second kill while the first runs waits for it.
+
+**`stop`** kills and resolves with `true` once the process has exited, after the `onExited` listeners, or with `false` after `timeoutMs` (10 s). The repo switch uses it.
+
+**Shutdown.** `main.ts` calls `enableShutdownHooks()`, so on Ctrl+C or `SIGTERM` Nest calls `onApplicationShutdown`: it stops every terminal in parallel and waits at most 10 s in all. `app.close()` in tests does the same, so a `FakePty` behind a Nest app needs `exitingOnKill()`.
 
 **`onExited`** is for #16: it hears when an agent's shell (or, in exec mode, its program) ended, with the exit code.
 
@@ -103,6 +109,15 @@ node-pty: shell exited
 
 `AgentTerminal` never knows its agent id. The arrow function remembers it (a closure).
 
+## Process tree
+
+`pty.kill()` ends only the one process in the PTY. What Claude Code started would live on: a dev server an agent started kept its worktree busy, so the merge cleanup couldn't remove it (#156), and kept its port. So `kill()` first runs `killTree(pid)`, then `pty.kill()`:
+
+- **Windows:** `taskkill /T /F /PID <pid>`. `/T` follows the parent chain, so it has to run while the process still lives. Once it is gone, its children are orphans, and `/T` doesn't find them any more.
+- **macOS/Linux:** node-pty starts the process as a session leader, so its process group holds what it starts. Children that open their own session (`detached`) are found in the process table (`ps -A -o pid=,ppid=`) while their parent lives. `SIGTERM` goes to the group and to every pid found, and `SIGKILL` after 2 s to those still there.
+
+Not caught: a process that cut itself loose from its parent before the kill, for example with a double fork. `killTree` ignores pids 0 and 1, so a `FakePty` (pid 0) never signals anything.
+
 ## Errors
 
 All refusals are a `TerminalError` with a `code`.
@@ -128,7 +143,7 @@ The last three are mistakes on the daemon's side (#16), not something a tab can 
 
 ## Not handled here
 
-- Killing an agent's whole process tree (Claude Code starts its own child processes, such as MCP servers). Ending the daemon cleanly with all terminals. PowerShell's UTF-8 output. All in #53.
+- PowerShell's UTF-8 output on Windows: #158.
 - Starting Claude Code with the issue prompt, and agent status: #16.
 - The `terminal:*` events: `TerminalGateway` in `apps/api/src/modules/gateway/terminal.gateway.ts`. It acks before it sends the scrollback, maps `TerminalError` codes as in [Errors](#errors) (and logs anything that isn't a `TerminalError`) and calls `detachOwner` on disconnect.
 - The browser terminal and fitting it to the window: #11.
@@ -147,5 +162,6 @@ Your own terminal plays one browser tab: keys go to `write`, the window size to 
 Three layers, all run with `npm run test:api`:
 
 - `ring-buffer.spec.ts`, `output-batcher.spec.ts`: the helpers, with Jest's fake timers.
-- `agent-terminal.spec.ts`, `terminal.service.spec.ts`: the logic, with `FakePty` (`apps/api/test/fake-pty.ts`) instead of a real PTY.
-- `terminal.pty.spec.ts`: real shells through `TerminalService`, on Ubuntu, macOS and Windows in CI. A command comes back, a resize reaches the shell, colour codes and UTF-8 arrive unchanged (skipped on Windows until PowerShell outputs UTF-8), 10,000 lines arrive in batches, a detached tab doesn't stop the shell, and `exit` makes the service forget the terminal. Each test kills its leftover shells in `afterEach`.
+- `process-tree.spec.ts`: reading `ps` output, finding descendants, never signalling pid 0 or 1.
+- `agent-terminal.spec.ts`, `terminal.service.spec.ts`: the logic, with `FakePty` (`apps/api/test/fake-pty.ts`) instead of a real PTY. The tree is killed before the PTY, and the shutdown stops all terminals and gives up after 10 s.
+- `terminal.pty.spec.ts`: real shells through `TerminalService`, on Ubuntu, macOS and Windows in CI. A command comes back, a resize reaches the shell, colour codes and UTF-8 arrive unchanged (skipped on Windows until PowerShell outputs UTF-8, #158), 10,000 lines arrive in batches, a detached tab doesn't stop the shell, and `exit` makes the service forget the terminal. `kill()` also ends a program's child and its detached child, and the shutdown ends three running programs within 10 s. Each test kills its leftover shells in `afterEach`.

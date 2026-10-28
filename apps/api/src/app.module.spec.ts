@@ -74,7 +74,7 @@ describe("AppModule", () => {
       .overrideProvider(START_OVERVIEW)
       .useValue(true)
       .overrideProvider(SPAWN_PTY)
-      .useValue(() => new FakePty())
+      .useValue(() => new FakePty().exitingOnKill())
       .overrideProvider(LOCATOR_DEPS)
       .useValue({
         env: { GITSPORE_CLAUDE_BIN: "/fake/claude" },

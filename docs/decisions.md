@@ -253,3 +253,11 @@ Gemessen mit PowerShell außerhalb von Jest:
 Für GS-03 zu klären: ob der PTY-Dienst `useConptyDll` nutzt, wie Sessions
 beim Herunterfahren des Daemons beendet werden, und ob eine neuere
 `node-pty`-Version das Verhalten behebt.
+
+Stand GS-53: Das Herunterfahren ist gelöst. `main.ts` ruft
+`enableShutdownHooks()` auf, `TerminalService.onApplicationShutdown` stoppt alle
+Terminals parallel, insgesamt höchstens 10 s. `kill()` beendet vorher den
+ganzen Prozessbaum (`process-tree.ts`): unter Windows `taskkill /T /F`, solange
+der Prozess noch lebt, sonst Prozessgruppe plus Prozesstabelle, erst `SIGTERM`,
+nach 2 s `SIGKILL`. Danach folgt weiterhin `pty.kill()`, das ConPTY braucht.
+Offen bleiben `useConptyDll` und eine neuere `node-pty`-Version.

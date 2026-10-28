@@ -413,13 +413,53 @@ describe("AgentTerminal", () => {
 });
 
 describe("kill", () => {
-  it("kills the PTY", () => {
+  it("kills the PTY", async () => {
     const pty = new FakePty();
     const terminal = new AgentTerminal(() => pty, OPTIONS);
 
-    terminal.kill();
+    await terminal.kill();
 
     expect(pty.kill).toHaveBeenCalledTimes(1);
+  });
+
+  it("ends the process tree first, then the PTY", async () => {
+    const pty = new FakePty();
+    const killTree = jest.fn(async () => {
+      expect(pty.kill).not.toHaveBeenCalled();
+    });
+    const terminal = new AgentTerminal(() => pty, {
+      ...OPTIONS,
+      platform: "win32",
+      killTree,
+    });
+
+    await terminal.kill();
+
+    expect(killTree).toHaveBeenCalledWith(pty.pid, "win32");
+    expect(pty.kill).toHaveBeenCalledTimes(1);
+  });
+
+  it("ends the tree once when kill comes again before it is done", async () => {
+    const pty = new FakePty();
+    const killTree = jest.fn(async () => {});
+    const terminal = new AgentTerminal(() => pty, { ...OPTIONS, killTree });
+
+    await Promise.all([terminal.kill(), terminal.kill()]);
+
+    expect(killTree).toHaveBeenCalledTimes(1);
+    expect(pty.kill).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves the PTY alone when the process exited during the tree kill", async () => {
+    const pty = new FakePty();
+    const terminal = new AgentTerminal(() => pty, {
+      ...OPTIONS,
+      killTree: async () => pty.exit(0),
+    });
+
+    await terminal.kill();
+
+    expect(pty.kill).not.toHaveBeenCalled();
   });
 
   it("does nothing once the PTY has exited", () => {
@@ -435,13 +475,13 @@ describe("kill", () => {
     expect(pty.kill).not.toHaveBeenCalled();
   });
 
-  it("ignores a kill the PTY refuses because the process just exited", () => {
+  it("ignores a kill the PTY refuses because the process just exited", async () => {
     const pty = new FakePty();
     const terminal = new AgentTerminal(() => pty, OPTIONS);
     pty.kill.mockImplementation(() => {
       throw new Error("Process already exited");
     });
 
-    expect(() => terminal.kill()).not.toThrow();
+    await expect(terminal.kill()).resolves.toBeUndefined();
   });
 });

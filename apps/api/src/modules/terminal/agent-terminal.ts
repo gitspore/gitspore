@@ -4,8 +4,12 @@ import { TerminalError } from "./terminal-error";
 import type { SessionId } from "@gitspore/shared";
 import { OutputBatcher } from "./output-batcher";
 import { RingBuffer } from "./ring-buffer";
+import { killTree } from "./process-tree";
 
-export type Pty = Pick<IPty, "onData" | "onExit" | "write" | "resize" | "kill">;
+export type Pty = Pick<
+  IPty,
+  "pid" | "onData" | "onExit" | "write" | "resize" | "kill"
+>;
 export type Viewer = {
   onData: (chunk: string) => void;
   onExit: (exitCode: number) => void;
@@ -24,6 +28,8 @@ export type AgentTerminalOptions = {
   // Only tests set this, to run the Windows branch on any OS.
   platform?: NodeJS.Platform;
   mode?: "shell" | "exec";
+  // Only tests set this, to see kill() without ending real processes.
+  killTree?: typeof killTree;
 };
 
 const TERMINAL_NAME = "xterm-256color";
@@ -124,7 +130,9 @@ export class AgentTerminal {
   private cols = DEFAULT_COLS;
   private rows = DEFAULT_ROWS;
   private exited = false;
+  private killing?: Promise<void>;
   private readonly platform: NodeJS.Platform;
+  private readonly killTree: typeof killTree;
 
   constructor(
     spawnPty: SpawnPty,
@@ -132,6 +140,7 @@ export class AgentTerminal {
     private readonly onExit?: (exitCode: number) => void,
   ) {
     this.platform = options.platform ?? process.platform;
+    this.killTree = options.killTree ?? killTree;
     this.pty =
       options.mode === "exec"
         ? startDirectly(spawnPty, options)
@@ -165,15 +174,17 @@ export class AgentTerminal {
     this.resizePty(cols, rows);
   }
 
-  kill(): void {
+  // Ends the process and everything it started (#53). The tree first, while
+  // the parent chain still leads from the process to its children, then the
+  // PTY. Resolves once both are done; onExit may come a moment later.
+  kill(): Promise<void> {
     if (this.exited) {
-      return;
+      return Promise.resolve();
     }
-    try {
-      this.pty.kill();
-    } catch {
-      // The process has just exited on its own; onExit follows.
-    }
+    this.killing ??= this.killTree(this.pty.pid, this.platform).then(() => {
+      if (!this.exited) this.release();
+    });
+    return this.killing;
   }
 
   private broadcast(chunk: string): void {
@@ -215,7 +226,15 @@ export class AgentTerminal {
     // ConPTY (win) keeps its pipes open after the shell exits, until kill()
     // releases them (docs/decisions.md, "Offen für GS-03").
     if (this.platform === "win32") {
+      this.release();
+    }
+  }
+
+  private release(): void {
+    try {
       this.pty.kill();
+    } catch {
+      // The process has just exited on its own; onExit follows.
     }
   }
 }
