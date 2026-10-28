@@ -2,12 +2,12 @@
 
 import type { Agent } from "@gitspore/shared";
 
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useGreenhouseStore } from "@/lib/client/GreenhouseClientProvider";
 import { mainGrid, shellGrid } from "@/lib/layout";
 import { issueTitle, needsInputCount, showSetup } from "@/lib/store/selectors";
-import { useHotbarKeys } from "@/lib/hotbarKeys";
+import { type HotbarKey, useHotbarKeys } from "@/lib/hotbarKeys";
 import { useSceneEnabled } from "@/lib/scene";
 import { Scene } from "../Scene";
 import { ConnectScreen } from "../attention/ConnectScreen";
@@ -30,9 +30,18 @@ export function AppShell() {
   const focusedAgentId = useGreenhouseStore((s) => s.focusedAgentId);
   // No repo chosen yet, or the user switches repos (#58)
   const setupVisible = useGreenhouseStore(showSetup);
-  // Keys 0–6 press the hotbar slots (#72), not behind the setup screen
+  // Keys 0–6 press the hotbar slots (#72), F toggles focus mode like the rail
+  // button (#169); not behind the setup screen
   const pressSlot = useGreenhouseStore((s) => s.pressSlot);
-  useHotbarKeys(pressSlot, !setupVisible);
+  const toggleMode = useCallback(
+    () => setMode(layout.mode === "scene" ? "focus" : "scene"),
+    [layout.mode, setMode],
+  );
+  const onKey = useCallback(
+    (key: HotbarKey) => (key === "focus" ? toggleMode() : pressSlot(key)),
+    [toggleMode, pressSlot],
+  );
+  useHotbarKeys(onKey, !setupVisible);
 
   // No scene with ?scene=off or without WebGL; the interface works the same (#18)
   const showScene = useSceneEnabled();
@@ -83,9 +92,7 @@ export function AppShell() {
               sidePanel={layout.sidePanel}
               onSidePanelChange={setSidePanel}
               mode={layout.mode}
-              onToggleMode={() =>
-                setMode(layout.mode === "scene" ? "focus" : "scene")
-              }
+              onToggleMode={toggleMode}
               waitingCount={waitingCount}
             />
           </div>
