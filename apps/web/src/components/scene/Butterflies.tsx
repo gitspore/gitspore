@@ -13,6 +13,7 @@ import { perches, pickPerch, pointer, seeded } from "./life";
 // a bloom most of all, or a flower in the grass), lands, rides the plant
 // as it sways, opens and closes its wings, and flies on. A moth circles a
 // string light's bulb instead and never lands. Both flee from the pointer.
+// One rare butterfly has rainbow wings; it flies like the others.
 // Everything moves in useFrame on plain objects; nothing re-renders
 
 // Where they may fly: x, y and z from–to
@@ -33,6 +34,8 @@ const SHY = 0.7;
 const FLEE_SECONDS = 1.4;
 
 export type FlierKind = "butterfly" | "moth";
+// One colour for a wing, or several for a gradient from hinge to tip
+export type WingColor = string | string[];
 
 // One flier's state:
 // - perch: the perch it heads for or sits on (null: wandering to goal)
@@ -54,8 +57,9 @@ type Flier = {
 // A wing painted on a small canvas: the hinge on the left edge, the tip on
 // the right, the canvas's top is the wing's back. A butterfly's has a
 // big forewing and a round hindwing, a dark rim and white dots; a moth's
-// is one soft pale triangle with darker specks
-function wingTexture(kind: FlierKind, color: string, edge: string) {
+// is one soft pale triangle with darker specks. Several colours are
+// painted as a gradient from the hinge to the tip (the rainbow wing)
+function wingTexture(kind: FlierKind, color: WingColor, edge: string) {
   const canvas = document.createElement("canvas");
   canvas.width = 128;
   canvas.height = 128;
@@ -76,7 +80,15 @@ function wingTexture(kind: FlierKind, color: string, edge: string) {
   }
   outline.closePath();
 
-  paint.fillStyle = color;
+  if (typeof color === "string") {
+    paint.fillStyle = color;
+  } else {
+    const rainbow = paint.createLinearGradient(0, 0, 128, 0);
+    color.forEach((stop, index) =>
+      rainbow.addColorStop(index / Math.max(color.length - 1, 1), stop),
+    );
+    paint.fillStyle = rainbow;
+  }
   paint.fill(outline);
   paint.save();
   paint.clip(outline);
@@ -130,7 +142,8 @@ const want = new THREE.Vector3();
 const nearest = new THREE.Vector3();
 
 // The fliers of one kind, each with its own colour (one wing texture per
-// colour). bulbs: where the moths circle (the string lights)
+// colour, a rainbow one included). bulbs: where the moths circle (the
+// string lights)
 export function Butterflies({
   kind,
   colors,
@@ -139,7 +152,7 @@ export function Butterflies({
   reducedMotion,
 }: {
   kind: FlierKind;
-  colors: string[];
+  colors: WingColor[];
   edge: string;
   bulbs: THREE.Vector3[];
   reducedMotion: boolean;
