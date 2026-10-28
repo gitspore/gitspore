@@ -11,21 +11,22 @@ import {
   focusedAgent,
   issueTitle,
   needsInputCount,
+  selectAgents,
+  selectIssues,
+  selectPlan,
 } from "@/lib/store/selectors";
+import { agentTokens, limitTip } from "@/lib/usageTip";
 import { ConnectionStatus, type Connection } from "./ConnectionStatus";
 import { Logo } from "./Logo";
 import { SettingsButton } from "./SettingsButton";
 import { ThemeToggle } from "./ThemeToggle";
 import { WaitBadge } from "./WaitBadge";
 import { HelpPopover } from "./HelpPopover";
-import { UsageMeter, type PlanUsage } from "./UsageMeter";
+import { UsageMeter } from "./UsageMeter";
 
 // The bar along the top. Agents, selection and connection come from the store.
 
 type TopBarProps = {
-  // Plan limits; a missing window hides its meter
-  usage?: PlanUsage;
-  // Temporary controls until the rail and the hotbar exist
   children?: ReactNode;
 };
 
@@ -35,7 +36,7 @@ const CONNECTION: Record<ClientStatus["kind"], Connection> = {
   offline: "offline",
 };
 
-export function TopBar({ usage, children }: TopBarProps) {
+export function TopBar({ children }: TopBarProps) {
   const waiting = useGreenhouseStore(needsInputCount);
   // The agent whose window the user works in (#72)
   const focused = useGreenhouseStore(focusedAgent);
@@ -46,6 +47,10 @@ export function TopBar({ usage, children }: TopBarProps) {
   const isMock = useGreenhouseStore((s) => s.mode === "mock");
   // The mock client knows which scenario it plays
   const mockScenario = useMockClient()?.scenarioName;
+  const plan = useGreenhouseStore(selectPlan);
+  const agents = useGreenhouseStore(selectAgents);
+  const issues = useGreenhouseStore(selectIssues);
+  const tokens = agentTokens(agents, issues);
 
   return (
     <div className="flex h-full items-center gap-4 px-4">
@@ -70,8 +75,22 @@ export function TopBar({ usage, children }: TopBarProps) {
           Mock: {mockScenario}
         </span>
       )}
-      {usage?.fiveHour && <UsageMeter label="5 h" {...usage.fiveHour} />}
-      {usage?.week && <UsageMeter label="week" {...usage.week} />}
+      {plan?.fiveHour && (
+        <UsageMeter
+          label="5 h"
+          percent={plan.fiveHour.usedPercent}
+          resetsAt={plan.fiveHour.resetsAt}
+          tip={limitTip("fiveHour", plan.fiveHour, tokens)}
+        />
+      )}
+      {plan?.sevenDay && (
+        <UsageMeter
+          label="week"
+          percent={plan.sevenDay.usedPercent}
+          resetsAt={plan.sevenDay.resetsAt}
+          tip={limitTip("sevenDay", plan.sevenDay, tokens)}
+        />
+      )}
       <ConnectionStatus status={connection} />
       <HelpPopover />
       <SettingsButton />

@@ -20,6 +20,7 @@ const agent = (overrides: Partial<Agent>): Agent => ({
   startedAt: "2026-10-21T10:00:00.000Z",
   pullRequest: null,
   statusReason: null,
+  usage: null,
   ...overrides,
 });
 
@@ -28,6 +29,8 @@ const state = (agents: Agent[] = []): GreenhouseState => ({
   repo: { path: "/repo", baseBranch: "main", github: "on" },
   agents,
   issues: [issue(42), issue(43)],
+  plan: null,
+  repoTokens: null,
 });
 
 // The code of the error an action throws.

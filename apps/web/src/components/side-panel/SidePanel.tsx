@@ -20,7 +20,10 @@ import {
   openIssuesWithoutAgent,
   selectAgents,
   selectIssues,
+  selectRepoTokens,
 } from "@/lib/store/selectors";
+import { UsageTip } from "@/components/shell/UsageTip";
+import { agentTokens, formatTokens, repoTip } from "@/lib/usageTip";
 import { AgentRow, FreeSlotRow } from "./AgentRow";
 import { BranchesTab } from "./BranchesTab";
 import { IssueRow } from "./IssueRow";
@@ -59,6 +62,8 @@ export function SidePanel({ tab, onTabChange, onClose }: SidePanelProps) {
   const [removeWorktree, setRemoveWorktree] = useState(false);
   // True once Stop was sent: the dialog waits for the agent:remove patch
   const [stopSent, setStopSent] = useState(false);
+
+  const repoTokens = useGreenhouseStore(selectRepoTokens);
 
   const planted = agents.filter((a) => a.slotIndex !== null).length;
   const active = agents.filter(
@@ -128,6 +133,26 @@ export function SidePanel({ tab, onTabChange, onClose }: SidePanelProps) {
                   {" "}
                   · {waiting} {waiting === 1 ? "needs" : "need"} you
                 </span>
+              )}
+              {/* The repo's total (#42), once something is counted */}
+              {repoTokens !== null && repoTokens > 0 && (
+                <>
+                  {" · "}
+                  <UsageTip
+                    content={repoTip(repoTokens, agentTokens(agents, issues))}
+                    trigger={
+                      <span
+                        tabIndex={0}
+                        className="rounded-md px-1 outline-none hover:bg-ink/20 focus-visible:ring-3 focus-visible:ring-ring/50"
+                      >
+                        <span className="text-mono-key font-mono tabular-nums">
+                          {formatTokens(repoTokens)}
+                        </span>{" "}
+                        tokens
+                      </span>
+                    }
+                  />
+                </>
               )}
             </p>
           </div>

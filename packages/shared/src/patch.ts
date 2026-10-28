@@ -55,6 +55,10 @@ function applyOp(state: GreenhouseState, op: PatchOp): GreenhouseState {
       return state.repo
         ? { ...state, repo: { ...state.repo, github: op.github } }
         : state;
+    case "plan:set":
+      return { ...state, plan: op.plan };
+    case "repoTokens:set":
+      return { ...state, repoTokens: op.repoTokens };
   }
 }
 

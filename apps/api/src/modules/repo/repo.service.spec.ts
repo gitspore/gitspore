@@ -26,6 +26,7 @@ function agent(id: string, slotIndex: number | null): Agent {
     startedAt: "2026-10-21T09:00:00.000Z",
     pullRequest: null,
     statusReason: null,
+    usage: null,
   };
 }
 

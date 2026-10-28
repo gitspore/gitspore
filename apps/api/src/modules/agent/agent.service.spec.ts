@@ -1018,6 +1018,7 @@ describe("AgentService.dispatch", () => {
             startedAt: "2026-10-21T10:00:00.000Z",
             pullRequest: null,
             statusReason: null,
+            usage: null,
           },
         },
       ]);
@@ -1143,6 +1144,20 @@ describe("AgentService.dispatch", () => {
       expect(written.hooks.PreToolUse[0].hooks[0]).toMatchObject({
         command: process.execPath,
         args: [expect.stringMatching(/hook-script\.mjs$/)],
+      });
+    });
+
+    it("writes settings.json with the statusline script as the statusline", async () => {
+      const written = JSON.parse(
+        await readFile(join(path(), ".gitspore", "settings.json"), "utf8"),
+      );
+
+      expect(written.statusLine).toEqual({
+        type: "command",
+        command: expect.stringMatching(
+          /^node '[^'\\]*statusline-script\.mjs'$/,
+        ),
+        padding: 0,
       });
     });
 

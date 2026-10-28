@@ -15,7 +15,7 @@ Someone running several agents on a Claude Pro or Max plan needs two answers: ho
 - The top bar shows the plan's 5-hour and weekly limits as two meters. From 80 % they turn amber; at 100 % they turn red, because all agents stop until the reset and that needs the user.
 - Each terminal window header shows how full its agent's context is and its token count. A hover shows input, output, cache read, cache write and the total.
 - No money amounts. With a Pro or Max plan the user doesn't pay per token, so `cost.total_cost_usd` (an API list price) would mislead.
-- The daemon starts each agent with a statusline command that writes the JSON to a file per session, and reads the token counts from the session logs.
+- The daemon starts each agent with a statusline command that posts the JSON to the daemon, the same way the hooks report the status, and reads the token counts from the session logs. A post needs no file watching and arrives within a second. The command still shows the user's own statusline, which `--settings` would otherwise replace.
 - The project's token total is a should-have. Claude Code deletes logs after 30 days by default, so it needs a running total kept by the daemon.
 
 Visual spec: "Usage" in [components.md](../design/components.md).
@@ -30,4 +30,6 @@ Visual spec: "Usage" in [components.md](../design/components.md).
 
 - The limits cover the whole Claude account, so sessions outside gitspore count too; the hover says so.
 - The plan limits exist only for Pro and Max. With an API key the top-bar meters stay hidden.
+- Claude Code reports the limits only after a session's first answer. So the daemon keeps the last known limits in `~/.gitspore/plan.json` and shows them from its start; they can be lower than the real ones until the next answer, if sessions outside gitspore used more meanwhile.
 - The statusline JSON and the session log format can change with Claude Code updates; the daemon should tolerate missing fields.
+- The statusline command runs in a shell (Git Bash or PowerShell on Windows), not like a hook with its arguments, so it calls `node` from the PATH.

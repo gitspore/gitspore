@@ -33,7 +33,7 @@ import { PROMPT, taskFile } from "./task-file";
 import { TerminalError } from "../terminal/terminal-error";
 import { AgentError, toServerError } from "./agent-error";
 import { parseHookPayload, statusFromHook } from "./hook-status";
-import { hookSettings } from "./hook-files";
+import { HOOK_SCRIPT, hookSettings, STATUSLINE_SCRIPT } from "./hook-files";
 import { reactToPullRequest } from "./pull-request-reaction";
 import { RepoService } from "../repo/repo.service";
 
@@ -61,9 +61,6 @@ const RESTARTED_REASON: StatusReason = {
     "worktree. The worktree and the branch are kept. Stop the agent to free " +
     "the slot; planting the issue again continues on its branch.",
 };
-
-// nest build copies it next to the compiled service (nest-cli.json assets).
-const HOOK_SCRIPT = join(__dirname, "hook-script.mjs");
 
 type Running = {
   worktreePath: string;
@@ -180,6 +177,7 @@ export class AgentService implements OnModuleInit {
           startedAt: now,
           pullRequest: null,
           statusReason: null,
+          usage: null,
         },
       },
     ]);
@@ -334,6 +332,7 @@ export class AgentService implements OnModuleInit {
             startedAt: now,
             pullRequest: null,
             statusReason: RESTARTED_REASON,
+            usage: null,
           },
         },
       ]);
@@ -479,18 +478,24 @@ export class AgentService implements OnModuleInit {
     entry.watchdog = undefined;
   }
 
-  // hook.json tells the hook script where to post and with which secret;
-  // settings.json tells Claude Code to run the script for every event.
+  // hook.json tells the hook and statusline scripts where to post and with
+  // which secret; settings.json tells Claude Code to run the hook script for
+  // every event and the statusline script after every answer.
   private async writeHookFiles(agentId: AgentId, path: string): Promise<void> {
     const hook = {
       url: this.hooks.url(),
       agentId,
       secret: this.hooks.issue(agentId),
     };
+    const settings = hookSettings(
+      process.execPath,
+      HOOK_SCRIPT,
+      STATUSLINE_SCRIPT,
+    );
     await writeFile(join(path, TASK_DIR, "hook.json"), JSON.stringify(hook));
     await writeFile(
       join(path, TASK_DIR, "settings.json"),
-      JSON.stringify(hookSettings(process.execPath, HOOK_SCRIPT), null, 2),
+      JSON.stringify(settings, null, 2),
     );
   }
 

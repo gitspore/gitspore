@@ -10,13 +10,14 @@ Turns an issue into a running agent and stops it again: `agent:dispatch` makes a
 | `agent-error.ts`           | `AgentError`, and `toServerError`, which turns every error into one of the contract         |
 | `task-file.ts`             | `PROMPT` (constant) and `taskFile(issue)`, the text of `.gitspore/task.md`                  |
 | `hook-status.ts`           | `parseHookPayload` and `statusFromHook`: hook event → status, pure                          |
-| `hook-files.ts`            | `hookSettings`, the content of `.gitspore/settings.json`                                    |
+| `hook-files.ts`            | `hookSettings`, the content of `.gitspore/settings.json`, and `statusLineCommand`           |
 | `pull-request-reaction.ts` | `reactToPullRequest`: a changed pull request → status or merge handling, pure               |
 | `hook-script.mjs`          | The script Claude Code runs per hook event; posts it to the daemon. Shipped as build asset  |
+| `statusline-script.mjs`    | Claude Code's statusline for the agent; posts its JSON to the daemon (#42). Build asset     |
 | `agent.module.ts`          | Provides `AgentService` and `AgentGateway`; imports State, GitHub, Terminal, Worktree, Hook |
 | `agent.e2e.spec.ts`        | Acceptance tests with real git, real PTYs, the fake claude and its hooks                    |
 
-The hook endpoint itself (`POST /hooks/:agentId`, secrets) is in `modules/hooks/`. It only checks and passes events on; what they mean is decided here.
+The hook endpoint itself (`POST /hooks/:agentId`, secrets) is in `modules/hooks/`. It only checks and passes events on; what they mean is decided here. The statusline goes to `POST /hooks/:agentId/statusline` with the same checks and secret, and on to `HookService.onStatusline`; `modules/usage/` reads it (#42).
 
 The gateway lives here and not in `GatewayModule`, so the gateway specs there don't start the worktree service. It is still guarded: every gateway on the port shares one Socket.io server, and the middleware in `StateGateway.afterInit` checks every connection.
 
@@ -38,7 +39,7 @@ async        locator.resolve → getIssue → fetch → leftoverFor
 4. **`getIssue`** fetches body and URL. An issue closed since the last poll gives `issue_not_found`.
 5. **Git:** `fetch` updates `origin/<base>`. `leftoverFor` looks for a branch an earlier agent left for the issue (see below). Without one, `create` starts the branch at `origin/<base>`, and still refuses a branch that exists locally or on origin (two dispatches at once). `ensureExcluded` keeps `.gitspore/` out of git, `publish` pushes the branch. The daemon never pulls; the user's checkout stays untouched.
 6. **Task file.** Issue number, title, URL, body and the instruction to put `Closes #<n>` into the pull request go into `<worktree>/.gitspore/task.md`. Issue text is user input from GitHub: it is only written to this file, never passed on a command line.
-7. **Hook files.** `HookService.issue` makes a secret for the agent. `hook.json` gets `{ url, agentId, secret }`, `settings.json` registers `hook-script.mjs` for every event `statusFromHook` reads (see below). Both are written before the spawn, because Claude runs `SessionStart` right away.
+7. **Hook files.** `HookService.issue` makes a secret for the agent. `hook.json` gets `{ url, agentId, secret }`, `settings.json` registers `hook-script.mjs` for every event `statusFromHook` reads (see below) and `statusline-script.mjs` as the statusline (see [Statusline](#statusline)). Both are written before the spawn, because Claude runs `SessionStart` right away.
 8. **Spawn** in exec mode, cwd the worktree: `claude --settings .gitspore/settings.json --session-id <uuid> "<PROMPT>"`. The settings path is relative and the prompt is constant and contains none of `& | < > ^ % "` (a test enforces it), because `claude.cmd` on Windows runs through `cmd.exe`. The session id is kept for a later `claude --resume`.
 9. **Still `starting`**, the watchdog starts, then the ack with the id. The first hook sets the status.
 
@@ -85,6 +86,15 @@ Claude Code runs `hook-script.mjs` for each event, with the daemon's own Node (`
 - The same status twice sends nothing; a change sets `statusSince` and goes out as `agent:upsert`.
 - `Stop` asks GitHub for the PR (`statusFromPullRequest`). An event that arrives while GitHub answers wins: a counter per agent drops the older result.
 - Events for unknown agents, agents being stopped, and payloads without a string `hook_event_name` are ignored.
+
+### Statusline
+
+For token usage (#42, ADR 0009), `settings.json` also sets `statusLine`. Claude Code runs it once at the start and after every answer (debounced by 300 ms), with JSON about the session on stdin: the plan's limits, the context, the model, the path of the session log. `statusline-script.mjs` posts that JSON to `POST /hooks/<agentId>/statusline` with the secret from `hook.json`, and prints the footer line (see below). Like the hook script it always exits 0, also without the daemon. The post gives up after 1 s, because Claude Code cancels a statusline that still runs when the next update comes.
+
+- `hook.json` is found through `workspace.project_dir` from the JSON, then `CLAUDE_PROJECT_DIR`, then the working directory.
+- Unlike a hook, the statusline is one command line for a shell: Git Bash (or PowerShell without it) on Windows, sh elsewhere. A quoted path as the first word is a string in PowerShell, not a command, so it can't use `process.execPath` and runs `node` from the PATH. The script path goes in single quotes with forward slashes, which read the same in all three shells; a path with `'` in it is refused. Checked by hand in Git Bash and Windows PowerShell.
+- `--settings` replaces the statusline the user set for Claude Code, so the script runs it itself and prints its output: the first `statusLine` command in the worktree's `.claude/settings.local.json`, its `.claude/settings.json`, then `~/.claude/settings.json` (or `$CLAUDE_CONFIG_DIR`), Claude Code's own order. It gets the same JSON on stdin and runs in the shell Claude Code would use (`CLAUDE_CODE_GIT_BASH_PATH` or Git Bash under Program Files, else PowerShell; `/bin/sh` elsewhere). Without one, or if it fails, prints nothing or takes longer than 2 s, the footer shows gitspore's short line ("Opus · context 22 %"). The post runs alongside, so a slow statusline never holds it back.
+- The overview agent (`modules/overview/`) gets the same statusline, so talking to it also brings the plan's limits. It has no hooks yet, so its `settings.json` has only `statusLine`. `hook.json` and `settings.json` go into `.gitspore/` in the repo root, which `ensureExcluded` keeps out of git as in the worktrees. Its secret is revoked when its shell exits or a repo switch stops it. If the files can't be written, it starts without the statusline.
 
 ### Watchdog
 
@@ -197,7 +207,7 @@ A spawn that throws although the locator found Claude is `claude_not_found`, and
 
 - `agent.service.spec.ts`: the logic of dispatch, leftover branches, rollback, taking over after a restart, hooks, watchdog, exit and stop, with stand-ins for git, GitHub, the terminals, the locator and the hook service.
 - `agent-request.spec.ts`, `agent-error.spec.ts`, `task-file.spec.ts`, `hook-status.spec.ts`, `hook-files.spec.ts`, `pull-request-reaction.spec.ts`: the pure functions.
-- `hook-script.spec.ts`: the real script against a stand-in daemon, including a daemon that is down or never answers.
+- `hook-script.spec.ts`, `statusline-script.spec.ts`: the real scripts against a stand-in daemon (`test/stand-in-daemon.ts`), including a daemon that is down or never answers.
 - `agent.gateway.spec.ts`: the events reach the service and the answers come back.
 - `agent.e2e.spec.ts`: the acceptance criteria of GS-66, GS-67, GS-48 and GS-102 with real git (a bare repo in a temp folder as origin), real PTYs, the real hook endpoint and `apps/api/test/fake-claude.mjs` through `GITSPORE_CLAUDE_BIN`. `FAKE_CLAUDE_HOOKS` makes the fake fire hook events through the written `settings.json`. Only GitHub is a stand-in; the tests fire its pull request events themselves, including a squash merge (a commit only on the branch) and a worktree with uncommitted changes. About a minute on Windows.
 

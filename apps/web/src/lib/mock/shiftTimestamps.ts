@@ -1,4 +1,12 @@
-import type { Agent, GreenhouseState, IsoTimestamp } from "@gitspore/shared";
+import type {
+  Agent,
+  GreenhouseState,
+  IsoTimestamp,
+  PatchOp,
+  PlanUsage,
+  UsageLimit,
+} from "@gitspore/shared";
+
 import type { Scenario, ScenarioEntry } from "./scenario";
 
 function shiftIso(iso: IsoTimestamp, offset: number): IsoTimestamp {
@@ -14,10 +22,33 @@ function shiftAgent(agent: Agent, offset: number): Agent {
   };
 }
 
+function shiftPlan(plan: PlanUsage | null, offset: number): PlanUsage | null {
+  if (plan === null) return null;
+  const shiftLimit = (limit: UsageLimit | null): UsageLimit | null =>
+    limit && { ...limit, resetsAt: shiftIso(limit.resetsAt, offset) };
+
+  return {
+    fiveHour: shiftLimit(plan.fiveHour),
+    sevenDay: shiftLimit(plan.sevenDay),
+  };
+}
+
+function shiftOp(op: PatchOp, offset: number): PatchOp {
+  switch (op.type) {
+    case "agent:upsert":
+      return { ...op, agent: shiftAgent(op.agent, offset) };
+    case "plan:set":
+      return { ...op, plan: shiftPlan(op.plan, offset) };
+    default:
+      return op;
+  }
+}
+
 function shiftState(state: GreenhouseState, offset: number): GreenhouseState {
   return {
     ...state,
     agents: state.agents.map((agent) => shiftAgent(agent, offset)),
+    plan: shiftPlan(state.plan, offset),
   };
 }
 
@@ -30,11 +61,7 @@ function shiftEntry(entry: ScenarioEntry, offset: number): ScenarioEntry {
         ...entry,
         payload: {
           ...entry.payload,
-          ops: entry.payload.ops.map((op) =>
-            op.type === "agent:upsert"
-              ? { ...op, agent: shiftAgent(op.agent, offset) }
-              : op,
-          ),
+          ops: entry.payload.ops.map((op) => shiftOp(op, offset)),
         },
       };
     case "terminal:data":

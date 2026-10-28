@@ -1,5 +1,5 @@
 import { applyPatch } from "@gitspore/shared";
-import type { Agent, Issue, PatchOp } from "@gitspore/shared";
+import type { Agent, Issue, PatchOp, PlanUsage } from "@gitspore/shared";
 import { StateStore } from "./state.store";
 
 const issue = (number: number, title = `Issue ${number}`): Issue => ({
@@ -21,6 +21,7 @@ const agent = (id: string, slotIndex: number | null = 0): Agent => ({
   startedAt: "2026-10-08T10:00:00.000Z",
   pullRequest: null,
   statusReason: null,
+  usage: null,
 });
 
 describe("StateStore", () => {
@@ -37,6 +38,8 @@ describe("StateStore", () => {
         repo: null,
         agents: [],
         issues: [],
+        plan: null,
+        repoTokens: null,
       });
     });
   });
@@ -114,6 +117,8 @@ describe("StateStore", () => {
         repo: null,
         agents: [],
         issues: [issue(1)],
+        plan: null,
+        repoTokens: null,
       });
     });
 
@@ -127,6 +132,8 @@ describe("StateStore", () => {
         repo: null,
         agents: [],
         issues: [],
+        plan: null,
+        repoTokens: null,
       });
     });
   });
@@ -222,7 +229,29 @@ describe("StateStore", () => {
         repo,
         agents: [],
         issues: [],
+        plan: null,
+        repoTokens: null,
       });
+    });
+
+    it("keeps the plan limits: they belong to the account", () => {
+      const plan: PlanUsage = {
+        fiveHour: { usedPercent: 40, resetsAt: "2026-10-08T15:00:00.000Z" },
+        sevenDay: null,
+      };
+      store.apply([{ type: "plan:set", plan }]);
+
+      store.setRepo(repo);
+
+      expect(store.snapshot().plan).toEqual(plan);
+    });
+
+    it("drops the token total: it belongs to the old repo", () => {
+      store.apply([{ type: "repoTokens:set", repoTokens: 5_000 }]);
+
+      store.setRepo(repo);
+
+      expect(store.snapshot().repoTokens).toBeNull();
     });
 
     it("tells reset listeners, not patch listeners", () => {

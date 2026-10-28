@@ -8,6 +8,7 @@ import { TerminalModule } from "./modules/terminal/terminal.module";
 import { OverviewModule } from "./modules/overview/overview.module";
 import { AgentModule } from "./modules/agent/agent.module";
 import { HookModule } from "./modules/hooks/hook.module";
+import { UsageModule } from "./modules/usage/usage.module";
 
 // Feature modules from src/modules and background workers from
 // src/workers get registered here as the app grows.
@@ -22,6 +23,7 @@ import { HookModule } from "./modules/hooks/hook.module";
     OverviewModule,
     AgentModule,
     HookModule,
+    UsageModule,
   ],
   controllers: [],
   providers: [],
