@@ -3,6 +3,35 @@
 Kurz festgehalten, damit später nachvollziehbar ist, _warum_ etwas so
 eingerichtet ist. Neue Einträge oben anfügen.
 
+## GS-131 – Dauerhafter Session-Token (2026-10-27)
+
+### Token in `~/.gitspore/session-token`, Web merkt ihn im `localStorage`
+
+Bisher erzeugte der Daemon bei jedem Start einen neuen Token, auch bei jedem
+Reload von `nest start --watch`. Der Nutzer musste ihn aus dem Log in die URL
+kopieren, und jeder neue Tab brauchte ihn wieder (`sessionStorage`).
+
+Jetzt liegt der Token in `~/.gitspore/session-token` (neben `config.json`,
+Modus `0600`). Der Daemon liest ihn beim Start und erzeugt ihn nur, wenn die
+Datei fehlt oder kaputt ist. Das Log zeigt einen fertigen Link mit dem Token.
+Der Web-Client merkt ihn sich im `localStorage`, also über Tabs und Neustarts
+hinweg.
+
+`localStorage` macht den Token nicht angreifbarer als die Datei: Er ist an den
+Origin `http://localhost:3000` gebunden, andere Webseiten lesen ihn nicht. Was
+dort läuft, ist ein lokaler Dev-Server, den der Nutzer selbst gestartet hat.
+Dieser Code läuft als der Nutzer und kann die Datei ohnehin direkt lesen.
+
+Verworfen:
+
+- Ein HTTP-Endpoint, der den Token an erlaubte Origins ausgibt: Ein lokaler
+  Prozess kann den `Origin`-Header fälschen, der Token wäre wertlos.
+- Den Token als `NEXT_PUBLIC_…` beim Build einsetzen: Er stünde in `out/`.
+- Den Browser beim Start öffnen: Bei jedem Watch-Reload ginge ein neuer Tab
+  auf, und Next ist beim Start der API oft noch nicht bereit.
+- Den Token weglassen: Die Prüfung von `Origin` und `Host` hält nur Webseiten
+  im Browser ab, keine lokalen Prozesse, und der Daemon startet Shells.
+
 ## GS-66 – Agent-Dispatch (2026-10-19)
 
 ### Der Branch geht sofort online, Claude macht die Git-Arbeit
@@ -253,3 +282,16 @@ Gemessen mit PowerShell außerhalb von Jest:
 Für GS-03 zu klären: ob der PTY-Dienst `useConptyDll` nutzt, wie Sessions
 beim Herunterfahren des Daemons beendet werden, und ob eine neuere
 `node-pty`-Version das Verhalten behebt.
+
+Stand GS-53: Das Herunterfahren ist gelöst. `main.ts` ruft
+`enableShutdownHooks()` auf, `TerminalService.onApplicationShutdown` stoppt alle
+Terminals parallel, insgesamt höchstens 10 s. `kill()` beendet vorher den
+ganzen Prozessbaum (`process-tree.ts`), solange der Prozess noch lebt. Unter
+macOS/Linux: Prozessgruppe plus Prozesstabelle, erst `SIGTERM`, nach 2 s
+`SIGKILL`. Unter Windows bewusst **nicht** `taskkill /T`: Windows vergibt PIDs
+sofort neu und aktualisiert die Eltern-PID nie, in der CI hat `/T` deshalb
+`git`-Prozesse paralleler Tests beendet. Stattdessen Prozesstabelle mit
+Startzeiten (`Get-CimInstance Win32_Process`). Getötet wird nur, wenn die PID
+noch die beim Start gemerkte Startzeit hat, und ein Kind zählt nur, wenn es
+nach seinem Elternprozess gestartet ist. Danach folgt weiterhin `pty.kill()`, das ConPTY braucht.
+Offen bleiben `useConptyDll` und eine neuere `node-pty`-Version.

@@ -134,7 +134,7 @@ describe("RepoService", () => {
       store.apply([
         {
           type: "issue:upsert",
-          issue: { number: 1, title: "Old", url: "u", labels: [] },
+          issue: { number: 1, title: "Old", url: "u", labels: [], body: "" },
         },
       ]);
 

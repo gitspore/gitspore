@@ -116,7 +116,7 @@ describe("shiftScenario", () => {
   });
 
   it("moves agent:upsert ops and leaves the other ops alone", () => {
-    const issue = { number: 2, title: "Other", url: "u", labels: [] };
+    const issue = { number: 2, title: "Other", url: "u", labels: [], body: "" };
     const [entry] = shiftScenario(
       scenario([
         {

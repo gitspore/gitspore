@@ -1,5 +1,5 @@
-import { Injectable } from "@nestjs/common";
-import { randomBytes, timingSafeEqual } from "node:crypto";
+import { Inject, Injectable } from "@nestjs/common";
+import { timingSafeEqual } from "node:crypto";
 
 export function allowedOrigins(): string[] {
   return (process.env.WEB_ORIGIN ?? "http://localhost:3000")
@@ -10,10 +10,15 @@ export function allowedOrigins(): string[] {
 
 const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
+// A string has no class Nest could look it up by, so it gets a token, like
+// START_OVERVIEW. GatewayModule loads it from SessionTokenStore.
+export const SESSION_TOKEN = Symbol("SESSION_TOKEN");
+
 @Injectable()
 export class SessionAuth {
-  readonly token = randomBytes(32).toString("hex");
   private readonly origins = allowedOrigins();
+
+  constructor(@Inject(SESSION_TOKEN) readonly token: string) {}
 
   isTokenValid(candidate: unknown): boolean {
     if (typeof candidate !== "string") return false;

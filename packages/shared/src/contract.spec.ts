@@ -71,12 +71,14 @@ const snapshot: GreenhouseState = {
       title: "Login fails with umlauts in the password",
       url: "https://github.com/gitspore/gitspore/issues/42",
       labels: ["bug"],
+      body: "Typing ü in the password field breaks the login.",
     },
     {
       number: 43,
       title: "Dark mode",
       url: "https://github.com/gitspore/gitspore/issues/43",
       labels: [],
+      body: "",
     },
   ],
   plan: {
@@ -105,6 +107,7 @@ const ops: { [T in PatchOp["type"]]: Extract<PatchOp, { type: T }> } = {
       title: "Flaky test",
       url: "https://github.com/gitspore/gitspore/issues/44",
       labels: ["ci", "good first issue"],
+      body: "",
     },
   },
   "issue:remove": { type: "issue:remove", issueNumber: 43 },

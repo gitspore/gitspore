@@ -29,6 +29,7 @@ function issue(number: number): Issue {
     title: `Issue ${number}`,
     url: `https://x/${number}`,
     labels: [],
+    body: "",
   };
 }
 

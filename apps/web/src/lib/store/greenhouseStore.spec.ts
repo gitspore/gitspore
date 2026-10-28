@@ -27,6 +27,7 @@ function issue(number: number): Issue {
     title: `Issue ${number}`,
     url: `https://x/${number}`,
     labels: [],
+    body: "",
   };
 }
 
@@ -584,6 +585,61 @@ describe("createGreenhouseStore", () => {
           );
 
         expect(focused(store)).toBe("a1");
+      });
+
+      // The Agents tab's row does what SidePanel's openAgent does (#146)
+      describe("an agent row in the Agents tab", () => {
+        // Pot 1 is a1, pot 2 is a2
+        function clickRow(store: ReturnType<typeof withAgents>, id: string) {
+          store.getState().selectSlot(id === "a1" ? 0 : 1);
+          store.getState().openWindow(id);
+        }
+
+        it("selects the slot and shows the agent's window, focused", () => {
+          const store = withAgents();
+
+          clickRow(store, "a2");
+
+          expect(store.getState().selectedSlot).toBe(1);
+          expect(windows(store)).toEqual([{ agentId: "a2", minimised: false }]);
+          expect(focused(store)).toBe("a2");
+        });
+
+        it("doesn't open a second window when clicked again", () => {
+          const store = withAgents();
+
+          clickRow(store, "a2");
+          clickRow(store, "a2");
+
+          expect(windows(store)).toEqual([{ agentId: "a2", minimised: false }]);
+        });
+
+        it("shows a minimised window again and gives it the focus", () => {
+          const store = withAgents();
+          clickRow(store, "a1");
+          clickRow(store, "a2");
+          store.getState().toggleMinimised("a1");
+
+          clickRow(store, "a1");
+
+          expect(windows(store)).toEqual([
+            { agentId: "a1", minimised: false },
+            { agentId: "a2", minimised: false },
+          ]);
+          expect(focused(store)).toBe("a1");
+          expect(store.getState().selectedSlot).toBe(0);
+        });
+
+        it("focuses a visible window behind the focused one", () => {
+          const store = withAgents();
+          clickRow(store, "a1");
+          clickRow(store, "a2");
+
+          clickRow(store, "a1");
+
+          expect(windows(store)).toHaveLength(2);
+          expect(focused(store)).toBe("a1");
+        });
       });
     });
 

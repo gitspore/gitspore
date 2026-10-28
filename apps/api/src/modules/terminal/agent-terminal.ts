@@ -4,8 +4,12 @@ import { TerminalError } from "./terminal-error";
 import type { SessionId } from "@gitspore/shared";
 import { OutputBatcher } from "./output-batcher";
 import { RingBuffer } from "./ring-buffer";
+import { killTree, startedAt } from "./process-tree";
 
-export type Pty = Pick<IPty, "onData" | "onExit" | "write" | "resize" | "kill">;
+export type Pty = Pick<
+  IPty,
+  "pid" | "onData" | "onExit" | "write" | "resize" | "kill"
+>;
 export type Viewer = {
   onData: (chunk: string) => void;
   onExit: (exitCode: number) => void;
@@ -24,12 +28,17 @@ export type AgentTerminalOptions = {
   // Only tests set this, to run the Windows branch on any OS.
   platform?: NodeJS.Platform;
   mode?: "shell" | "exec";
+  // Only tests set these, to see kill() without ending real processes.
+  killTree?: typeof killTree;
+  startedAt?: typeof startedAt;
 };
 
 const TERMINAL_NAME = "xterm-256color";
 const DEFAULT_COLS = 80;
 const DEFAULT_ROWS = 24;
 const REDRAW_DELAY_MS = 50;
+// ConPTY can send its first bytes a moment before the process exists.
+const START_SLACK_MS = 1_000;
 
 // Arguments are typed into the shell unquoted,
 // so anything else (spaces, quotes, $, ;, `, \, @) is refused.
@@ -124,7 +133,13 @@ export class AgentTerminal {
   private cols = DEFAULT_COLS;
   private rows = DEFAULT_ROWS;
   private exited = false;
+  private killing?: Promise<void>;
+  // Windows: when the process started, looked up at its first output, so
+  // kill() never ends a process that got the pid after it (#53).
+  private started?: Promise<number | undefined>;
   private readonly platform: NodeJS.Platform;
+  private readonly killTree: typeof killTree;
+  private readonly startedAt: typeof startedAt;
 
   constructor(
     spawnPty: SpawnPty,
@@ -132,12 +147,17 @@ export class AgentTerminal {
     private readonly onExit?: (exitCode: number) => void,
   ) {
     this.platform = options.platform ?? process.platform;
+    this.killTree = options.killTree ?? killTree;
+    this.startedAt = options.startedAt ?? startedAt;
     this.pty =
       options.mode === "exec"
         ? startDirectly(spawnPty, options)
         : startInShell(spawnPty, options);
 
-    this.pty.onData((chunk) => this.batcher.push(chunk));
+    this.pty.onData((chunk) => {
+      this.noteStart();
+      this.batcher.push(chunk);
+    });
     this.pty.onExit(({ exitCode }) => this.handleExit(exitCode));
   }
 
@@ -165,15 +185,35 @@ export class AgentTerminal {
     this.resizePty(cols, rows);
   }
 
-  kill(): void {
+  // Ends the process and everything it started (#53). The tree first, while
+  // the parent chain still leads from the process to its children, then the
+  // PTY. Resolves once both are done; onExit may come a moment later.
+  kill(): Promise<void> {
     if (this.exited) {
+      return Promise.resolve();
+    }
+    this.killing ??= (async () => {
+      await this.killTree(this.pty.pid, this.platform, await this.started);
+      if (!this.exited) this.release();
+    })();
+    return this.killing;
+  }
+
+  // Windows only: ConPTY knows the pid only once the process runs, so it is
+  // looked up at the first output that comes with a pid. A start after that
+  // output means the pid already went to another process: no start, and
+  // kill() leaves the tree alone.
+  private noteStart(): void {
+    if (this.started || this.platform !== "win32" || this.pty.pid <= 1) {
       return;
     }
-    try {
-      this.pty.kill();
-    } catch {
-      // The process has just exited on its own; onExit follows.
-    }
+    const seen = Date.now();
+    this.started = this.startedAt(this.pty.pid, this.platform).then(
+      (started) =>
+        started !== undefined && started <= seen + START_SLACK_MS
+          ? started
+          : undefined,
+    );
   }
 
   private broadcast(chunk: string): void {
@@ -215,7 +255,15 @@ export class AgentTerminal {
     // ConPTY (win) keeps its pipes open after the shell exits, until kill()
     // releases them (docs/decisions.md, "Offen für GS-03").
     if (this.platform === "win32") {
+      this.release();
+    }
+  }
+
+  private release(): void {
+    try {
       this.pty.kill();
+    } catch {
+      // The process has just exited on its own; onExit follows.
     }
   }
 }

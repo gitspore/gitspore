@@ -166,6 +166,33 @@
           "3": {
             "$value": "#79b2ea",
             "$type": "color"
+          },
+          "rainbow": {
+            "1": {
+              "$value": "#e8524a",
+              "$type": "color",
+              "$description": "the one rare rainbow butterfly's wing, from hinge to tip"
+            },
+            "2": {
+              "$value": "#f29a38",
+              "$type": "color"
+            },
+            "3": {
+              "$value": "#f5dc5e",
+              "$type": "color"
+            },
+            "4": {
+              "$value": "#6cc06a",
+              "$type": "color"
+            },
+            "5": {
+              "$value": "#4f9be0",
+              "$type": "color"
+            },
+            "6": {
+              "$value": "#9a6ad0",
+              "$type": "color"
+            }
           }
         },
         "moth": {
@@ -476,6 +503,34 @@
         "pebble": {
           "$value": "#a89e8c",
           "$type": "color"
+        },
+        "berry": {
+          "1": {
+            "$value": "#c8363d",
+            "$type": "color",
+            "$description": "berries on some of the bushes, each a shade of these"
+          },
+          "2": {
+            "$value": "#8e2a4a",
+            "$type": "color"
+          }
+        },
+        "blossom": {
+          "petal": {
+            "1": {
+              "$value": "#fbf4ea",
+              "$type": "color",
+              "$description": "small blossoms on some of the bushes, one colour per bush"
+            },
+            "2": {
+              "$value": "#f4b3c8",
+              "$type": "color"
+            }
+          },
+          "heart": {
+            "$value": "#f2c14a",
+            "$type": "color"
+          }
         }
       },
       "light": {
@@ -662,6 +717,32 @@
         "pebble": {
           "$value": "#4a453d",
           "$type": "color"
+        },
+        "berry": {
+          "1": {
+            "$value": "#d4545a",
+            "$type": "color"
+          },
+          "2": {
+            "$value": "#a3475f",
+            "$type": "color"
+          }
+        },
+        "blossom": {
+          "petal": {
+            "1": {
+              "$value": "#ffffff",
+              "$type": "color"
+            },
+            "2": {
+              "$value": "#f8c9d8",
+              "$type": "color"
+            }
+          },
+          "heart": {
+            "$value": "#e9c45c",
+            "$type": "color"
+          }
         }
       },
       "light": {

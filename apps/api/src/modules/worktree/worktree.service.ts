@@ -8,7 +8,15 @@ import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { basename, dirname, join, resolve } from "node:path";
 import { simpleGit, SimpleGit } from "simple-git";
 import { WorktreeError } from "./worktree-error";
-import { access, appendFile, mkdir, readFile } from "node:fs/promises";
+import {
+  access,
+  appendFile,
+  mkdir,
+  readFile,
+  rename,
+  rm,
+} from "node:fs/promises";
+import { setTimeout as sleep } from "node:timers/promises";
 
 export type Worktree = { branch: string; path: string };
 
@@ -25,6 +33,12 @@ export type Leftover = {
 // timeout per instance, and a second instance would have its own queue, so
 // two git commands could run at once. One timeout for all commands instead.
 const GIT_TIMEOUT_MS = 60_000;
+
+// remove() moves a worktree to "<prefix><folder>" before it deletes it. Branch
+// folders are lowercase letters, digits and dashes, so the dot can't collide.
+const REMOVING_PREFIX = ".removing-";
+// About a second in all, see moveAside().
+const MOVE_ASIDE_TRIES = 5;
 
 // simple-git refuses these when they are passed through .env(), and drops
 // them from the ambient environment otherwise (simple-git 4, environment
@@ -357,12 +371,34 @@ export class WorktreeService implements OnModuleInit {
       }
     }
 
-    await this.run([
-      "worktree",
-      "remove",
-      ...(options.force ? ["--force"] : []),
-      options.path,
-    ]);
+    // Node deletes the folder, not git worktree remove: an agent's npm install
+    // leaves tens of thousands of files, which git deletes without output for
+    // longer than GIT_TIMEOUT_MS on Windows, and the workspace junctions in
+    // node_modules stop it. rm removes a junction as a link, never its target.
+    // The folder is moved aside first: Windows refuses that at once while a
+    // process works in it (a dev server the agent started), where rm would
+    // get halfway and leave a worktree without .git (#156). prune then drops
+    // the registration of the folder that is gone.
+    const exists = await this.pathExists(worktree.path);
+    const aside = join(
+      this.worktreeRoot,
+      `${REMOVING_PREFIX}${basename(worktree.path)}`,
+    );
+    if (exists) {
+      // Left by an earlier removal whose rm failed.
+      await rm(aside, { recursive: true, force: true, maxRetries: 5 });
+      await this.moveAside(worktree.path, aside);
+    }
+    await this.run(["worktree", "prune"]);
+    if (exists) {
+      try {
+        await rm(aside, { recursive: true, force: true, maxRetries: 5 });
+      } catch (error) {
+        // For git the worktree is gone; only a folder is left over.
+        const message = error instanceof Error ? error.message : String(error);
+        this.logger.warn(`Could not delete ${aside}: ${message}`);
+      }
+    }
 
     if (options.deleteBranch) {
       await this.run(["branch", "-D", worktree.branch]);
@@ -420,6 +456,29 @@ export class WorktreeService implements OnModuleInit {
     const output = await this.run(["ls-remote", "--heads", "origin"]);
     // "<sha>\trefs/heads/<branch>" per line.
     return branchNames(output.replace(/^\S+\t/gm, ""));
+  }
+
+  // A short lock (antivirus, the search indexer) passes after a retry; a
+  // process working in the folder doesn't, and nothing is deleted.
+  private async moveAside(path: string, to: string): Promise<void> {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        await rename(path, to);
+        return;
+      } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code ?? "";
+        if (!["EPERM", "EBUSY", "EACCES"].includes(code)) throw error;
+        if (attempt === MOVE_ASIDE_TRIES) {
+          throw new WorktreeError(
+            "in_use",
+            `${path} is in use by another program, for example a dev server ` +
+              "or a terminal open in it, so nothing was removed. End it and " +
+              "try again.",
+          );
+        }
+        await sleep(100 * attempt);
+      }
+    }
   }
 
   private async pathExists(path: string): Promise<boolean> {

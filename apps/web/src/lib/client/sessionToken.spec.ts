@@ -77,7 +77,7 @@ describe("resolveSessionToken", () => {
     return { store, storage, replaceSearch, resolve };
   }
 
-  it("stores the token from the url in sessionStorage", () => {
+  it("stores the token from the url in the storage", () => {
     const { resolve, store } = setup({ search: "?token=abc123" });
 
     expect(resolve()).toBe("abc123");
@@ -128,7 +128,7 @@ describe("resolveSessionToken", () => {
     expect(resolve()).toBeNull();
   });
 
-  it("does not throw when sessionStorage is unavailable", () => {
+  it("does not throw when the storage is unavailable", () => {
     const replaceSearch = jest.fn();
     const storage = {
       getItem: () => {

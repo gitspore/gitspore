@@ -64,6 +64,7 @@ const issue = (number: number): Issue => ({
   title: `Issue ${number}`,
   url: `https://github.com/owner/repo/issues/${number}`,
   labels: [],
+  body: "",
 });
 
 // A promise the test resolves itself, to hold a step of the dispatch.

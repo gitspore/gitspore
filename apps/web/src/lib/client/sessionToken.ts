@@ -23,7 +23,7 @@ export function extractToken(search: string): {
 
 /**
  * Finds the session token for the daemon: a token in the URL wins and is
- * remembered in the session storage, otherwise the remembered one is used.
+ * remembered in the storage, otherwise the remembered one is used.
  * A token in the URL is removed from the address bar, so it does not stay in
  * the history or get copied around.
  *
