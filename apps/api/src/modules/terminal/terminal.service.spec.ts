@@ -168,12 +168,49 @@ describe("TerminalService", () => {
     expect(ptys).toHaveLength(2);
   });
 
-  it("kills an agent's process", () => {
+  it("kills an agent's process", async () => {
     spawn("agent-1");
 
-    service.kill("agent-1");
+    await service.kill("agent-1");
 
     expect(ptys[0].kill).toHaveBeenCalledTimes(1);
+  });
+
+  describe("shutdown", () => {
+    it("stops all terminals at once and resolves when all have exited", async () => {
+      spawn("agent-1");
+      spawn("agent-2");
+      spawn("overview");
+      for (const pty of ptys) pty.exitingOnKill();
+      const exited = jest.fn();
+      service.onExited(exited);
+
+      await service.onApplicationShutdown();
+
+      expect(exited).toHaveBeenCalledTimes(3);
+      expect(() => spawn("agent-1")).not.toThrow();
+    });
+
+    it("gives up after 10 s for a terminal that doesn't exit", async () => {
+      spawn("agent-1");
+      spawn("agent-2");
+      ptys[0].exitingOnKill();
+      let done = false;
+
+      const shutdown = service.onApplicationShutdown().then(() => {
+        done = true;
+      });
+      await jest.advanceTimersByTimeAsync(9_999);
+      expect(done).toBe(false);
+
+      await jest.advanceTimersByTimeAsync(1);
+      await shutdown;
+      expect(done).toBe(true);
+    });
+
+    it("resolves at once without terminals", async () => {
+      await expect(service.onApplicationShutdown()).resolves.toBeUndefined();
+    });
   });
 
   it("refuses to kill an unknown agent", () => {
@@ -235,7 +272,8 @@ describe("TerminalService", () => {
         stopped = true;
         return result;
       });
-      await Promise.resolve();
+      // The kill runs a few promise steps (tree first, then the PTY).
+      await jest.advanceTimersByTimeAsync(0);
 
       expect(ptys[0].kill).toHaveBeenCalled();
       expect(stopped).toBe(false);
