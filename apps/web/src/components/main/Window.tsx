@@ -8,11 +8,11 @@ import { Button } from "@/components/ui/button";
 import { UsageMeter } from "@/components/shell/UsageMeter";
 import { contextTip } from "@/lib/usageTip";
 import { agentName } from "@/lib/agentName";
+import { useGreenhouseStore } from "@/lib/client/GreenhouseClientProvider";
 import { STATUS_COLOUR, STATUS_ICON, STATUS_WORD } from "@/lib/status";
 import { cn } from "@/lib/utils";
-import { useRef, useState, type MouseEvent } from "react";
+import { useRef, type MouseEvent } from "react";
 import { useTheme } from "next-themes";
-import type { TerminalTheme } from "./TerminalPanel";
 
 // One agent's terminal window.
 
@@ -38,12 +38,13 @@ export function Window({
   onMinimise,
 }: WindowProps) {
   const StatusIcon = STATUS_ICON[agent.status];
-  // The terminal follows day and night (null)
-  // until this window's switch overrides
+  // The terminal follows day and night until this window's switch
+  // overrides; kept in the store, as minimising unmounts the window
   const { resolvedTheme } = useTheme();
-  const [terminalTheme, setTerminalTheme] = useState<TerminalTheme | null>(
-    null,
+  const terminalTheme = useGreenhouseStore(
+    (s) => s.layout.windows.find((w) => w.agentId === agent.id)?.theme,
   );
+  const setWindowTheme = useGreenhouseStore((s) => s.setWindowTheme);
   const theme = terminalTheme ?? (resolvedTheme === "dark" ? "dark" : "light");
   const name = agentName(agent, issueTitle);
 
@@ -105,7 +106,9 @@ export function Window({
           size="icon"
           className="size-9 rounded-lg bg-hover hover:bg-ink/20 [&_svg]:size-5"
           aria-label={`Terminal colours: ${theme}`}
-          onClick={() => setTerminalTheme(theme === "dark" ? "light" : "dark")}
+          onClick={() =>
+            setWindowTheme(agent.id, theme === "dark" ? "light" : "dark")
+          }
         >
           {theme === "dark" ? <MoonIcon /> : <SunIcon />}
         </Button>

@@ -2,13 +2,22 @@
 
 import { MoonIcon, SunIcon } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { useGreenhouseStore } from "@/lib/client/GreenhouseClientProvider";
 
 // Day/night switch in the top bar.
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
 
   const isNight = resolvedTheme === "dark";
+
+  // Any change of day and night, by this switch or the system's setting,
+  // brings every terminal window back to it (#55)
+  const followDayAndNight = useGreenhouseStore((s) => s.followDayAndNight);
+  useEffect(() => {
+    followDayAndNight();
+  }, [resolvedTheme, followDayAndNight]);
 
   return (
     <Button

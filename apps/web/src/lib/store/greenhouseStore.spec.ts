@@ -682,6 +682,50 @@ describe("createGreenhouseStore", () => {
       ]);
     });
 
+    it("setWindowTheme sets one window's terminal colours", () => {
+      const { store } = setup();
+      store.getState().openWindow("a1");
+      store.getState().openWindow("a2");
+
+      store.getState().setWindowTheme("a2", "dark");
+
+      expect(windows(store)).toEqual([
+        { agentId: "a1", minimised: false },
+        { agentId: "a2", minimised: false, theme: "dark" },
+      ]);
+    });
+
+    // Minimising unmounts the window, so its choice lives here (#55)
+    it("keeps a window's colours while it is minimised", () => {
+      const { store } = setup();
+      store.getState().openWindow("a1");
+      store.getState().setWindowTheme("a1", "light");
+
+      store.getState().toggleMinimised("a1");
+      store.getState().toggleMinimised("a1");
+
+      expect(windows(store)).toEqual([
+        { agentId: "a1", minimised: false, theme: "light" },
+      ]);
+    });
+
+    // The top bar's day/night, or the system's, overrides every window
+    it("followDayAndNight drops every window's own colours", () => {
+      const { store } = setup();
+      store.getState().openWindow("a1");
+      store.getState().openWindow("a2");
+      store.getState().setWindowTheme("a1", "dark");
+      store.getState().setWindowTheme("a2", "light");
+      store.getState().toggleMinimised("a2");
+
+      store.getState().followDayAndNight();
+
+      expect(windows(store)).toEqual([
+        { agentId: "a1", minimised: false },
+        { agentId: "a2", minimised: true },
+      ]);
+    });
+
     it("closes the window of a removed agent", () => {
       const { store } = setup();
       store
