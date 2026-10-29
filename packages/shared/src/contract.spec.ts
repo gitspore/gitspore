@@ -50,6 +50,7 @@ const snapshot: GreenhouseState = {
           total: 701_000,
         },
       },
+      cleaningUp: false,
     },
     {
       id: "overview",
@@ -63,6 +64,7 @@ const snapshot: GreenhouseState = {
       pullRequest: null,
       statusReason: null,
       usage: null,
+      cleaningUp: false,
     },
   ],
   issues: [

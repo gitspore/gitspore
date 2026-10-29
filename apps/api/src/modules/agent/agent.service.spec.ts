@@ -1019,6 +1019,7 @@ describe("AgentService.dispatch", () => {
             pullRequest: null,
             statusReason: null,
             usage: null,
+            cleaningUp: false,
           },
         },
       ]);
@@ -1363,6 +1364,18 @@ describe("AgentService.dispatch", () => {
       expect(worktrees.remove).not.toHaveBeenCalled();
     });
 
+    it("flags the agent as cleaning up while the worktree goes", async () => {
+      worktrees.remove.mockImplementation(async () => {
+        expect(agentOf()?.cleaningUp).toBe(true);
+      });
+      github.pullRequestChanged(branch, merged);
+      expect(agentOf()?.cleaningUp).toBe(false);
+      await sleep(60);
+
+      expect(worktrees.remove).toHaveBeenCalled();
+      expect(agentOf()).toBeUndefined();
+    });
+
     it("then ends Claude, removes worktree and local branch, and frees the slot", async () => {
       github.pullRequestChanged(branch, merged);
       await sleep(60);
@@ -1376,7 +1389,8 @@ describe("AgentService.dispatch", () => {
       });
       expect(worktrees.deleteRemoteBranch).not.toHaveBeenCalled();
       expect(store.snapshot().agents).toEqual([]);
-      expect(statuses).toEqual(["merged", "removed"]);
+      // merged, merged again with cleaningUp, removed
+      expect(statuses).toEqual(["merged", "merged", "removed"]);
     });
 
     it("doesn't kill a Claude that has already ended", async () => {

@@ -27,6 +27,7 @@ function agent(id: string, slotIndex: number | null): Agent {
     pullRequest: null,
     statusReason: null,
     usage: null,
+    cleaningUp: false,
   };
 }
 
