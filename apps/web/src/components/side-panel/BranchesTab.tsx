@@ -145,6 +145,26 @@ export function BranchesTab() {
                   style={{ stroke: chainColour(layout.chains[edge.chain]) }}
                 />
               ))}
+              {layout.markers.map(({ chain, row }) => {
+                const { agent, lane } = layout.chains[chain];
+                return (
+                  <circle
+                    key={chain}
+                    cx={x(lane)}
+                    cy={y(row)}
+                    r={4}
+                    className={cn(
+                      "pointer-events-auto",
+                      agent && "cursor-pointer",
+                      dimmed(chain) && "opacity-35",
+                    )}
+                    style={{ fill: chainColour(layout.chains[chain]) }}
+                    onClick={(event) =>
+                      agent && openAgent(agent, event.shiftKey)
+                    }
+                  />
+                );
+              })}
             </svg>
 
             {layout.rows.map((row) => {

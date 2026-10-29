@@ -83,7 +83,7 @@ describe("layoutBranches", () => {
     expect(labels).toEqual(["#12 login-redirect", "main", "#21 dark-mode"]);
   });
 
-  it("puts a new agent's label on main when it has no commits yet", () => {
+  it("gives a new agent its own lane and node on main's commit", () => {
     const fresh: BranchGraph = {
       hasMore: false,
       commits: [commit("m1", "m0"), commit("m0")],
@@ -95,7 +95,10 @@ describe("layoutBranches", () => {
 
     const layout = layoutBranches(fresh, [a12], "main");
 
-    expect(layout.chains).toHaveLength(1);
+    expect(layout.chains).toHaveLength(2);
+    expect(layout.chains[1]).toMatchObject({ lane: 1, empty: true });
+    expect(chainColour(layout.chains[1])).toBe("var(--color-agent-1)");
+    expect(layout.markers).toEqual([{ chain: 1, row: 0 }]);
     expect(layout.rows[0].labels.map(labelText)).toEqual([
       "main",
       "#12 login-redirect",

@@ -9,6 +9,8 @@ export type Chain = {
   lane: number;
   agent: Agent | null;
   base: boolean;
+  // Agent branch still on a commit another chain claimed: a lone marker row.
+  empty: boolean;
   top: number;
   bottom: number;
 };
@@ -34,6 +36,7 @@ export type BranchLayout = {
   rows: GraphRow[];
   chains: Chain[];
   edges: GraphEdge[];
+  markers: { chain: number; row: number }[];
   lanes: number;
 };
 
@@ -52,9 +55,30 @@ export function layoutBranches(
 
   const startChain = (sha: string, agent: Agent | null, base: boolean) => {
     const start = rowOf.get(sha);
-    if (start === undefined || chainOf.has(sha)) return;
+    if (start === undefined) return;
+    if (chainOf.has(sha)) {
+      // A branch without commits of its own still gets a lane and a node.
+      if (agent) {
+        chains.push({
+          lane: -1,
+          agent,
+          base,
+          empty: true,
+          top: start,
+          bottom: start,
+        });
+      }
+      return;
+    }
     const id = chains.length;
-    const chain: Chain = { lane: -1, agent, base, top: start, bottom: start };
+    const chain: Chain = {
+      lane: -1,
+      agent,
+      base,
+      empty: false,
+      top: start,
+      bottom: start,
+    };
     chains.push(chain);
 
     let current: string | undefined = sha;
@@ -91,6 +115,10 @@ export function layoutBranches(
       chains[chain].top = Math.min(chains[chain].top, row);
     }
   });
+
+  const markers = chains.flatMap((chain, id) =>
+    chain.empty ? [{ chain: id, row: chain.top }] : [],
+  );
 
   const hasBase = chains[0]?.base ?? false;
   const taken: Chain[][] = [];
@@ -158,6 +186,7 @@ export function layoutBranches(
     rows,
     chains,
     edges,
+    markers,
     lanes: Math.max(1, ...chains.map((c) => c.lane + 1)),
   };
 }
