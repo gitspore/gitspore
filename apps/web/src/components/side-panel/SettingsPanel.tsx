@@ -14,9 +14,9 @@ import {
 } from "@/lib/sceneSettings";
 import { selectAgents, selectRepo } from "@/lib/store/selectors";
 
-// The settings in the side panel's place (#111): the repository and the
-// scene options. Spec: GS-110 in Penpot (`settings`, `repo-card`,
-// `settings-group`, `settings-row`, `section-heading`).
+// The settings in the side panel's place (#111): the repository, the scene
+// options and the ambient sound (#172). Spec: GS-110 in Penpot (`settings`,
+// `repo-card`, `settings-group`, `settings-row`, `section-heading`).
 
 const SCENE_OPTIONS: {
   option: SceneOption;
@@ -124,6 +124,17 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
               />
             );
           })}
+        </div>
+      </Section>
+
+      <Section title="Sound">
+        <div className="flex flex-col gap-1 rounded-xl bg-panel-2 py-1">
+          <SettingsRow
+            label="Ambient sound"
+            description="Birds and wind by day, crickets at night"
+            checked={stored.ambientSound}
+            onChange={(ambientSound) => change({ ambientSound })}
+          />
         </div>
       </Section>
     </div>

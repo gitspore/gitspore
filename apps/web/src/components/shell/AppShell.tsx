@@ -9,6 +9,7 @@ import {
 } from "@/lib/store/selectors";
 import { type HotbarKey, useHotbarKeys } from "@/lib/hotbarKeys";
 import { useSceneEnabled } from "@/lib/scene";
+import { useSceneSettings } from "@/lib/sceneSettings";
 import { Scene } from "../Scene";
 import { ConnectScreen } from "../attention/ConnectScreen";
 import { NotificationStack } from "../attention/NotificationStack";
@@ -16,6 +17,7 @@ import { Hotbar } from "../main/Hotbar";
 import { WindowGrid } from "../main/WindowGrid";
 import { SettingsPanel } from "../side-panel/SettingsPanel";
 import { SidePanel } from "../side-panel/SidePanel";
+import { AmbientSound } from "./AmbientSound";
 import { SceneLoader, SceneVeil } from "./SceneLoading";
 import { ToolRail } from "./ToolRail";
 import { TopBar } from "./TopBar";
@@ -54,8 +56,13 @@ export function AppShell() {
 
   const waitingCount = useGreenhouseStore(needsInputCount);
 
+  // Ambient sound by day and night (#172), also without the scene
+  const { stored: sceneSettings } = useSceneSettings();
+
   return (
     <>
+      <AmbientSound enabled={sceneSettings.ambientSound} />
+
       {/* The scene fills the page under the interface */}
       <div className="fixed inset-0 z-0 bg-panel-2">
         {showScene && (
