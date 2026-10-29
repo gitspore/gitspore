@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { BranchGraph } from "@gitspore/shared";
+import type { Agent, BranchGraph } from "@gitspore/shared";
 import {
   useGreenhouseStore,
   useNow,
@@ -48,6 +48,7 @@ export function BranchesTab() {
   );
   const selectedSlot = useGreenhouseStore((s) => s.selectedSlot);
   const selectSlot = useGreenhouseStore((s) => s.selectSlot);
+  const openWindow = useGreenhouseStore((s) => s.openWindow);
   const loadBranchGraph = useGreenhouseStore((s) => s.loadBranchGraph);
   const now = useNow();
 
@@ -78,6 +79,13 @@ export function BranchesTab() {
       clearInterval(timer);
     };
   }, [loadBranchGraph]);
+
+  // Like a click on the plant: select the pot, show and focus the window.
+  function openAgent(agent: Agent) {
+    if (agent.slotIndex === null) return;
+    selectSlot(agent.slotIndex);
+    openWindow(agent.id);
+  }
 
   const layout = useMemo(
     () => graph && layoutBranches(graph, agents, baseBranch),
@@ -153,10 +161,10 @@ export function BranchesTab() {
             return (
               <div
                 key={row.commit.sha}
-                onClick={() => owner && selectSlot(owner.slotIndex)}
+                onClick={() => owner && openAgent(owner)}
                 className={cn(
                   "flex h-7 items-center gap-2 pr-2",
-                  owner && "cursor-pointer",
+                  owner && "cursor-pointer rounded-sm hover:bg-hover",
                   dimmed(row.chain) && "opacity-35",
                 )}
                 style={{ paddingLeft: width }}
@@ -174,7 +182,7 @@ export function BranchesTab() {
                   <BranchLabel
                     key={label.branch}
                     label={label}
-                    onOpen={selectSlot}
+                    onOpen={openAgent}
                   />
                 ))}
                 {now !== 0 && (
@@ -200,7 +208,7 @@ function BranchLabel({
   onOpen,
 }: {
   label: GraphLabel;
-  onOpen: (slot: number) => void;
+  onOpen: (agent: Agent) => void;
 }) {
   const className =
     "flex max-w-1/2 min-w-0 items-center gap-1 rounded-sm border-2 border-current px-2 text-ui-badge font-semibold";
@@ -216,16 +224,15 @@ function BranchLabel({
     );
   }
 
-  const slot = agent.slotIndex;
   return (
     <button
       type="button"
-      className={cn(className, "hover:bg-hover")}
+      className={cn(className, "hover:bg-ink/10")}
       title={text}
       style={style}
       onClick={(event) => {
         event.stopPropagation();
-        onOpen(slot);
+        onOpen(agent);
       }}
     >
       <span
