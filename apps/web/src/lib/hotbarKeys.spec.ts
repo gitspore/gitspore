@@ -40,4 +40,18 @@ describe("hotbarKey", () => {
       expect(hotbarKey(press({ [modifier]: true }))).toBeNull();
     },
   );
+
+  it.each(["f", "F"])("gives focus for %s", (key) => {
+    expect(hotbarKey(press({ key }))).toBe("focus");
+  });
+
+  it("ignores an f typed into a terminal", () => {
+    expect(
+      hotbarKey(press({ key: "f", target: { tagName: "TEXTAREA" } })),
+    ).toBeNull();
+  });
+
+  it("leaves Ctrl+F to the browser's search", () => {
+    expect(hotbarKey(press({ key: "f", ctrlKey: true }))).toBeNull();
+  });
 });
