@@ -430,6 +430,25 @@ describe("createGreenhouseStore", () => {
         expect(windows(store)).toEqual([{ agentId: "a1", minimised: false }]);
       });
 
+      it("moves the focus into another visible window instead (#171)", () => {
+        const store = withAgents();
+        store.getState().pressSlot(1);
+        store.getState().pressSlot(3, { beside: true });
+        store.getState().pressSlot(1);
+
+        expect(store.getState().focusedAgentId).toBe("a1");
+        expect(windows(store)).toEqual([
+          { agentId: "a1", minimised: false },
+          { agentId: "a3", minimised: false },
+        ]);
+
+        store.getState().pressSlot(1);
+        expect(windows(store)).toEqual([
+          { agentId: "a1", minimised: true },
+          { agentId: "a3", minimised: false },
+        ]);
+      });
+
       it("opens the overview agent with 0, keeping the selected slot", () => {
         const store = withAgents();
         store.getState().selectSlot(2);

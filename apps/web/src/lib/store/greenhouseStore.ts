@@ -69,9 +69,11 @@ export type GreenhouseStoreState = {
   focusWindow: (agentId: AgentId) => void;
   /**
    * A hotbar slot was pressed, by click or key (#72): 1–6 are the pots, 0 the
-   * overview agent. A visible window is minimised; otherwise the agent's
-   * window shows, alone, or `beside` the open ones (shift-click, ADR 0005).
-   * A slot without an agent does nothing.
+   * overview agent. The focused window is minimised; another visible one
+   * takes the focus, so after leaving a terminal its digit moves into that
+   * terminal (#171). Otherwise the agent's window shows, alone, or `beside`
+   * the open ones (shift-click, ADR 0005). A slot without an agent does
+   * nothing.
    */
   pressSlot: (key: number, options?: { beside?: boolean }) => void;
   openSetup: () => void;
@@ -178,6 +180,10 @@ export function createGreenhouseStore(
       const visible = layout.windows.some(
         (w) => w.agentId === agent.id && !w.minimised,
       );
+      if (visible && get().focusedAgentId !== agent.id) {
+        get().focusWindow(agent.id);
+        return;
+      }
       if (visible) {
         get().toggleMinimised(agent.id);
         return;

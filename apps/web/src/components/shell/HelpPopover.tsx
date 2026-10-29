@@ -57,7 +57,10 @@ const STATES = [
 ];
 
 const KEYS = [
-  { keys: ["1 – 6"], text: "open that pot's terminal, with Shift beside" },
+  {
+    keys: ["1 – 6"],
+    text: "open that pot's terminal, with Shift beside. Open beside: go into it. Focused: minimise it",
+  },
   { keys: ["0"], text: "the overview: ask about all agents" },
   {
     keys: ["F"],
@@ -66,7 +69,7 @@ const KEYS = [
   // A, I, G (agents, issues, branches tab) come back with #153
   {
     keys: ["Ctrl", "` ^"],
-    text: "the key left of 1: leave the terminal for its hotbar slot. Esc stays with Claude Code, it interrupts",
+    text: "the key left of 1: leave the terminal for its hotbar slot, then a digit goes into another one. Esc stays with Claude Code, it interrupts",
   },
 ];
 
