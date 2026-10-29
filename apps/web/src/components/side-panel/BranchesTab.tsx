@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { BranchGraph } from "@gitspore/shared";
+import type { Agent, BranchGraph } from "@gitspore/shared";
 import {
   useGreenhouseStore,
   useNow,
@@ -51,6 +51,7 @@ export function BranchesTab() {
   );
   const selectedSlot = useGreenhouseStore((s) => s.selectedSlot);
   const selectSlot = useGreenhouseStore((s) => s.selectSlot);
+  const openWindow = useGreenhouseStore((s) => s.openWindow);
   const loadBranchGraph = useGreenhouseStore((s) => s.loadBranchGraph);
   const now = useNow();
 
@@ -83,6 +84,14 @@ export function BranchesTab() {
       clearInterval(timer);
     };
   }, [loadBranchGraph, limit]);
+
+  // Like a hotbar press: this agent's window alone, the others minimised.
+  // Never beside, and a visible window stays open.
+  function openAgent(agent: Agent) {
+    if (agent.slotIndex === null) return;
+    selectSlot(agent.slotIndex);
+    openWindow(agent.id, { alone: true });
+  }
 
   const layout = useMemo(
     () => graph && layoutBranches(graph, agents, baseBranch),
@@ -135,21 +144,37 @@ export function BranchesTab() {
                   className={cn(dimmed(edge.chain) && "opacity-35")}
                   style={{ stroke: chainColour(layout.chains[edge.chain]) }}
                 />
-              ))}
-              {layout.rows.map((row, i) => {
-                const colour = chainColour(layout.chains[row.chain]);
-                return (
-                  <circle
-                    key={row.commit.sha}
-                    cx={x(layout.chains[row.chain].lane)}
-                    cy={y(i)}
-                    r={row.merge ? 5 : 4}
-                    strokeWidth={2}
-                    className={cn(dimmed(row.chain) && "opacity-35")}
-                    style={{
-                      stroke: colour,
-                      fill: row.head ? colour : "var(--color-panel)",
-                    }}
+              );
+            })}
+          </svg>
+
+          {layout.rows.map((row) => {
+            const owner = layout.chains[row.chain].agent;
+            return (
+              <div
+                key={row.commit.sha}
+                onClick={() => owner && openAgent(owner)}
+                className={cn(
+                  "flex h-7 items-center gap-2 pr-2",
+                  owner && "cursor-pointer rounded-sm hover:bg-hover",
+                  dimmed(row.chain) && "opacity-35",
+                )}
+                style={{ paddingLeft: width }}
+              >
+                <span className="shrink-0 font-mono text-ui-meta text-muted-foreground">
+                  {row.commit.sha.slice(0, 7)}
+                </span>
+                <span
+                  className="min-w-16 flex-1 truncate text-ui-body"
+                  title={row.commit.subject}
+                >
+                  {row.commit.subject}
+                </span>
+                {row.labels.map((label) => (
+                  <BranchLabel
+                    key={label.branch}
+                    label={label}
+                    onOpen={openAgent}
                   />
                 );
               })}
@@ -219,7 +244,7 @@ function BranchLabel({
   onOpen,
 }: {
   label: GraphLabel;
-  onOpen: (slot: number) => void;
+  onOpen: (agent: Agent) => void;
 }) {
   const className =
     "flex max-w-1/2 min-w-0 items-center gap-1 rounded-sm border-2 border-current px-2 text-ui-badge font-semibold";
@@ -235,16 +260,15 @@ function BranchLabel({
     );
   }
 
-  const slot = agent.slotIndex;
   return (
     <button
       type="button"
-      className={cn(className, "hover:bg-hover")}
+      className={cn(className, "hover:bg-ink/10")}
       title={text}
       style={style}
       onClick={(event) => {
         event.stopPropagation();
-        onOpen(slot);
+        onOpen(agent);
       }}
     >
       <span
