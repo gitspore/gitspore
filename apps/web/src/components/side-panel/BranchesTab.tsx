@@ -144,37 +144,21 @@ export function BranchesTab() {
                   className={cn(dimmed(edge.chain) && "opacity-35")}
                   style={{ stroke: chainColour(layout.chains[edge.chain]) }}
                 />
-              );
-            })}
-          </svg>
-
-          {layout.rows.map((row) => {
-            const owner = layout.chains[row.chain].agent;
-            return (
-              <div
-                key={row.commit.sha}
-                onClick={() => owner && openAgent(owner)}
-                className={cn(
-                  "flex h-7 items-center gap-2 pr-2",
-                  owner && "cursor-pointer rounded-sm hover:bg-hover",
-                  dimmed(row.chain) && "opacity-35",
-                )}
-                style={{ paddingLeft: width }}
-              >
-                <span className="shrink-0 font-mono text-ui-meta text-muted-foreground">
-                  {row.commit.sha.slice(0, 7)}
-                </span>
-                <span
-                  className="min-w-16 flex-1 truncate text-ui-body"
-                  title={row.commit.subject}
-                >
-                  {row.commit.subject}
-                </span>
-                {row.labels.map((label) => (
-                  <BranchLabel
-                    key={label.branch}
-                    label={label}
-                    onOpen={openAgent}
+              ))}
+              {layout.rows.map((row, i) => {
+                const colour = chainColour(layout.chains[row.chain]);
+                return (
+                  <circle
+                    key={row.commit.sha}
+                    cx={x(layout.chains[row.chain].lane)}
+                    cy={y(i)}
+                    r={row.merge ? 5 : 4}
+                    strokeWidth={2}
+                    className={cn(dimmed(row.chain) && "opacity-35")}
+                    style={{
+                      stroke: colour,
+                      fill: row.head ? colour : "var(--color-panel)",
+                    }}
                   />
                 );
               })}
@@ -185,10 +169,10 @@ export function BranchesTab() {
               return (
                 <div
                   key={row.commit.sha}
-                  onClick={() => owner && selectSlot(owner.slotIndex)}
+                  onClick={() => owner && openAgent(owner)}
                   className={cn(
                     "flex h-7 items-center gap-2 pr-2",
-                    owner && "cursor-pointer",
+                    owner && "cursor-pointer rounded-sm hover:bg-hover",
                     dimmed(row.chain) && "opacity-35",
                   )}
                   style={{ paddingLeft: width }}
@@ -206,7 +190,7 @@ export function BranchesTab() {
                     <BranchLabel
                       key={label.branch}
                       label={label}
-                      onOpen={selectSlot}
+                      onOpen={openAgent}
                     />
                   ))}
                   {now !== 0 && (
