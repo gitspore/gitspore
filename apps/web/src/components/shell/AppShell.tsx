@@ -1,12 +1,12 @@
 "use client";
-
-import type { Agent } from "@gitspore/shared";
-
 import { useCallback, useRef, useState } from "react";
-import { useShallow } from "zustand/react/shallow";
 import { useGreenhouseStore } from "@/lib/client/GreenhouseClientProvider";
 import { mainGrid, shellGrid } from "@/lib/layout";
-import { issueTitle, needsInputCount, showSetup } from "@/lib/store/selectors";
+import {
+  hasVisibleWindow,
+  needsInputCount,
+  showSetup,
+} from "@/lib/store/selectors";
 import { type HotbarKey, useHotbarKeys } from "@/lib/hotbarKeys";
 import { useSceneEnabled } from "@/lib/scene";
 import { Scene } from "../Scene";
