@@ -26,6 +26,7 @@ const a21 = agent(3, 21, "spore/21-dark-mode");
 
 describe("layoutBranches", () => {
   const graph: BranchGraph = {
+    hasMore: false,
     commits: [
       commit("x2", "x1"),
       commit("m2", "m1"),
@@ -84,6 +85,7 @@ describe("layoutBranches", () => {
 
   it("puts a new agent's label on main when it has no commits yet", () => {
     const fresh: BranchGraph = {
+      hasMore: false,
       commits: [commit("m1", "m0"), commit("m0")],
       heads: [
         { branch: "main", sha: "m1" },
@@ -102,6 +104,7 @@ describe("layoutBranches", () => {
 
   it("draws a merged branch in its own grey lane up to the merge", () => {
     const merged: BranchGraph = {
+      hasMore: false,
       commits: [
         commit("m2", "m1", "s1"),
         commit("s1", "m0"),
@@ -126,6 +129,7 @@ describe("layoutBranches", () => {
 
   it("reuses a lane once the branch before it has ended", () => {
     const twoMerges: BranchGraph = {
+      hasMore: false,
       commits: [
         commit("m4", "m3", "t1"),
         commit("t1", "m3"),
@@ -145,6 +149,7 @@ describe("layoutBranches", () => {
 
   it("leaves branches without an agent unlabelled", () => {
     const leftover: BranchGraph = {
+      hasMore: false,
       commits: [commit("z1", "m0"), commit("m0")],
       heads: [
         { branch: "main", sha: "m0" },
@@ -161,6 +166,7 @@ describe("layoutBranches", () => {
 
   it("runs a line to the bottom when the parent was cut off", () => {
     const cut: BranchGraph = {
+      hasMore: false,
       commits: [commit("m1", "m0")],
       heads: [{ branch: "main", sha: "m1" }],
     };

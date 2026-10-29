@@ -15,11 +15,14 @@ import {
   type GraphEdge,
   type GraphLabel,
 } from "@/lib/branches/branchLayout";
+import { Button } from "@/components/ui/button";
 import { STATUS_COLOUR } from "@/lib/status";
 import { selectAgents } from "@/lib/store/selectors";
 import { cn } from "@/lib/utils";
 
 const REFRESH_MS = 5000;
+// Commits per page; "Load more" raises the limit by this much.
+const PAGE = 40;
 const ROW = 28;
 const LANE = 16;
 const PAD = 12;
@@ -53,11 +56,13 @@ export function BranchesTab() {
 
   const [graph, setGraph] = useState<BranchGraph | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
+  // Stays raised across the refresh, so loaded rows don't vanish again.
+  const [limit, setLimit] = useState(PAGE);
 
   useEffect(() => {
     let active = true;
     const load = () =>
-      loadBranchGraph().then(
+      loadBranchGraph(limit).then(
         (answer) => {
           if (!active) return;
           if ("error" in answer) {
@@ -77,7 +82,7 @@ export function BranchesTab() {
       active = false;
       clearInterval(timer);
     };
-  }, [loadBranchGraph]);
+  }, [loadBranchGraph, limit]);
 
   const layout = useMemo(
     () => graph && layoutBranches(graph, agents, baseBranch),
@@ -99,7 +104,7 @@ export function BranchesTab() {
   const dimmed = (chain: number) => selected !== -1 && chain !== selected;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex h-full min-h-0 flex-col gap-2">
       <p className="px-2 text-ui-meta text-muted-foreground">
         {baseBranch} + agent branches
       </p>
@@ -112,79 +117,93 @@ export function BranchesTab() {
           No commits yet.
         </p>
       ) : (
-        <div className="relative">
-          <svg
-            aria-hidden
-            className="absolute top-0 left-0 overflow-visible"
-            width={width}
-            height={layout.rows.length * ROW}
-          >
-            {layout.edges.map((edge, i) => (
-              <path
-                key={i}
-                d={pathOf(edge)}
-                fill="none"
-                strokeWidth={2}
-                className={cn(dimmed(edge.chain) && "opacity-35")}
-                style={{ stroke: chainColour(layout.chains[edge.chain]) }}
-              />
-            ))}
-            {layout.rows.map((row, i) => {
-              const colour = chainColour(layout.chains[row.chain]);
-              return (
-                <circle
-                  key={row.commit.sha}
-                  cx={x(layout.chains[row.chain].lane)}
-                  cy={y(i)}
-                  r={row.merge ? 5 : 4}
+        // The rows scroll here, the SVG with them: both sit in one box.
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="relative">
+            <svg
+              aria-hidden
+              className="absolute top-0 left-0 overflow-visible"
+              width={width}
+              height={layout.rows.length * ROW}
+            >
+              {layout.edges.map((edge, i) => (
+                <path
+                  key={i}
+                  d={pathOf(edge)}
+                  fill="none"
                   strokeWidth={2}
-                  className={cn(dimmed(row.chain) && "opacity-35")}
-                  style={{
-                    stroke: colour,
-                    fill: row.head ? colour : "var(--color-panel)",
-                  }}
+                  className={cn(dimmed(edge.chain) && "opacity-35")}
+                  style={{ stroke: chainColour(layout.chains[edge.chain]) }}
                 />
+              ))}
+              {layout.rows.map((row, i) => {
+                const colour = chainColour(layout.chains[row.chain]);
+                return (
+                  <circle
+                    key={row.commit.sha}
+                    cx={x(layout.chains[row.chain].lane)}
+                    cy={y(i)}
+                    r={row.merge ? 5 : 4}
+                    strokeWidth={2}
+                    className={cn(dimmed(row.chain) && "opacity-35")}
+                    style={{
+                      stroke: colour,
+                      fill: row.head ? colour : "var(--color-panel)",
+                    }}
+                  />
+                );
+              })}
+            </svg>
+
+            {layout.rows.map((row) => {
+              const owner = layout.chains[row.chain].agent;
+              return (
+                <div
+                  key={row.commit.sha}
+                  onClick={() => owner && selectSlot(owner.slotIndex)}
+                  className={cn(
+                    "flex h-7 items-center gap-2 pr-2",
+                    owner && "cursor-pointer",
+                    dimmed(row.chain) && "opacity-35",
+                  )}
+                  style={{ paddingLeft: width }}
+                >
+                  <span className="shrink-0 font-mono text-ui-meta text-muted-foreground">
+                    {row.commit.sha.slice(0, 7)}
+                  </span>
+                  <span
+                    className="min-w-16 flex-1 truncate text-ui-body"
+                    title={row.commit.subject}
+                  >
+                    {row.commit.subject}
+                  </span>
+                  {row.labels.map((label) => (
+                    <BranchLabel
+                      key={label.branch}
+                      label={label}
+                      onOpen={selectSlot}
+                    />
+                  ))}
+                  {now !== 0 && (
+                    <span className="shrink-0 text-ui-meta text-muted-foreground tabular-nums">
+                      {formatAge(now - Date.parse(row.commit.date))}
+                    </span>
+                  )}
+                </div>
               );
             })}
-          </svg>
-
-          {layout.rows.map((row) => {
-            const owner = layout.chains[row.chain].agent;
-            return (
-              <div
-                key={row.commit.sha}
-                onClick={() => owner && selectSlot(owner.slotIndex)}
-                className={cn(
-                  "flex h-7 items-center gap-2 pr-2",
-                  owner && "cursor-pointer",
-                  dimmed(row.chain) && "opacity-35",
-                )}
-                style={{ paddingLeft: width }}
-              >
-                <span className="shrink-0 font-mono text-ui-meta text-muted-foreground">
-                  {row.commit.sha.slice(0, 7)}
-                </span>
-                <span
-                  className="min-w-16 flex-1 truncate text-ui-body"
-                  title={row.commit.subject}
-                >
-                  {row.commit.subject}
-                </span>
-                {row.labels.map((label) => (
-                  <BranchLabel
-                    key={label.branch}
-                    label={label}
-                    onOpen={selectSlot}
-                  />
-                ))}
-                {now !== 0 && (
-                  <span className="shrink-0 text-ui-meta text-muted-foreground tabular-nums">
-                    {formatAge(now - Date.parse(row.commit.date))}
-                  </span>
-                )}
-              </div>
-            );
-          })}
+          </div>
+          {graph?.hasMore && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-1 w-full text-muted-foreground hover:bg-hover"
+              onClick={() => setLimit((l) => l + PAGE)}
+            >
+              {/* On the span, because cn() drops text-ui-* next to a text colour */}
+              <span className="text-ui-meta">Load more</span>
+            </Button>
+          )}
         </div>
       )}
 

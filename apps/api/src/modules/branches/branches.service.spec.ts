@@ -22,8 +22,10 @@ describe("BranchesService", () => {
 
   afterEach(() => rm(dir, { recursive: true, force: true }));
 
-  const graphOf = async (path: string) => {
-    const ack = await new BranchesService(new RepoConfig(path, "main")).graph();
+  const graphOf = async (path: string, limit?: number) => {
+    const ack = await new BranchesService(new RepoConfig(path, "main")).graph(
+      limit,
+    );
     if ("error" in ack) throw new Error(ack.error.message);
     return ack.graph;
   };
@@ -80,6 +82,49 @@ describe("BranchesService", () => {
       "from elsewhere",
       "initial",
     ]);
+  });
+
+  describe("limit", () => {
+    // initial + 4 more: five commits on main, newest first.
+    const fiveCommits = async () => {
+      const git = await initRepo(repo);
+      for (let i = 1; i <= 4; i++) {
+        await git.raw(["commit", "--allow-empty", "-m", `commit ${i}`]);
+      }
+    };
+
+    it("sends the newest `limit` commits and says older ones exist", async () => {
+      await fiveCommits();
+
+      const graph = await graphOf(repo, 3);
+
+      expect(graph.commits.map((c) => c.subject)).toEqual([
+        "commit 4",
+        "commit 3",
+        "commit 2",
+      ]);
+      expect(graph.hasMore).toBe(true);
+    });
+
+    it("says nothing more once the whole history fits", async () => {
+      await fiveCommits();
+
+      const exact = await graphOf(repo, 5);
+      const above = await graphOf(repo, 40);
+
+      expect(exact.commits).toHaveLength(5);
+      expect(exact.hasMore).toBe(false);
+      expect(above.commits).toHaveLength(5);
+      expect(above.hasMore).toBe(false);
+    });
+
+    it("defaults to DEFAULT_COMMITS and keeps a nonsense limit in range", async () => {
+      await fiveCommits();
+
+      expect((await graphOf(repo)).commits).toHaveLength(5);
+      expect((await graphOf(repo, 0)).commits).toHaveLength(1);
+      expect((await graphOf(repo, Number.NaN)).commits).toHaveLength(5);
+    });
   });
 
   it("answers git_failed when the folder is no repo", async () => {

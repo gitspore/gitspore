@@ -186,6 +186,8 @@ export type BranchHead = {
 export type BranchGraph = {
   commits: GraphCommit[];
   heads: BranchHead[];
+  /** Older commits exist beyond `commits`; ask again with a higher limit. */
+  hasMore: boolean;
 };
 
 /** The repository gitspore works in. */

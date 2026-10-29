@@ -17,6 +17,11 @@ const MAIN_SUBJECTS = [
 
 const AGENT_SUBJECTS = ["first draft", "tests", "fix review notes"];
 
+// Older commits below MAIN_SUBJECTS, so "Load more" has something to load.
+const HISTORY = 60;
+
+export const DEFAULT_LIMIT = 40;
+
 export function fakeSha(seed: string): string {
   let hash = 2166136261;
   for (const ch of seed) {
@@ -29,6 +34,7 @@ export function mockBranchGraph(
   agents: Agent[],
   baseBranch: string,
   now: number,
+  limit = DEFAULT_LIMIT,
 ): BranchGraph {
   const commit = (
     seed: string,
@@ -44,9 +50,16 @@ export function mockBranchGraph(
     subject,
   });
 
+  const history: GraphCommit[] = [];
+  for (let i = 0; i < HISTORY; i++) {
+    const parents = i === 0 ? [] : [history[i - 1].sha];
+    const minutesAgo = 600 + (HISTORY - i) * 120;
+    history.push(commit(`history-${i}`, parents, minutesAgo, `history ${i}`));
+  }
+
   const main: GraphCommit[] = [];
   MAIN_SUBJECTS.forEach((subject, i) => {
-    const parents = i === 0 ? [] : [main[i - 1].sha];
+    const parents = i === 0 ? [history[HISTORY - 1].sha] : [main[i - 1].sha];
     main.push(commit(`main-${i}`, parents, 600 - i * 60, subject));
   });
   const side = commit("side-0", [main[1].sha], 300, "readme setup", "Claude");
@@ -81,10 +94,12 @@ export function mockBranchGraph(
     agentHeads.push({ branch: agent.branch, sha: parent.sha });
   }
 
+  const commits = [...branchCommits, ...history, ...trunk, side].sort(
+    (a, b) => Date.parse(b.date) - Date.parse(a.date),
+  );
   return {
-    commits: [...branchCommits, ...trunk, side].sort(
-      (a, b) => Date.parse(b.date) - Date.parse(a.date),
-    ),
+    commits: commits.slice(0, limit),
+    hasMore: commits.length > limit,
     heads: [
       { branch: baseBranch, sha: merge.sha },
       ...agentHeads.sort((a, b) => a.branch.localeCompare(b.branch)),

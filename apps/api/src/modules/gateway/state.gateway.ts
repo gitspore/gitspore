@@ -130,10 +130,19 @@ export class StateGateway implements OnGatewayInit, OnGatewayConnection {
     }
   }
 
+  // A missing or non-numeric limit falls back to the service's default.
   @SubscribeMessage("branches:graph")
-  async handleBranchesGraph(@Ack() ack: (response: BranchGraphAck) => void) {
+  async handleBranchesGraph(
+    @MessageBody() payload: unknown,
+    @Ack() ack: (response: BranchGraphAck) => void,
+  ) {
+    const limit = (payload as { limit?: unknown } | null)?.limit;
     try {
-      ack(await this.branches.graph());
+      ack(
+        await this.branches.graph(
+          typeof limit === "number" ? limit : undefined,
+        ),
+      );
     } catch (error) {
       this.logger.error(error);
       ack({ error: { code: "internal", message: FAILED } });
