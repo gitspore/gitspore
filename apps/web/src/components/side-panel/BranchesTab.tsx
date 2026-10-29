@@ -80,11 +80,12 @@ export function BranchesTab() {
     };
   }, [loadBranchGraph]);
 
-  // Like a click on the plant: select the pot, show and focus the window.
+  // Like a hotbar press: this agent's window alone, the others minimised.
+  // Never beside, and a visible window stays open.
   function openAgent(agent: Agent) {
     if (agent.slotIndex === null) return;
     selectSlot(agent.slotIndex);
-    openWindow(agent.id);
+    openWindow(agent.id, { alone: true });
   }
 
   const layout = useMemo(
