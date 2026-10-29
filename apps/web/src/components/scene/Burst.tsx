@@ -11,10 +11,12 @@ import { seeded } from "./life";
 // - soil: a puff of crumbs when a seed is planted, quick and heavy
 // - petals: when a branch is merged, petals in the bloom's colours fly up
 //   and drift down slowly, tumbling
+// - dust: when a plant is removed after clean-up, a few dozen tiny bits in
+//   the plant's colours drift up and out a little and fade
 // Each bit flies on its own throw (direction, speed, spin) under gravity
 // and shrinks away at the end. Afterwards nothing is drawn
 
-export type BurstKind = "soil" | "petals";
+export type BurstKind = "soil" | "petals" | "dust";
 
 type Recipe = {
   count: number;
@@ -47,7 +49,18 @@ const RECIPES: Record<BurstKind, Recipe> = {
     seconds: 2.6,
     size: 0.085,
   },
+  dust: {
+    count: 36,
+    up: [0.5, 1.1],
+    out: 0.7,
+    gravity: -0.3,
+    drag: 1.6,
+    seconds: 1.1,
+    size: 0.03,
+  },
 };
+
+const SEEDS: Record<BurstKind, number> = { soil: 51, petals: 53, dust: 57 };
 
 const place = new THREE.Vector3();
 const spin = new THREE.Euler();
@@ -71,7 +84,7 @@ export function Burst({
   // Every bit's throw, from a seed of its own kind; the colours go in
   // turn. Soil crumbs are lumps, petals flat ovals
   const throws = useMemo(() => {
-    const random = seeded(kind === "soil" ? 51 : 53);
+    const random = seeded(SEEDS[kind]);
     return [...Array(recipe.count).keys()].map(() => {
       const angle = random() * Math.PI * 2;
       const out = recipe.out * (0.3 + random() * 0.7);
@@ -89,7 +102,7 @@ export function Burst({
   }, [kind, recipe]);
   const geometry = useMemo(
     () =>
-      kind === "soil"
+      kind === "soil" || kind === "dust"
         ? new THREE.IcosahedronGeometry(1, 0)
         : new THREE.SphereGeometry(1, 8, 4).scale(1, 0.25, 0.6),
     [kind],

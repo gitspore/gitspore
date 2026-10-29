@@ -161,6 +161,9 @@ const Pot = memo(function Pot({
     const count = (burst?.count ?? 0) + 1;
     if (seeing.id && seeing.id !== seen.id) {
       setBurst({ kind: "soil", count });
+    } else if (!seeing.id && seen.id && !test) {
+      // the plant is gone after clean-up: dissolve where it stood
+      setBurst({ kind: "dust", count });
     } else if (seeing.merged && !seen.merged) {
       setBurst({ kind: "petals", count });
     }
@@ -227,7 +230,11 @@ const Pot = memo(function Pot({
           key={burst.count}
           kind={burst.kind}
           colors={
-            burst.kind === "soil" ? [colors.soil] : [art.petal, art.heart]
+            burst.kind === "soil"
+              ? [colors.soil]
+              : burst.kind === "dust"
+                ? [art.petal, art.leaf, art.bud, art.heart]
+                : [art.petal, art.heart]
           }
           y={SOIL_Y}
         />
