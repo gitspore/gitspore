@@ -232,6 +232,17 @@
             "$type": "color"
           }
         },
+        "bluebird": {
+          "body": {
+            "$value": "#4a7fb5",
+            "$type": "color",
+            "$description": "the bluebird on the fence by day: back, wings and tail"
+          },
+          "belly": {
+            "$value": "#f1e4cf",
+            "$type": "color"
+          }
+        },
         "rabbit": {
           "fur": {
             "$value": "#a08468",

@@ -2,6 +2,7 @@ import { useMemo } from "react";
 
 import type { Mode, tokens } from "@/theme/tokens";
 
+import { Bluebird } from "./Bluebird";
 import { Bumblebee } from "./Bumblebee";
 import { Butterflies } from "./Butterflies";
 import { Dragonfly } from "./Dragonfly";
@@ -24,7 +25,8 @@ import { Teacup } from "./Teacup";
 // - beams of sun by day, of moon at night, with dust drifting in them
 // - fireflies at night
 // - by day butterflies (a rare one with rainbow wings), a bumblebee, a
-//   dragonfly, and a robin and a rabbit in the grass; at night moths
+//   dragonfly, a robin and a rabbit in the grass, and a bluebird on the
+//   fence; at night moths
 //   around the bulbs, and eyes in the woods
 // - day and night: a ladybug on the table, a steaming cup of tea, a snail
 //   on a table leg
@@ -106,6 +108,12 @@ export function GardenLife({
           <Robin
             brown={scene.robin.body}
             breast={scene.robin.breast}
+            dark={scene.insect}
+            reducedMotion={reducedMotion}
+          />
+          <Bluebird
+            blue={scene.bluebird.body}
+            belly={scene.bluebird.belly}
             dark={scene.insect}
             reducedMotion={reducedMotion}
           />

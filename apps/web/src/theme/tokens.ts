@@ -308,6 +308,10 @@ export const tokens = {
           body: "#8a6446",
           breast: "#e2733a",
         },
+        bluebird: {
+          body: "#4a7fb5",
+          belly: "#f1e4cf",
+        },
         rabbit: {
           fur: "#a08468",
           pale: "#efe6d6",
@@ -736,6 +740,10 @@ export const tokens = {
         robin: {
           body: "#8a6446",
           breast: "#e2733a",
+        },
+        bluebird: {
+          body: "#4a7fb5",
+          belly: "#f1e4cf",
         },
         rabbit: {
           fur: "#a08468",
