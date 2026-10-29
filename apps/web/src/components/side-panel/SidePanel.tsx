@@ -86,11 +86,11 @@ export function SidePanel({ tab, onTabChange, onClose }: SidePanelProps) {
     dispatchAgent(issueNumber, freeSlot);
   }
 
-  // Like a click on the plant: the agent's window shows and takes the focus.
+  // Like a click on the plant: the agent's window alone, or beside with shift.
   // An open one is un-minimised, never added twice.
-  function openAgent(agentId: AgentId, slotIndex: number) {
+  function openAgent(agentId: AgentId, slotIndex: number, shift: boolean) {
     selectSlot(slotIndex);
-    openWindow(agentId);
+    openWindow(agentId, { alone: !shift });
   }
 
   function openStop(agent: Agent) {
@@ -200,7 +200,7 @@ export function SidePanel({ tab, onTabChange, onClose }: SidePanelProps) {
                   ""
                 }
                 selected={selectedSlot === slotIndex}
-                onSelect={() => openAgent(agent.id, slotIndex)}
+                onSelect={(shift) => openAgent(agent.id, slotIndex, shift)}
                 onStop={() => openStop(agent)}
               />
             );

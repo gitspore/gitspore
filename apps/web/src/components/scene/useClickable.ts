@@ -10,11 +10,11 @@ import type { ThreeEvent } from "@react-three/fiber";
 export const DRAG_PX = 4;
 
 // Click and hover for a scene object (a pot, the book). onOpen runs on a
-// click; null means nothing to open, so no hand and no outline. A press
+// click, with whether shift was held; null means nothing to open, so no hand and no outline. A press
 // that moved more than DRAG_PX before the release was an orbit drag, not
 // a click. stopPropagation: only the front object reacts, not the ones
 // behind it. Spread the handlers onto the object's group
-export function useClickable(onOpen: (() => void) | null) {
+export function useClickable(onOpen: ((shift: boolean) => void) | null) {
   const [hovered, setHovered] = useState(false);
   const active = hovered && onOpen !== null;
   useCursor(active);
@@ -22,7 +22,7 @@ export function useClickable(onOpen: (() => void) | null) {
   const handlers = {
     onClick: (event: ThreeEvent<MouseEvent>) => {
       event.stopPropagation();
-      if (onOpen && event.delta <= DRAG_PX) onOpen();
+      if (onOpen && event.delta <= DRAG_PX) onOpen(event.shiftKey);
     },
     onPointerOver: (event: ThreeEvent<PointerEvent>) => {
       event.stopPropagation();

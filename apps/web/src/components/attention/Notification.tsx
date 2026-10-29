@@ -10,7 +10,7 @@ import { formatSeconds, useSecondsSince } from "@/lib/time";
 
 type NotificationProps = {
   agent: Agent;
-  onOpen: () => void;
+  onOpen: (shift: boolean) => void;
   onOpenBeside: () => void;
   onDismiss: () => void;
 };
@@ -51,7 +51,11 @@ export function Notification({
         >
           Open beside
         </Button>
-        <Button variant="on-wait" className="h-10 px-4" onClick={onOpen}>
+        <Button
+          variant="on-wait"
+          className="h-10 px-4"
+          onClick={(event) => onOpen(event.shiftKey)}
+        >
           Open
         </Button>
       </div>

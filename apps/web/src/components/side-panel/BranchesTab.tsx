@@ -86,11 +86,11 @@ export function BranchesTab() {
   }, [loadBranchGraph, limit]);
 
   // Like a hotbar press: this agent's window alone, the others minimised.
-  // Never beside, and a visible window stays open.
-  function openAgent(agent: Agent) {
+  // Shift opens it beside the visible windows.
+  function openAgent(agent: Agent, shift: boolean) {
     if (agent.slotIndex === null) return;
     selectSlot(agent.slotIndex);
-    openWindow(agent.id, { alone: true });
+    openWindow(agent.id, { alone: !shift });
   }
 
   const layout = useMemo(
@@ -144,40 +144,7 @@ export function BranchesTab() {
                   className={cn(dimmed(edge.chain) && "opacity-35")}
                   style={{ stroke: chainColour(layout.chains[edge.chain]) }}
                 />
-              );
-            })}
-          </svg>
-
-          {layout.rows.map((row) => {
-            const owner = layout.chains[row.chain].agent;
-            return (
-              <div
-                key={row.commit.sha}
-                onClick={() => owner && openAgent(owner)}
-                className={cn(
-                  "flex h-7 items-center gap-2 pr-2",
-                  owner && "cursor-pointer rounded-sm hover:bg-hover",
-                  dimmed(row.chain) && "opacity-35",
-                )}
-                style={{ paddingLeft: width }}
-              >
-                <span className="shrink-0 font-mono text-ui-meta text-muted-foreground">
-                  {row.commit.sha.slice(0, 7)}
-                </span>
-                <span
-                  className="min-w-16 flex-1 truncate text-ui-body"
-                  title={row.commit.subject}
-                >
-                  {row.commit.subject}
-                </span>
-                {row.labels.map((label) => (
-                  <BranchLabel
-                    key={label.branch}
-                    label={label}
-                    onOpen={openAgent}
-                  />
-                );
-              })}
+              ))}
             </svg>
 
             {layout.rows.map((row) => {
@@ -185,10 +152,10 @@ export function BranchesTab() {
               return (
                 <div
                   key={row.commit.sha}
-                  onClick={() => owner && selectSlot(owner.slotIndex)}
+                  onClick={(event) => owner && openAgent(owner, event.shiftKey)}
                   className={cn(
                     "flex h-7 items-center gap-2 pr-2",
-                    owner && "cursor-pointer",
+                    owner && "cursor-pointer rounded-sm hover:bg-hover",
                     dimmed(row.chain) && "opacity-35",
                   )}
                   style={{ paddingLeft: width }}
@@ -206,7 +173,7 @@ export function BranchesTab() {
                     <BranchLabel
                       key={label.branch}
                       label={label}
-                      onOpen={selectSlot}
+                      onOpen={openAgent}
                     />
                   ))}
                   {now !== 0 && (
@@ -244,7 +211,7 @@ function BranchLabel({
   onOpen,
 }: {
   label: GraphLabel;
-  onOpen: (agent: Agent) => void;
+  onOpen: (agent: Agent, shift: boolean) => void;
 }) {
   const className =
     "flex max-w-1/2 min-w-0 items-center gap-1 rounded-sm border-2 border-current px-2 text-ui-badge font-semibold";
@@ -268,7 +235,7 @@ function BranchLabel({
       style={style}
       onClick={(event) => {
         event.stopPropagation();
-        onOpen(agent);
+        onOpen(agent, event.shiftKey);
       }}
     >
       <span

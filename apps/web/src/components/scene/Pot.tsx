@@ -132,7 +132,7 @@ const Pot = memo(function Pot({
 
   const openWindow = useGreenhouseStore((state) => state.openWindow);
   const { hovered, handlers } = useClickable(
-    agent ? () => openWindow(agent.id) : null,
+    agent ? (shift) => openWindow(agent.id, { alone: !shift }) : null,
   );
   // During a seed packet drag: the outline marks the free pot
   // the packet would land in, and hovering doesn't outline
