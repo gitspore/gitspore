@@ -15,6 +15,9 @@ export type SceneSettings = {
   cameraMotion: boolean;
   // Grass, flowers, insects and the string lights; the URL flag is ?life
   life: boolean;
+  // Birds by day, crickets at night (#172). Not a scene option: low power
+  // and the URL flags leave it alone
+  ambientSound: boolean;
 };
 
 // The options a URL flag can set, and what the scene finally draws
@@ -28,6 +31,7 @@ export const DEFAULT_SCENE_SETTINGS: SceneSettings = {
   glow: true,
   cameraMotion: true,
   life: true,
+  ambientSound: true,
 };
 
 export const URL_FLAGS: Record<SceneOption, string> = {
