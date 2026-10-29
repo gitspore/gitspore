@@ -102,6 +102,17 @@ export function needsInputCount(state: GreenhouseStoreState): number {
 }
 
 /**
+ * Whether a window shows: open, not minimised, and its agent still exists.
+ * The same windows WindowGrid tiles (#109).
+ */
+export function hasVisibleWindow(state: GreenhouseStoreState): boolean {
+  const agents = selectAgents(state);
+  return state.layout.windows.some(
+    (w) => !w.minimised && agents.some((a) => a.id === w.agentId),
+  );
+}
+
+/**
  * Open issues no agent works on yet: the ones that can be dispatched. A new
  * array each call: use it as
  * `useGreenhouseStore(useShallow(openIssuesWithoutAgent))`.

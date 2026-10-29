@@ -63,6 +63,8 @@ export type GreenhouseStoreState = {
   openWindow: (agentId: AgentId, options?: { alone?: boolean }) => void;
   closeWindow: (agentId: AgentId) => void;
   toggleMinimised: (agentId: AgentId) => void;
+  /** Minimises these windows, e.g. the oldest ones that don't fit (#109). */
+  minimiseWindows: (agentIds: AgentId[]) => void;
   /** Focus moved into the agent's window (a click into its terminal). */
   focusWindow: (agentId: AgentId) => void;
   /**
@@ -155,6 +157,15 @@ export function createGreenhouseStore(
           showing ? agentId : s.focusedAgentId,
         );
       }),
+    minimiseWindows: (agentIds) =>
+      set((s) =>
+        withWindows(
+          s,
+          s.layout.windows.map((w) =>
+            agentIds.includes(w.agentId) ? { ...w, minimised: true } : w,
+          ),
+        ),
+      ),
     focusWindow: (agentId) => {
       if (get().focusedAgentId === agentId) return;
       set((s) => withWindows(s, s.layout.windows, agentId));

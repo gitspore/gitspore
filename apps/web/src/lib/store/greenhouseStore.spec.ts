@@ -653,6 +653,22 @@ describe("createGreenhouseStore", () => {
       expect(windows(store)).toEqual([{ agentId: "a2", minimised: false }]);
     });
 
+    it("minimiseWindows minimises those windows and moves the focus on", () => {
+      const { store } = setup();
+      store.getState().openWindow("a1");
+      store.getState().openWindow("a2");
+      store.getState().openWindow("a3");
+
+      store.getState().minimiseWindows(["a1", "a3"]);
+
+      expect(windows(store)).toEqual([
+        { agentId: "a1", minimised: true },
+        { agentId: "a2", minimised: false },
+        { agentId: "a3", minimised: true },
+      ]);
+      expect(store.getState().focusedAgentId).toBe("a2");
+    });
+
     it("toggleMinimised flips one window", () => {
       const { store } = setup();
       store.getState().openWindow("a1");

@@ -13,7 +13,7 @@ import { Scene } from "../Scene";
 import { ConnectScreen } from "../attention/ConnectScreen";
 import { NotificationStack } from "../attention/NotificationStack";
 import { Hotbar } from "../main/Hotbar";
-import { Window } from "../main/Window";
+import { WindowGrid } from "../main/WindowGrid";
 import { SettingsPanel } from "../side-panel/SettingsPanel";
 import { SidePanel } from "../side-panel/SidePanel";
 import { SceneLoader, SceneVeil } from "./SceneLoading";
@@ -25,9 +25,6 @@ export function AppShell() {
   const layout = useGreenhouseStore((s) => s.layout);
   const setSidePanel = useGreenhouseStore((s) => s.setSidePanel);
   const setMode = useGreenhouseStore((s) => s.setMode);
-  const toggleMinimised = useGreenhouseStore((s) => s.toggleMinimised);
-  const focusWindow = useGreenhouseStore((s) => s.focusWindow);
-  const focusedAgentId = useGreenhouseStore((s) => s.focusedAgentId);
   // No repo chosen yet, or the user switches repos (#58)
   const setupVisible = useGreenhouseStore(showSetup);
   // Keys 0–6 press the hotbar slots (#72), F toggles focus mode like the rail
@@ -48,21 +45,13 @@ export function AppShell() {
   // The scene's free part of the main area; the camera frames the table
   // into it. Focus mode with a window open has no scene area, so it hides
   const sceneArea = useRef<HTMLDivElement>(null);
-  const sceneHidden =
-    layout.mode === "focus" && layout.windows.some((w) => !w.minimised);
+  // The windows themselves are WindowGrid's (#109)
+  const windowsVisible = useGreenhouseStore(hasVisibleWindow);
+  const sceneHidden = layout.mode === "focus" && windowsVisible;
   // Until the scene has drawn its first frames a veil covers it, with a
   // growing seedling in its free area
   const [sceneReady, setSceneReady] = useState(false);
 
-  // The agents of the visible windows; a window whose agent is gone is skipped
-  const visibleWindows = useGreenhouseStore(
-    useShallow((s) =>
-      s.layout.windows
-        .filter((w) => !w.minimised)
-        .map((w) => s.server?.agents.find((a) => a.id === w.agentId))
-        .filter((agent) => agent !== undefined),
-    ),
-  );
   const waitingCount = useGreenhouseStore(needsInputCount);
 
   return (
@@ -100,7 +89,7 @@ export function AppShell() {
 
         {/* Main Section */}
         <section
-          className="relative grid min-w-0 grid-cols-[minmax(0,1fr)] gap-layout-edge [grid-area:main]"
+          className="relative grid min-h-0 min-w-0 grid-cols-[minmax(0,1fr)] gap-layout-edge [grid-area:main]"
           style={mainGrid(layout)}
         >
           <div
@@ -110,18 +99,9 @@ export function AppShell() {
             {showScene && <SceneLoader ready={sceneReady} />}
           </div>
 
-          {visibleWindows.length > 0 && (
-            // Side by side for now; tiling (1, 2, 2+1, 2×2) comes with WindowGrid
-            <div className="pointer-events-auto flex min-w-0 gap-2 [grid-area:windows]">
-              {visibleWindows.map((agent) => (
-                <AgentWindow
-                  key={agent.id}
-                  agent={agent}
-                  focused={agent.id === focusedAgentId}
-                  onFocus={() => focusWindow(agent.id)}
-                  onMinimise={() => toggleMinimised(agent.id)}
-                />
-              ))}
+          {windowsVisible && (
+            <div className="pointer-events-auto min-h-0 min-w-0 [grid-area:windows]">
+              <WindowGrid />
             </div>
           )}
 
@@ -156,29 +136,5 @@ export function AppShell() {
       {/* Covers the greenhouse until a repo is chosen */}
       {setupVisible && <ConnectScreen />}
     </>
-  );
-}
-
-// A window with its issue title from the store
-function AgentWindow({
-  agent,
-  focused,
-  onFocus,
-  onMinimise,
-}: {
-  agent: Agent;
-  focused: boolean;
-  onFocus: () => void;
-  onMinimise: () => void;
-}) {
-  const title = useGreenhouseStore(issueTitle(agent.issueNumber));
-  return (
-    <Window
-      agent={agent}
-      issueTitle={title}
-      focused={focused}
-      onFocus={onFocus}
-      onMinimise={onMinimise}
-    />
   );
 }

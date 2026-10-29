@@ -1,12 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  MAX_SLOTS,
-  type Agent,
-  type AgentId,
-  type ErrorCode,
-} from "@gitspore/shared";
+import { MAX_SLOTS, type Agent, type AgentId } from "@gitspore/shared";
 import { X } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { Button } from "@/components/ui/button";
@@ -27,6 +22,7 @@ import { agentTokens, formatTokens, repoTip } from "@/lib/usageTip";
 import { AgentRow, FreeSlotRow } from "./AgentRow";
 import { BranchesTab } from "./BranchesTab";
 import { IssueRow } from "./IssueRow";
+import { stopErrorText } from "./stopErrorText";
 
 // The side panel: title, counts, tabs. Spec: `side-panel` and `segmented-tabs`.
 
@@ -256,12 +252,4 @@ export function SidePanel({ tab, onTabChange, onClose }: SidePanelProps) {
       </ConfirmDialog>
     </div>
   );
-}
-
-// What the stop dialog says when the daemon refused. A dirty worktree comes
-// as git_failed: the contract has no code of its own for it yet.
-function stopErrorText(agent: Agent, code: ErrorCode): string {
-  if (code === "git_failed")
-    return `The worktree of ${agent.branch} can't be removed, maybe it has uncommitted changes. The agent keeps running.`;
-  return "The agent couldn't be stopped and keeps running.";
 }
