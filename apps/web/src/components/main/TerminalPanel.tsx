@@ -2,6 +2,7 @@
 
 import { xtermTheme } from "@/theme/tokens";
 import type { AgentId } from "@gitspore/shared";
+import { ClipboardAddon } from "@xterm/addon-clipboard";
 import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
@@ -12,8 +13,11 @@ import {
   useGreenhouseStore,
 } from "@/lib/client/GreenhouseClientProvider";
 import { TERMINAL_FONT } from "@/lib/terminal/font";
+import { copiesSelection } from "@/lib/terminal/copyKey";
 import { leavesTerminal } from "@/lib/terminal/leaveKey";
+import { programClipboard } from "@/lib/terminal/programClipboard";
 import { TerminalSession } from "@/lib/terminal/TerminalSession";
+
 //
 //
 //
@@ -66,9 +70,29 @@ export function TerminalPanel({
     // on every open. Answer would
     // reach shell as typed text ("1;2c").
     terminal.parser.registerCsiHandler({ final: "c" }, () => true);
+    // Programs copy with OSC 52; Claude Code does on its own selection
+    const programCopy = programClipboard((text) =>
+      navigator.clipboard.writeText(text),
+    );
+    terminal.loadAddon(new ClipboardAddon(undefined, programCopy));
+    // A program asking for the clipboard gets no answer,
+    // not even an empty one:
+    // the addon sends it as typed text ("52;c;" at the prompt).
+    // Registered after the addon, so it runs first
+    terminal.parser.registerOscHandler(52, (data) => data.endsWith(";?"));
+
     // Ctrl + the key left of 1 leaves the terminal for its hotbar slot
     // (#120); the shell never gets it. The window stays the focused one
+    // Ctrl+Shift+C copies; preventDefault keeps Chrome's element picker shut,
+    // even with nothing selected
     terminal.attachCustomKeyEventHandler((event) => {
+      if (copiesSelection(event)) {
+        if (event.type === "keydown") {
+          event.preventDefault();
+          copySelection(terminal, programCopy.lastCopy);
+        }
+        return false;
+      }
       if (!leavesTerminal(event)) return true;
       if (event.type === "keydown") {
         event.preventDefault();
@@ -80,6 +104,29 @@ export function TerminalPanel({
     const fitAddon = new FitAddon();
     terminal.loadAddon(fitAddon);
     terminal.open(container);
+
+    // Right-click: xterm puts its own selection into its textarea for the
+    // browser's Copy. Under Claude Code that is empty, so offer what it copied
+    const textarea = terminal.textarea;
+    const offerProgramCopy = () => {
+      if (!textarea || textarea.value || !programCopy.lastCopy) return;
+      textarea.value = programCopy.lastCopy;
+      textarea.select();
+    };
+    // A new click or drag starts a new selection
+    const forgetProgramCopy = (event: MouseEvent) => {
+      if (event.button === 0) programCopy.forget();
+    };
+    container.addEventListener("contextmenu", offerProgramCopy);
+    container.addEventListener("mousedown", forgetProgramCopy, true);
+    // A press, a release (the end of a drag) or a key in this terminal
+    // lets the program's next copy through;
+    // replayed output comes without one
+    const noteUserAction = () => programCopy.userActed();
+    container.addEventListener("mousedown", noteUserAction, true);
+    container.addEventListener("mouseup", noteUserAction, true);
+    container.addEventListener("keydown", noteUserAction, true);
+
     const session = new TerminalSession(terminal, client, actions);
     // PTY gets size at most every 200 ms.
     // timer reads cols/rows when it fires:
@@ -116,6 +163,12 @@ export function TerminalPanel({
     observer.observe(container);
     return () => {
       observer.disconnect();
+      container.removeEventListener("contextmenu", offerProgramCopy);
+      container.removeEventListener("mousedown", forgetProgramCopy, true);
+      container.removeEventListener("mousedown", noteUserAction, true);
+      container.removeEventListener("mouseup", noteUserAction, true);
+      container.removeEventListener("keydown", noteUserAction, true);
+
       session.dispose();
       terminal.dispose();
       terminalRef.current = null;
@@ -138,4 +191,10 @@ function leaveTerminal(terminal: Terminal, agentId: AgentId) {
   );
   if (slot) slot.focus({ focusVisible: true });
   else terminal.blur();
+}
+
+// The terminal's own selection, else what a program like Claude Code copied
+function copySelection(terminal: Terminal, programCopy: string) {
+  const text = terminal.getSelection() || programCopy;
+  if (text) void navigator.clipboard.writeText(text).catch(() => {});
 }
