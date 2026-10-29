@@ -124,6 +124,7 @@ export class MockClient implements GreenhouseClient {
         pullRequest: null,
         statusReason: null,
         usage: null,
+        cleaningUp: false,
       };
       ack({ agentId });
       this.sendPatch([{ type: "agent:upsert", agent }]);
@@ -269,12 +270,13 @@ export class MockClient implements GreenhouseClient {
       this.sendSnapshot();
     },
 
-    "branches:graph": (_payload, ack) => {
+    "branches:graph": (payload, ack) => {
       ack({
         graph: mockBranchGraph(
           this.state.agents,
           this.state.repo?.baseBranch ?? "main",
           this.player.virtualNow(),
+          payload.limit,
         ),
       });
     },

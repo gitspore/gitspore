@@ -33,7 +33,7 @@ export const WILT_PLANTS: Record<WiltStage, PlantState> = {
 
 // The rim ring's colour (a key of tokens' color.status) by agent status;
 // no ring while the plant alone says enough
-export type RingColor = "waiting" | "error" | "review";
+export type RingColor = "working" | "waiting" | "error" | "review";
 
 export const RING_COLORS: Record<AgentStatus, RingColor | null> = {
   starting: null,

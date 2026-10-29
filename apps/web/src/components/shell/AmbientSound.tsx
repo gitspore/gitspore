@@ -9,7 +9,7 @@ import { useTheme } from "next-themes";
 // then; a hidden tab is silent. A missing or broken file stays silent too.
 // The files and their licences are in public/sounds.
 
-const TRACKS = { day: "/sounds/day.wav", night: "/sounds/night.wav" } as const;
+const TRACKS = { day: "/sounds/day.m4a", night: "/sounds/night.m4a" } as const;
 type Mode = keyof typeof TRACKS;
 const MODES = Object.keys(TRACKS) as Mode[];
 

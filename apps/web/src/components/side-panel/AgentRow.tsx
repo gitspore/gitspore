@@ -24,7 +24,7 @@ type AgentRowProps = {
   agent: Agent;
   issueTitle: string;
   selected: boolean;
-  onSelect: () => void;
+  onSelect: (shift: boolean) => void;
   onStop: () => void;
 };
 
@@ -65,7 +65,7 @@ export function AgentRow({
     >
       <button
         type="button"
-        onClick={onSelect}
+        onClick={(event) => onSelect(event.shiftKey)}
         aria-pressed={selected}
         // The name is the row's text; the title adds what a click does
         title="Open terminal"

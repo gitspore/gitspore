@@ -137,6 +137,17 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           />
         </div>
       </Section>
+
+      <Section title="Display">
+        <div className="flex flex-col gap-1 rounded-xl bg-panel-2 py-1">
+          <SettingsRow
+            label="FPS meter"
+            description="Frame rate graph at the bottom left"
+            checked={stored.fpsMeter}
+            onChange={(fpsMeter) => change({ fpsMeter })}
+          />
+        </div>
+      </Section>
     </div>
   );
 }

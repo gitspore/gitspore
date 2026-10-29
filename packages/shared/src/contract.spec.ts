@@ -50,6 +50,7 @@ const snapshot: GreenhouseState = {
           total: 701_000,
         },
       },
+      cleaningUp: false,
     },
     {
       id: "overview",
@@ -63,6 +64,7 @@ const snapshot: GreenhouseState = {
       pullRequest: null,
       statusReason: null,
       usage: null,
+      cleaningUp: false,
     },
   ],
   issues: [
@@ -132,7 +134,7 @@ const clientPayloads: {
   "state:request": {},
   "repo:choose": { path: "/home/dev/repo", baseBranch: "main" },
   "repo:check": { path: "/home/dev/repo", baseBranch: "main" },
-  "branches:graph": {},
+  "branches:graph": { limit: 80 },
   "terminal:open": { agentId: "agent-1" },
   "terminal:input": { sessionId: "session-1", data: "y\r" },
   "terminal:resize": { sessionId: "session-1", cols: 80, rows: 24 },
@@ -205,6 +207,7 @@ const acks: {
           sha: "a41c9e2f0c1d4b6e8f7a9b0c1d2e3f4a5b6c7d8e",
         },
       ],
+      hasMore: false,
     },
   },
   branchGraphError: {

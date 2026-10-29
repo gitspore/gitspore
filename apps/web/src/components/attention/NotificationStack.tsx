@@ -39,7 +39,7 @@ export function NotificationStack() {
         <Notification
           key={waitKey(agent)}
           agent={agent}
-          onOpen={() => open(agent, false)}
+          onOpen={(shift) => open(agent, shift)}
           onOpenBeside={() => open(agent, true)}
           onDismiss={() => setDismissed((d) => new Set(d).add(waitKey(agent)))}
         />

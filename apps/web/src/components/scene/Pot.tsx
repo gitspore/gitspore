@@ -128,11 +128,18 @@ const Pot = memo(function Pot({
   // The rim ring from the agent's status,
   // pulsing in the first wilt stage;
   // none while the test keys run
-  const ring = !test && agent ? RING_COLORS[agent.status] : null;
+  // and a green glow circling it while the agent is cleaned up
+  const cleaningUp = !test && !!agent?.cleaningUp;
+  const ring =
+    !test && agent
+      ? cleaningUp
+        ? "working"
+        : RING_COLORS[agent.status]
+      : null;
 
   const openWindow = useGreenhouseStore((state) => state.openWindow);
   const { hovered, handlers } = useClickable(
-    agent ? () => openWindow(agent.id) : null,
+    agent ? (shift) => openWindow(agent.id, { alone: !shift }) : null,
   );
   // During a seed packet drag: the outline marks the free pot
   // the packet would land in, and hovering doesn't outline
@@ -154,6 +161,9 @@ const Pot = memo(function Pot({
     const count = (burst?.count ?? 0) + 1;
     if (seeing.id && seeing.id !== seen.id) {
       setBurst({ kind: "soil", count });
+    } else if (!seeing.id && seen.id && !test) {
+      // the plant is gone after clean-up: dissolve where it stood
+      setBurst({ kind: "dust", count });
     } else if (seeing.merged && !seen.merged) {
       setBurst({ kind: "petals", count });
     }
@@ -182,7 +192,8 @@ const Pot = memo(function Pot({
           geometry={ringGeo}
           color={ringColors[ring]}
           glow={glow}
-          pulse={stage === "pulse"}
+          pulse={!cleaningUp && stage === "pulse"}
+          spin={cleaningUp && !reducedMotion}
         />
       )}
 
@@ -219,7 +230,11 @@ const Pot = memo(function Pot({
           key={burst.count}
           kind={burst.kind}
           colors={
-            burst.kind === "soil" ? [colors.soil] : [art.petal, art.heart]
+            burst.kind === "soil"
+              ? [colors.soil]
+              : burst.kind === "dust"
+                ? [art.petal, art.leaf, art.bud, art.heart]
+                : [art.petal, art.heart]
           }
           y={SOIL_Y}
         />
