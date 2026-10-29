@@ -6,7 +6,7 @@ import { ClipboardAddon } from "@xterm/addon-clipboard";
 import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import {
   useGreenhouseClient,
@@ -17,12 +17,18 @@ import { copiesSelection } from "@/lib/terminal/copyKey";
 import { leavesTerminal } from "@/lib/terminal/leaveKey";
 import { programClipboard } from "@/lib/terminal/programClipboard";
 import { TerminalSession } from "@/lib/terminal/TerminalSession";
+import { StartingBeetle } from "./StartingBeetle";
 
 //
 //
 //
 // PTY resize at most every (Claude redraws on each):
 const PTY_RESIZE_THROTTLE_MS = 200;
+// The beetle scuttles at least this long, so it never just flickers
+const BEETLE_MIN_MS = 1200;
+// Agents whose window showed the beetle on this page. Later opens replay
+// the scrollback right away and go without it
+const greeted = new Set<AgentId>();
 
 // xterm needs browser.
 // ssr: false
@@ -43,6 +49,8 @@ export function TerminalPanel({
   const terminalRef = useRef<Terminal | null>(null);
   // Read by the effect below without making it build a new terminal
   const focusedRef = useRef(focused);
+  // The first open of this agent's window waits for its first output
+  const [waiting, setWaiting] = useState(() => !greeted.has(agentId));
   const client = useGreenhouseClient();
   // openTerminal waits connection to load.
   const connected = useGreenhouseStore(
@@ -128,6 +136,16 @@ export function TerminalPanel({
     container.addEventListener("keydown", noteUserAction, true);
 
     const session = new TerminalSession(terminal, client, actions);
+    // The beetle goes once the first output is on screen, after at least
+    // BEETLE_MIN_MS
+    const shownAt = performance.now();
+    let beetleTimer: ReturnType<typeof setTimeout> | undefined;
+    const firstOutput = terminal.onWriteParsed(() => {
+      firstOutput.dispose();
+      greeted.add(agentId);
+      const wait = BEETLE_MIN_MS - (performance.now() - shownAt);
+      beetleTimer = setTimeout(() => setWaiting(false), Math.max(0, wait));
+    });
     // PTY gets size at most every 200 ms.
     // timer reads cols/rows when it fires:
     // last send = final size
@@ -168,6 +186,8 @@ export function TerminalPanel({
       container.removeEventListener("mousedown", noteUserAction, true);
       container.removeEventListener("mouseup", noteUserAction, true);
       container.removeEventListener("keydown", noteUserAction, true);
+      firstOutput.dispose();
+      clearTimeout(beetleTimer);
 
       session.dispose();
       terminal.dispose();
@@ -180,7 +200,18 @@ export function TerminalPanel({
     focusedRef.current = focused;
     if (focused) terminalRef.current?.focus();
   }, [focused]);
-  return <div ref={containerRef} className="size-full" />;
+  return (
+    <div className="relative size-full">
+      <div ref={containerRef} className="size-full" />
+      {/* In the terminal's colours, so the window isn't blank meanwhile.
+          Clicks go through to the terminal underneath */}
+      {waiting && (
+        <div className="pointer-events-none absolute inset-0 grid place-items-center bg-terminal-bg text-terminal-fg">
+          <StartingBeetle />
+        </div>
+      )}
+    </div>
+  );
 }
 
 // Focus the agent's hotbar slot, with the keyboard focus ring, so Tab and
