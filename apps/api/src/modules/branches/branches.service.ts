@@ -10,7 +10,9 @@ import {
   REF_FORMAT,
 } from "./branch-graph";
 
-export const MAX_COMMITS = 40;
+export const DEFAULT_COMMITS = 40;
+// Keeps one request cheap for git and for the panel to draw.
+export const MAX_COMMITS = 2000;
 
 const GIT_TIMEOUT_MS = 10_000;
 
@@ -20,7 +22,8 @@ export class BranchesService {
 
   constructor(private readonly config: RepoConfig) {}
 
-  async graph(): Promise<BranchGraphAck> {
+  /** The newest `limit` commits; `hasMore` says whether older ones exist. */
+  async graph(limit = DEFAULT_COMMITS): Promise<BranchGraphAck> {
     if (!this.config.isSet()) {
       return {
         error: {
@@ -44,16 +47,28 @@ export class BranchesService {
         ]),
         baseBranch,
       );
-      if (heads.length === 0) return { graph: { commits: [], heads } };
+      if (heads.length === 0) {
+        return { graph: { commits: [], heads, hasMore: false } };
+      }
+
+      const count = clampLimit(limit);
 
       const log = await git.raw([
         "log",
         "--topo-order",
-        `--max-count=${MAX_COMMITS}`,
+        // One more than asked tells whether older commits exist.
+        `--max-count=${count + 1}`,
         `--format=${LOG_FORMAT}`,
         ...new Set(heads.map((head) => head.sha)),
       ]);
-      return { graph: { commits: parseCommits(log), heads } };
+      const commits = parseCommits(log);
+      return {
+        graph: {
+          commits: commits.slice(0, count),
+          heads,
+          hasMore: commits.length > count,
+        },
+      };
     } catch (error) {
       this.logger.warn(error);
       return {
@@ -61,4 +76,9 @@ export class BranchesService {
       };
     }
   }
+}
+
+function clampLimit(limit: number): number {
+  if (!Number.isFinite(limit)) return DEFAULT_COMMITS;
+  return Math.min(Math.max(Math.floor(limit), 1), MAX_COMMITS);
 }
