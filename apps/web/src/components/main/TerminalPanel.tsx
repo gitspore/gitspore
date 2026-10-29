@@ -17,8 +17,9 @@ import { TerminalSession } from "@/lib/terminal/TerminalSession";
 //
 //
 //
-// only check size when size has stopped changing for:
-const RESIZE_DEBOUNCE_MS = 100;
+// PTY resize at most every (Claude redraws on each):
+const PTY_RESIZE_THROTTLE_MS = 200;
+
 // xterm needs browser.
 // ssr: false
 
@@ -80,29 +81,41 @@ export function TerminalPanel({
     terminal.loadAddon(fitAddon);
     terminal.open(container);
     const session = new TerminalSession(terminal, client, actions);
+    // PTY gets size at most every 200 ms.
+    // timer reads cols/rows when it fires:
+    // last send = final size
+    let lastSent = 0;
+    let ptyTimer: ReturnType<typeof setTimeout> | undefined;
+    const resizePty = () => {
+      ptyTimer = undefined;
+      lastSent = performance.now();
+      session.resize(terminal.cols, terminal.rows);
+    };
     // hidden = no size
     // fitting when hidden would shrink the agent's terminal
     // to 2 × 1 because of xterm minimum
     const fitToContainer = () => {
       if (container.clientWidth === 0 || container.clientHeight === 0) return;
       fitAddon.fit();
-      session.resize(terminal.cols, terminal.rows);
+      if (ptyTimer !== undefined) return;
+      const wait = PTY_RESIZE_THROTTLE_MS - (performance.now() - lastSent);
+      if (wait <= 0) resizePty();
+      else ptyTimer = setTimeout(resizePty, wait);
     };
+
     fitToContainer();
     void session.open(agentId);
     terminalRef.current = terminal;
     if (focusedRef.current) terminal.focus();
 
     // first fit after observe().
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const observer = new ResizeObserver(() => {
-      clearTimeout(timer);
-      timer = setTimeout(fitToContainer, RESIZE_DEBOUNCE_MS);
-    });
+    // Observer reports after layout, before paint:
+    // fit lands in the same frame.
+    // at most once per frame
+    const observer = new ResizeObserver(fitToContainer);
     observer.observe(container);
     return () => {
       observer.disconnect();
-      clearTimeout(timer);
       session.dispose();
       terminal.dispose();
       terminalRef.current = null;
