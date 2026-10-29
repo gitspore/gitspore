@@ -11,6 +11,7 @@ import {
   useGreenhouseClient,
   useGreenhouseStore,
 } from "@/lib/client/GreenhouseClientProvider";
+import { TERMINAL_FONT } from "@/lib/terminal/font";
 import { leavesTerminal } from "@/lib/terminal/leaveKey";
 import { TerminalSession } from "@/lib/terminal/TerminalSession";
 //
@@ -54,7 +55,10 @@ export function TerminalPanel({
   useEffect(() => {
     const container = containerRef.current;
     if (!client || !connected || !container) return;
-    const terminal = new Terminal({ theme: xtermTheme[theme] });
+    const terminal = new Terminal({
+      theme: xtermTheme[theme],
+      ...TERMINAL_FONT,
+    });
     // Don't answer "which terminal are you?"
     // (CSI c)
     // question is replayed from scrollback

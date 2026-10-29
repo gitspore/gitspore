@@ -42,10 +42,11 @@ export function mainGrid({ mode, windows }: LayoutSettings): CSSProperties {
       gridTemplateAreas: `"scene" "hotbar"`,
     };
   }
-  // Focus mode: windows cover the main area
+  // Focus mode: windows cover the main area. minmax(0, 1fr), so two rows of
+  // terminals can't stretch it past the screen
   if (mode === "focus") {
     return {
-      gridTemplateRows: "1fr auto",
+      gridTemplateRows: "minmax(0, 1fr) auto",
       gridTemplateAreas: `"windows" "hotbar"`,
     };
   }

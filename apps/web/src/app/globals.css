@@ -98,7 +98,9 @@ body {
 
 .app-shell {
   display: grid;
-  grid-template-rows: var(--size-top-bar) 1fr;
+  /* minmax(0, 1fr): two rows of terminals in focus mode can't stretch the
+     page past the screen (#109) */
+  grid-template-rows: var(--size-top-bar) minmax(0, 1fr);
   gap: var(--space-layout-edge);
   padding: var(--space-layout-edge);
 }
