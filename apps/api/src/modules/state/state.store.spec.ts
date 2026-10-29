@@ -22,6 +22,7 @@ const agent = (id: string, slotIndex: number | null = 0): Agent => ({
   pullRequest: null,
   statusReason: null,
   usage: null,
+  cleaningUp: false,
 });
 
 describe("StateStore", () => {

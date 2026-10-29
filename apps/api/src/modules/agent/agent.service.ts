@@ -93,6 +93,7 @@ type AgentChange = {
   status?: AgentStatus;
   statusReason?: StatusReason | null;
   pullRequest?: PullRequest | null;
+  cleaningUp?: boolean;
 };
 
 @Injectable()
@@ -178,6 +179,7 @@ export class AgentService implements OnModuleInit {
           pullRequest: null,
           statusReason: null,
           usage: null,
+          cleaningUp: false,
         },
       },
     ]);
@@ -333,6 +335,7 @@ export class AgentService implements OnModuleInit {
             pullRequest: null,
             statusReason: RESTARTED_REASON,
             usage: null,
+            cleaningUp: false,
           },
         },
       ]);
@@ -421,6 +424,7 @@ export class AgentService implements OnModuleInit {
     if (entry.processRunning) await this.killAndWait(agentId);
 
     if (removeWorktree) {
+      this.update(agentId, { cleaningUp: true });
       await this.removeWorktree(agentId, entry);
     }
     this.running.delete(agentId);
@@ -459,7 +463,7 @@ export class AgentService implements OnModuleInit {
       await this.worktrees.remove({ path: entry.worktreePath });
     } catch (error) {
       entry.stopping = false;
-      this.setStatus(agentId, "error");
+      this.update(agentId, { status: "error", cleaningUp: false });
       throw error;
     }
   }
@@ -621,6 +625,7 @@ export class AgentService implements OnModuleInit {
   ): Promise<void> {
     if (this.running.get(agentId) !== entry || entry.stopping) return;
     entry.stopping = true;
+    this.update(agentId, { cleaningUp: true });
     this.hooks.revoke(agentId);
     if (entry.processRunning) await this.killAndWait(agentId);
 
@@ -659,7 +664,11 @@ export class AgentService implements OnModuleInit {
   // The agent stays merged, with the reason, until the user stops it.
   private blockCleanup(agentId: AgentId, entry: Running, message: string) {
     entry.stopping = false;
-    this.setStatus(agentId, "merged", { code: "cleanup_blocked", message });
+    this.update(agentId, {
+      status: "merged",
+      statusReason: { code: "cleanup_blocked", message },
+      cleaningUp: false,
+    });
   }
 
   // Asks GitHub directly: a pull request Claude opened seconds ago is not in
@@ -744,11 +753,13 @@ export class AgentService implements OnModuleInit {
       }
     }
     if (change.pullRequest !== undefined) next.pullRequest = change.pullRequest;
+    if (change.cleaningUp !== undefined) next.cleaningUp = change.cleaningUp;
 
     const unchanged =
       next.status === agent.status &&
       sameReason(next.statusReason, agent.statusReason) &&
-      samePullRequest(next.pullRequest, agent.pullRequest);
+      samePullRequest(next.pullRequest, agent.pullRequest) &&
+      next.cleaningUp === agent.cleaningUp;
     if (unchanged) return;
     this.store.apply([{ type: "agent:upsert", agent: next }]);
   }

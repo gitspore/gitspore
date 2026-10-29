@@ -140,6 +140,7 @@ export class OverviewAgentService implements OnApplicationBootstrap {
           pullRequest: null,
           statusReason: null,
           usage: null,
+          cleaningUp: false,
         },
       },
     ]);

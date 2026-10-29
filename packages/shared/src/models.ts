@@ -147,6 +147,12 @@ export type Agent = {
    * until then, and for agents without a statusline (the overview agent).
    */
   usage: AgentUsage | null;
+  /**
+   * `true` while the daemon cleans the agent up (a stop with worktree removal,
+   * or the cleanup after a merge). The agent is removed when it is done, or
+   * goes back to `error` / `merged` when the worktree can't be removed.
+   */
+  cleaningUp: boolean;
 };
 
 /** An open GitHub issue in the repo. */

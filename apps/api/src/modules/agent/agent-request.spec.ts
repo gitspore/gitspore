@@ -21,6 +21,7 @@ const agent = (overrides: Partial<Agent>): Agent => ({
   pullRequest: null,
   statusReason: null,
   usage: null,
+  cleaningUp: false,
   ...overrides,
 });
 

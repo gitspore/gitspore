@@ -128,7 +128,14 @@ const Pot = memo(function Pot({
   // The rim ring from the agent's status,
   // pulsing in the first wilt stage;
   // none while the test keys run
-  const ring = !test && agent ? RING_COLORS[agent.status] : null;
+  // and a green glow circling it while the agent is cleaned up
+  const cleaningUp = !test && !!agent?.cleaningUp;
+  const ring =
+    !test && agent
+      ? cleaningUp
+        ? "working"
+        : RING_COLORS[agent.status]
+      : null;
 
   const openWindow = useGreenhouseStore((state) => state.openWindow);
   const { hovered, handlers } = useClickable(
@@ -182,7 +189,8 @@ const Pot = memo(function Pot({
           geometry={ringGeo}
           color={ringColors[ring]}
           glow={glow}
-          pulse={stage === "pulse"}
+          pulse={!cleaningUp && stage === "pulse"}
+          spin={cleaningUp && !reducedMotion}
         />
       )}
 

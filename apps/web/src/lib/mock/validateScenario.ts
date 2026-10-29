@@ -77,6 +77,7 @@ const agentSchema = z.object({
   statusReason: statusReasonSchema.nullable(),
   // Scenarios from before #42 have no usage.
   usage: agentUsageSchema.nullable().default(null),
+  cleaningUp: z.boolean().default(false),
 }) satisfies z.ZodType<Agent>;
 
 const issueSchema = z.object({

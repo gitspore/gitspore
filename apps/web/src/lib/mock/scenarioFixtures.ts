@@ -13,6 +13,7 @@ export const agent: Agent = {
   pullRequest: null,
   statusReason: null,
   usage: null,
+  cleaningUp: false,
 };
 
 export const ANCHOR = "2026-10-09T09:30:00.000Z";

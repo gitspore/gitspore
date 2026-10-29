@@ -17,6 +17,7 @@ const agent: Agent = {
   pullRequest: null,
   statusReason: null,
   usage: null,
+  cleaningUp: false,
 };
 
 function scenario(events: Scenario["events"] = []): Scenario {

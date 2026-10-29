@@ -124,6 +124,7 @@ export class MockClient implements GreenhouseClient {
         pullRequest: null,
         statusReason: null,
         usage: null,
+        cleaningUp: false,
       };
       ack({ agentId });
       this.sendPatch([{ type: "agent:upsert", agent }]);

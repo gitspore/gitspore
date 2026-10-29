@@ -189,6 +189,7 @@ describe("OverviewAgentService", () => {
       pullRequest: null,
       statusReason: null,
       usage: null,
+      cleaningUp: false,
     });
     expect(new Date(agent.startedAt).toISOString()).toBe(agent.startedAt);
   });
