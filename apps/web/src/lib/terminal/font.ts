@@ -1,10 +1,12 @@
 // The terminal's font, in one place: TerminalPanel gives it to xterm.js, and
 // the window grid measures a cell with it to turn columns and rows into
-// pixels (#109). Today xterm's own defaults; GS-55 changes it to JetBrains
-// Mono 13 px here.
+// pixels (#109). The system's monospace at 13 px, the size of
+// typography.mono.terminal (#55). Not JetBrains Mono at 1.2 yet: xterm's DOM
+// renderer draws block characters as font glyphs, and Claude Code's logo got
+// seams; that needs the WebGL renderer (follow-up)
 export const TERMINAL_FONT = {
   fontFamily: "monospace",
-  fontSize: 15,
+  fontSize: 13,
   lineHeight: 1,
 };
 
