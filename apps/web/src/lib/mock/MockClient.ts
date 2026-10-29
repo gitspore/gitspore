@@ -269,12 +269,13 @@ export class MockClient implements GreenhouseClient {
       this.sendSnapshot();
     },
 
-    "branches:graph": (_payload, ack) => {
+    "branches:graph": (payload, ack) => {
       ack({
         graph: mockBranchGraph(
           this.state.agents,
           this.state.repo?.baseBranch ?? "main",
           this.player.virtualNow(),
+          payload.limit,
         ),
       });
     },

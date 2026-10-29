@@ -21,7 +21,7 @@ describe("mockBranchGraph", () => {
   });
 
   it("puts children before their parents", () => {
-    const { commits } = mockBranchGraph(agents, "main", NOW);
+    const { commits } = mockBranchGraph(agents, "main", NOW, 1000);
     const row = new Map(commits.map((c, i) => [c.sha, i]));
 
     for (const [i, commit] of commits.entries()) {
@@ -38,5 +38,17 @@ describe("mockBranchGraph", () => {
     expect(later.commits.map((c) => c.sha)).toEqual(
       first.commits.map((c) => c.sha),
     );
+  });
+
+  it("sends `limit` commits and says whether more exist", () => {
+    const first = mockBranchGraph(agents, "main", NOW);
+    const more = mockBranchGraph(agents, "main", NOW, 80);
+    const all = mockBranchGraph(agents, "main", NOW, 1000);
+
+    expect(first.commits).toHaveLength(40);
+    expect(first.hasMore).toBe(true);
+    expect(more.commits.slice(0, 40)).toEqual(first.commits);
+    expect(all.hasMore).toBe(false);
+    expect(all.commits.length).toBeLessThan(1000);
   });
 });

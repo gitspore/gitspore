@@ -108,8 +108,10 @@ export function SidePanel({ tab, onTabChange, onClose }: SidePanelProps) {
     stopAgent(stopping.id, removeWorktree);
   }
 
+  // h-full and min-h-0 down to the Branches tab, so its list can scroll
+  // inside the panel instead of growing it.
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex h-full min-h-0 flex-col gap-3">
       <header className="flex items-start justify-between px-2 pt-1">
         {tab === "branches" ? (
           <div>
@@ -166,7 +168,7 @@ export function SidePanel({ tab, onTabChange, onClose }: SidePanelProps) {
 
       <Tabs
         value={tab}
-        className="gap-3"
+        className="min-h-0 flex-1 gap-3"
         onValueChange={(value) => onTabChange(value as SidePanelTab)}
       >
         <TabsList className="group-data-horizontal/tabs:h-auto w-full rounded-lg bg-panel-2 p-1">
@@ -222,7 +224,7 @@ export function SidePanel({ tab, onTabChange, onClose }: SidePanelProps) {
           )}
         </TabsContent>
 
-        <TabsContent value="branches">
+        <TabsContent value="branches" className="min-h-0">
           <BranchesTab />
         </TabsContent>
       </Tabs>

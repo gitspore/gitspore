@@ -855,15 +855,15 @@ describe("createGreenhouseStore", () => {
 
     it("loadBranchGraph emits branches:graph and resolves with the graph", async () => {
       const { store, client, ack } = setup();
-      const graph = { commits: [], heads: [] };
+      const graph = { commits: [], heads: [], hasMore: false };
 
-      const loaded = store.getState().loadBranchGraph();
+      const loaded = store.getState().loadBranchGraph(80);
       ack("branches:graph", { graph });
 
       await expect(loaded).resolves.toEqual({ graph });
       expect(client.emit).toHaveBeenCalledWith(
         "branches:graph",
-        {},
+        { limit: 80 },
         expect.any(Function),
       );
     });

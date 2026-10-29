@@ -85,7 +85,8 @@ export type GreenhouseStoreState = {
   chooseRepo: (path: string, baseBranch: string) => Promise<RepoChooseAck>;
   /** Resolves with what the daemon found; chooses nothing. Can reject too. */
   checkRepo: (path: string, baseBranch: string) => Promise<RepoCheckAck>;
-  loadBranchGraph: () => Promise<BranchGraphAck>;
+  /** The newest `limit` commits (the daemon's default without one). */
+  loadBranchGraph: (limit?: number) => Promise<BranchGraphAck>;
 
   dispatchAgent: (issueNumber: number, slotIndex: number) => void;
   stopAgent: (agentId: AgentId, removeWorktree: boolean) => void;
@@ -228,9 +229,9 @@ export function createGreenhouseStore(
       askDaemon<RepoCheckAck>(client, (answer) =>
         client.emit("repo:check", { path, baseBranch }, answer),
       ),
-    loadBranchGraph: () =>
+    loadBranchGraph: (limit) =>
       askDaemon<BranchGraphAck>(client, (answer) =>
-        client.emit("branches:graph", {}, answer),
+        client.emit("branches:graph", limit ? { limit } : {}, answer),
       ),
     // Terminal traffic touches no state: input goes straight out, output
     // (terminal:data) goes straight to xterm.js and never through the store.

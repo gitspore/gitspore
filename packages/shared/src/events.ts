@@ -172,6 +172,11 @@ export type RepoCheck = {
 /** In the order above. Checks that need a git repo are left out without one. */
 export type RepoCheckAck = { checks: RepoCheck[] };
 
+export type BranchGraphPayload = {
+  /** How many commits to send, newest first. Defaults to 40; capped. */
+  limit?: number;
+};
+
 export type BranchGraphAck = { graph: BranchGraph } | { error: ServerError };
 
 // --- Payloads: Server → Client --------------------------------------------
@@ -257,8 +262,12 @@ export interface ClientToServerEvents {
     ack: (response: RepoCheckAck) => void,
   ) => void;
 
+  /**
+   * Client → Server. The base branch and the agent branches with their
+   * newest commits, for the Branches tab. `hasMore` says older commits exist.
+   */
   "branches:graph": (
-    payload: EmptyPayload,
+    payload: BranchGraphPayload,
     ack: (response: BranchGraphAck) => void,
   ) => void;
 
