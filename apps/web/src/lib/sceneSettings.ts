@@ -18,6 +18,8 @@ export type SceneSettings = {
   // Birds by day, crickets at night (#172). Not a scene option: low power
   // and the URL flags leave it alone
   ambientSound: boolean;
+  // The FPS meter bottom left (#179). Like ambientSound, not a scene option
+  fpsMeter: boolean;
 };
 
 // The options a URL flag can set, and what the scene finally draws
@@ -32,6 +34,7 @@ export const DEFAULT_SCENE_SETTINGS: SceneSettings = {
   cameraMotion: true,
   life: true,
   ambientSound: true,
+  fpsMeter: false,
 };
 
 export const URL_FLAGS: Record<SceneOption, string> = {

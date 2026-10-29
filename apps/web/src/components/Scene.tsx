@@ -118,7 +118,7 @@ export function Scene({
   // them (#111). ?testing=1, read once, turns on the plant test keys (see Pots)
   const { resolvedTheme } = useTheme();
   const t = resolvedTheme === "light" ? tokens.day : tokens.night;
-  const { scene } = useSceneSettings();
+  const { scene, stored } = useSceneSettings();
   const [testingOn] = useState(
     () => new URLSearchParams(window.location.search).get("testing") === "1",
   );
@@ -270,10 +270,10 @@ export function Scene({
           />
         )}
 
-        {/* Dev meters. StatsGl adds its own panel to <body>; the class
-          places it. No trackGPU: its timer queries pile up on the HD 530
-          and cost 18 ms CPU */}
-        {DEV && (
+        {/* StatsGl adds its own panel to <body>; the class places it. Set
+          in the settings, also in production. No trackGPU: its timer
+          queries pile up on the HD 530 and cost 18 ms CPU */}
+        {stored.fpsMeter && (
           <StatsGl className="fixed bottom-3 left-3 z-50 origin-bottom-left scale-200" />
         )}
         {DEV && <DrawCalls />}
