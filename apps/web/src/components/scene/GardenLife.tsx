@@ -2,6 +2,7 @@ import { useMemo } from "react";
 
 import type { Mode, tokens } from "@/theme/tokens";
 
+import { Ants } from "./Ants";
 import { Bluebird } from "./Bluebird";
 import { Bumblebee } from "./Bumblebee";
 import { Butterflies } from "./Butterflies";
@@ -15,6 +16,7 @@ import { Snail } from "./Snail";
 import { bulbSpots, StringLights } from "./StringLights";
 import { SunBeams } from "./SunBeams";
 import { Teacup } from "./Teacup";
+import { Worm } from "./Worm";
 
 //
 //
@@ -25,11 +27,11 @@ import { Teacup } from "./Teacup";
 // - beams of sun by day, of moon at night, with dust drifting in them
 // - fireflies at night
 // - by day butterflies (a rare one with rainbow wings), a bumblebee, a
-//   dragonfly, a robin and a rabbit in the grass, and a bluebird on the
-//   fence; at night moths
+//   dragonfly, a robin and a rabbit in the grass, a bluebird on the
+//   fence, and a trail of ants left of the table; at night moths
 //   around the bulbs, and eyes in the woods
 // - day and night: a ladybug on the table, a steaming cup of tea, a snail
-//   on a table leg
+//   on a table leg, and now and then a worm peeking out of the earth
 // Mounted only with garden life on (the settings; off in low power)
 
 type ModeTokens = (typeof tokens)[Mode];
@@ -124,6 +126,12 @@ export function GardenLife({
             dark={scene.insect}
             reducedMotion={reducedMotion}
           />
+          <Ants
+            body={scene.ant.body}
+            crumb={scene.ant.crumb}
+            nest={scene.ant.nest}
+            reducedMotion={reducedMotion}
+          />
         </>
       )}
       {t.scene.moths > 0 && (
@@ -152,6 +160,12 @@ export function GardenLife({
         shell={scene.snail.shell}
         body={scene.snail.body}
         dark={scene.insect}
+        reducedMotion={reducedMotion}
+      />
+      <Worm
+        body={scene.worm.body}
+        band={scene.worm.band}
+        hole={scene.worm.hole}
         reducedMotion={reducedMotion}
       />
     </>

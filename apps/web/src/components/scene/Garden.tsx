@@ -346,8 +346,10 @@ function flowerInstances(
 
 // Pebbles on the trodden ground near the table, and the mushrooms: a few
 // at each front leg's foot (the back legs hide under the table) and a
-// ring in the meadow. [x, z, size] each
-function pebbleSpots(random: () => number) {
+// ring in the meadow. [x, z, size] each. The worm takes the same seed to
+// come up between them
+export const PEBBLE_SEED = 13;
+export function pebbleSpots(random: () => number) {
   const spots: [number, number, number][] = [];
   while (spots.length < 70) {
     const x = (random() * 2 - 1) * 8;
@@ -503,7 +505,7 @@ export function Garden({
     () => floorTexture(tufts, colors, far),
     [tufts, colors, far],
   );
-  const pebbles = useMemo(() => pebbleSpots(seeded(13)), []);
+  const pebbles = useMemo(() => pebbleSpots(seeded(PEBBLE_SEED)), []);
 
   useEffect(() => {
     for (const { uniforms } of [grassLook, flowerLook]) {
