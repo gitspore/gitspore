@@ -137,7 +137,7 @@ class FakeGitHub {
 class FakeHooks {
   readonly issue = jest.fn((agentId: string) => `secret-${agentId}`);
   readonly revoke = jest.fn();
-  readonly url = jest.fn(() => "http://127.0.0.1:3001");
+  readonly url = jest.fn(() => "http://127.0.0.1:8888");
   private listener?: (agentId: string, payload: unknown) => void;
   readonly onEvent = jest.fn(
     (listener: (agentId: string, payload: unknown) => void) => {
@@ -1131,7 +1131,7 @@ describe("AgentService.dispatch", () => {
       );
 
       expect(written).toEqual({
-        url: "http://127.0.0.1:3001",
+        url: "http://127.0.0.1:8888",
         agentId,
         secret: `secret-${agentId}`,
       });

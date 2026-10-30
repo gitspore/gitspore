@@ -35,7 +35,7 @@ Alle Skripte werden im Repo-Root ausgeführt:
 
 | Skript              | Wirkung                                                             |
 | ------------------- | ------------------------------------------------------------------- |
-| `npm run dev`       | Startet Web (Port 3000) und API (Port 3001) parallel                |
+| `npm run dev`       | Startet Web (Port 3000) und API (Port 8888) parallel                |
 | `npm run typecheck` | Baut `shared`, dann `tsc --noEmit` in allen Workspaces              |
 | `npm run lint`      | ESLint in allen Workspaces, danach `prettier --check`               |
 | `npm run format`    | Formatiert das ganze Repo mit Prettier                              |

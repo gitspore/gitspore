@@ -25,7 +25,7 @@ export class SocketClient implements GreenhouseClient {
   private readonly statusSource: ConnectionStatusSource;
 
   /**
-   * @param url Where the daemon listens, e.g. http://localhost:3001.
+   * @param url Where the daemon listens, e.g. http://localhost:8888.
    * @param token The session token from the link the daemon logs. It goes into
    *   the Socket.io handshake `auth`, the daemon rejects the connection
    *   without it. Null if the page was opened without one: the client then
