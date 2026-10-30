@@ -104,13 +104,19 @@ export function Ladybug({
   dark,
   wingOpacity,
   reducedMotion,
+  seed = 41,
+  start = [-1.1, -0.5],
+  heading = 0.6,
 }: {
   red: string;
   dark: string;
   wingOpacity: number;
   reducedMotion: boolean;
+  seed?: number;
+  start?: [number, number];
+  heading?: number;
 }) {
-  const random = useMemo(() => seeded(41), []);
+  const random = useMemo(() => seeded(seed), [seed]);
   const shell = useMemo(() => shellGeometry(red, dark), [red, dark]);
   useEffect(() => () => shell.dispose(), [shell]);
   // A wing: a long oval hinged at the middle of the back, mirrored for
@@ -131,9 +137,9 @@ export function Ladybug({
   // Where it is and faces, whether it crawls, rests or flies (and for how
   // long), and the flight's start and end
   const bug = useRef({
-    x: -1.1,
-    z: -0.5,
-    heading: 0.6,
+    x: start[0],
+    z: start[1],
+    heading,
     rest: 0,
     walked: 0,
     flight: -1,
