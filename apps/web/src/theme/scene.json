@@ -243,6 +243,17 @@
             "$type": "color"
           }
         },
+        "redbird": {
+          "body": {
+            "$value": "#c93a35",
+            "$type": "color",
+            "$description": "the red and white bird on the fence by day: back, wings and tail"
+          },
+          "belly": {
+            "$value": "#f7f2ea",
+            "$type": "color"
+          }
+        },
         "rabbit": {
           "fur": {
             "$value": "#a08468",

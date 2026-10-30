@@ -98,13 +98,17 @@ export function Bluebird({
   belly,
   dark,
   reducedMotion,
+  seed = 97,
+  perches = PERCHES,
 }: {
   blue: string;
   belly: string;
   dark: string;
   reducedMotion: boolean;
+  seed?: number;
+  perches?: number[];
 }) {
-  const random = useMemo(() => seeded(97), []);
+  const random = useMemo(() => seeded(seed), [seed]);
   const body = useMemo(
     () => bodyGeometry(blue, belly, dark),
     [blue, belly, dark],
@@ -134,13 +138,13 @@ export function Bluebird({
     action: "sit" as Action,
     age: 0,
     length: 8,
-    from: PERCHES[2],
-    to: PERCHES[2],
+    from: perches[2],
+    to: perches[2],
     side: 1,
     heading: Math.PI / 2,
     look: 0,
     lookGoal: 0,
-    position: perch(PERCHES[2], new THREE.Vector3()),
+    position: perch(perches[2], new THREE.Vector3()),
     ahead: new THREE.Vector3(),
   });
 
@@ -173,7 +177,7 @@ export function Bluebird({
     if (state.action === "sit") {
       if (random() < dt * 0.9) state.lookGoal = (random() - 0.5) * 2;
       if (done && !reducedMotion) {
-        const others = PERCHES.filter(
+        const others = perches.filter(
           (angle) => Math.abs(angle - state.from) > 0.6,
         );
         state.to = others[Math.floor(random() * others.length)];
@@ -221,7 +225,7 @@ export function Bluebird({
   });
 
   return (
-    <group ref={root} position={perch(PERCHES[2], new THREE.Vector3())}>
+    <group ref={root} position={perch(perches[2], new THREE.Vector3())}>
       <mesh geometry={body} castShadow>
         <meshStandardMaterial vertexColors roughness={0.9} />
       </mesh>

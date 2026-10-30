@@ -312,6 +312,10 @@ export const tokens = {
           body: "#4a7fb5",
           belly: "#f1e4cf",
         },
+        redbird: {
+          body: "#c93a35",
+          belly: "#f7f2ea",
+        },
         rabbit: {
           fur: "#a08468",
           pale: "#efe6d6",
@@ -754,6 +758,10 @@ export const tokens = {
         bluebird: {
           body: "#4a7fb5",
           belly: "#f1e4cf",
+        },
+        redbird: {
+          body: "#c93a35",
+          belly: "#f7f2ea",
         },
         rabbit: {
           fur: "#a08468",

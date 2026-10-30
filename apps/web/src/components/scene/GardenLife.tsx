@@ -27,7 +27,7 @@ import { Worm } from "./Worm";
 // - beams of sun by day, of moon at night, with dust drifting in them
 // - fireflies at night
 // - by day butterflies (a rare one with rainbow wings), a bumblebee, a
-//   dragonfly, a robin and a rabbit in the grass, a bluebird on the
+//   dragonfly, a robin and a rabbit in the grass, a bluebird and a red and white bird on the
 //   fence, and a trail of ants left of the table; at night moths
 //   around the bulbs, and eyes in the woods
 // - day and night: a ladybug on the table, a steaming cup of tea, a snail
@@ -118,6 +118,14 @@ export function GardenLife({
             belly={scene.bluebird.belly}
             dark={scene.insect}
             reducedMotion={reducedMotion}
+          />
+          <Bluebird
+            blue={scene.redbird.body}
+            belly={scene.redbird.belly}
+            dark={scene.insect}
+            reducedMotion={reducedMotion}
+            seed={31}
+            perches={[-2.7, -2.35, -2.05, -1.55, -1.1, -0.8]}
           />
           <Rabbit
             fur={scene.rabbit.fur}
