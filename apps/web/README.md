@@ -31,7 +31,7 @@ The app can run without the daemon (`apps/api`). A mock client plays a scripted 
 
 The URL wins over the variable. `?mock=<name>` picks a scenario, `?mock=true` the default one (`all-states`), `?mock=false` forces the real daemon. `?speed=<n>` sets the playback speed (default 1; `10` shows a 60 s stage in 6 s). A wrong scenario name or speed shows an error screen that lists the valid values.
 
-Without any of this the app talks to the daemon at `NEXT_PUBLIC_DAEMON_URL` (default `http://localhost:3001`).
+Without any of this the app talks to the daemon at `NEXT_PUBLIC_DAEMON_URL` (default `http://localhost:8888`).
 
 In mock mode a small panel in the bottom right shows the scenario and has buttons for speed (×1, ×10, ×60), pause/resume and restart.
 

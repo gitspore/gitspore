@@ -4,8 +4,8 @@ import type { ClientMode } from "./clientMode";
 import type { GreenhouseClient } from "./GreenhouseClient";
 import { SocketClient } from "./SocketClient";
 
-// apps/api listens on 3001 unless PORT says otherwise.
-const DEFAULT_DAEMON_URL = "http://localhost:3001";
+// apps/api listens on 8888 unless PORT says otherwise.
+const DEFAULT_DAEMON_URL = "http://localhost:8888";
 
 /**
  * Builds the client for a mode from resolveClientMode(). Components get a
