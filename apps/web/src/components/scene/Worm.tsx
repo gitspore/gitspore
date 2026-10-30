@@ -17,9 +17,8 @@ import { pointer, seeded } from "./life";
 
 // Where it may come up (x from–to, z from–to): bare earth the camera sees
 // beside and behind the table, clear of the table top, the robin's and
-// the rabbit's patches, the light posts and the mushrooms
+// the rabbit's patches, the ants' trail, the light posts and the mushrooms
 const PATCHES = [
-  [-6.0, -4.4, 2.6, 3.3],
   [4.4, 6.0, 2.6, 3.3],
   [-6.2, -4.8, -4.6, -3.2],
   [4.8, 6.2, -4.6, -3.0],

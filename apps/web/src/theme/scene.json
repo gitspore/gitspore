@@ -274,6 +274,23 @@
             "$type": "color"
           }
         },
+        "ant": {
+          "body": {
+            "$value": "#2e1f18",
+            "$type": "color",
+            "$description": "the ants on their trail left of the table, by day"
+          },
+          "crumb": {
+            "$value": "#eadcb8",
+            "$type": "color",
+            "$description": "the crumb an ant carries home"
+          },
+          "nest": {
+            "$value": "#7a5a40",
+            "$type": "color",
+            "$description": "the low mound of earth over their nest"
+          }
+        },
         "worm": {
           "body": {
             "$value": "#d9908a",
@@ -664,7 +681,7 @@
       "butterflies": {
         "$value": "1",
         "$type": "number",
-        "$description": "1 = the day animals: butterflies, bumblebee, dragonfly, robin, rabbit"
+        "$description": "1 = the day animals: butterflies, bumblebee, dragonfly, robin, rabbit, ants"
       },
       "moths": {
         "$value": "0",
@@ -875,7 +892,7 @@
       "butterflies": {
         "$value": "0",
         "$type": "number",
-        "$description": "1 = the day animals: butterflies, bumblebee, dragonfly, robin, rabbit"
+        "$description": "1 = the day animals: butterflies, bumblebee, dragonfly, robin, rabbit, ants"
       },
       "moths": {
         "$value": "1",
