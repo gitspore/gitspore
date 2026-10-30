@@ -22,6 +22,16 @@ export type TerminalActions = Pick<
   "openTerminal" | "sendTerminalInput" | "resizeTerminal" | "closeTerminal"
 >;
 
+// A planted agent appears at once, but the daemon starts its terminal only
+// after the issue, the worktree and the push, a few seconds later. Opened in
+// between, it refuses: ask again every second for half a minute (#55).
+// Tests pass their own, without real waiting
+export type OpenRetry = { attempts: number; wait: () => Promise<void> };
+const OPEN_RETRY: OpenRetry = {
+  attempts: 30,
+  wait: () => new Promise((resolve) => setTimeout(resolve, 1000)),
+};
+
 export class TerminalSession {
   // null before ack, after refusal and after exit.
   // if output delivered before open()
@@ -38,6 +48,7 @@ export class TerminalSession {
     private readonly screen: TerminalScreen,
     private readonly client: GreenhouseClient,
     private readonly actions: TerminalActions,
+    private readonly retry: OpenRetry = OPEN_RETRY,
   ) {
     client.on("terminal:data", this.onOutput);
     client.on("terminal:exit", this.onExit);
@@ -45,9 +56,16 @@ export class TerminalSession {
     this.input = screen.onData(this.onInput);
   }
   async open(agentId: AgentId): Promise<void> {
-    this.waiting = true;
-    const sessionId = await this.actions.openTerminal(agentId);
-    this.waiting = false;
+    let sessionId: SessionId | null = null;
+    for (let attempt = 1; attempt <= this.retry.attempts; attempt++) {
+      if (attempt > 1) await this.retry.wait();
+      // Closed while waiting: nothing was opened
+      if (this.disposed) return;
+      this.waiting = true;
+      sessionId = await this.actions.openTerminal(agentId);
+      this.waiting = false;
+      if (sessionId !== null || this.disposed) break;
+    }
     const early = this.early;
     this.early = [];
 

@@ -65,6 +65,11 @@ export type GreenhouseStoreState = {
   toggleMinimised: (agentId: AgentId) => void;
   /** Minimises these windows, e.g. the oldest ones that don't fit (#109). */
   minimiseWindows: (agentIds: AgentId[]) => void;
+  /** The window's sun/moon switch: its terminal's colours. */
+  setWindowTheme: (agentId: AgentId, theme: "light" | "dark") => void;
+  /** Day and night changed: every window follows it again. */
+  followDayAndNight: () => void;
+
   /** Focus moved into the agent's window (a click into its terminal). */
   focusWindow: (agentId: AgentId) => void;
   /**
@@ -167,6 +172,26 @@ export function createGreenhouseStore(
           ),
         ),
       ),
+    setWindowTheme: (agentId, theme) =>
+      set((s) => ({
+        layout: {
+          ...s.layout,
+          windows: s.layout.windows.map((w) =>
+            w.agentId === agentId ? { ...w, theme } : w,
+          ),
+        },
+      })),
+    followDayAndNight: () =>
+      set((s) => ({
+        layout: {
+          ...s.layout,
+          windows: s.layout.windows.map((w) => ({
+            agentId: w.agentId,
+            minimised: w.minimised,
+          })),
+        },
+      })),
+
     focusWindow: (agentId) => {
       if (get().focusedAgentId === agentId) return;
       set((s) => withWindows(s, s.layout.windows, agentId));

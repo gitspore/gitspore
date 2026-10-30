@@ -4,7 +4,13 @@ export type SidePanelTab = "agents" | "issues" | "branches";
 // What the panel column shows: a tab, or the settings in its place (#111)
 export type SidePanelView = SidePanelTab | "settings";
 export type MainMode = "scene" | "focus";
-export type OpenWindow = { agentId: string; minimised: boolean };
+// theme: the window's sun/moon switch; without it the terminal follows day
+// and night. Kept here, as minimising unmounts the window (#55)
+export type OpenWindow = {
+  agentId: string;
+  minimised: boolean;
+  theme?: "light" | "dark";
+};
 
 // The three settings that make every layout state (ADR 0003)
 export type LayoutSettings = {

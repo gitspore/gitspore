@@ -83,12 +83,59 @@ describe("TerminalSession", () => {
     expect(terminal.options.disableStdin).toBe(true);
   });
 
-  it("says so when the daemon refuses the open", async () => {
-    const { terminal, session } = setup();
+  it("says so when the daemon keeps refusing the open", async () => {
+    const { client, actions, terminal } = setup();
+    const openTerminal = jest.fn(actions.openTerminal);
+    const session = new TerminalSession(
+      terminal,
+      client,
+      { ...actions, openTerminal },
+      { attempts: 3, wait: async () => {} },
+    );
 
     await session.open("nobody");
 
+    expect(openTerminal).toHaveBeenCalledTimes(3);
     expect(terminal.text).toBe("Could not open the terminal\r\n");
+  });
+
+  // A planted agent's terminal starts a few seconds after the agent appears
+  it("asks again until the agent's terminal is there", async () => {
+    const { clock, client, actions, terminal } = setup();
+    let refusals = 2;
+    const session = new TerminalSession(
+      terminal,
+      client,
+      {
+        ...actions,
+        openTerminal: (agentId) =>
+          refusals-- > 0
+            ? Promise.resolve(null)
+            : actions.openTerminal(agentId),
+      },
+      { attempts: 5, wait: async () => {} },
+    );
+
+    await session.open("a1");
+    clock.advance(450);
+
+    expect(terminal.text).toBe(GREETING);
+  });
+
+  it("stops asking when closed while it waits", async () => {
+    const { client, actions, terminal } = setup();
+    const openTerminal = jest.fn(async () => null);
+    const session: TerminalSession = new TerminalSession(
+      terminal,
+      client,
+      { ...actions, openTerminal },
+      { attempts: 5, wait: async () => session.dispose() },
+    );
+
+    await session.open("a1");
+
+    expect(openTerminal).toHaveBeenCalledTimes(1);
+    expect(terminal.text).toBe("");
   });
 
   it("gives the session back when disposed before the ack", async () => {
