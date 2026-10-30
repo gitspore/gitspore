@@ -322,6 +322,11 @@ export const tokens = {
           shell: "#b07a45",
           body: "#c9b9a0",
         },
+        worm: {
+          body: "#d9908a",
+          band: "#c4736f",
+          hole: "#5a4030",
+        },
         teacup: "#f1e6d2",
         tea: "#6e4122",
         steam: "#fdf8ee",
@@ -754,6 +759,11 @@ export const tokens = {
         snail: {
           shell: "#b07a45",
           body: "#c9b9a0",
+        },
+        worm: {
+          body: "#d9908a",
+          band: "#c4736f",
+          hole: "#5a4030",
         },
         teacup: "#f1e6d2",
         tea: "#6e4122",

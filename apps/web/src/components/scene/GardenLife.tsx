@@ -15,6 +15,7 @@ import { Snail } from "./Snail";
 import { bulbSpots, StringLights } from "./StringLights";
 import { SunBeams } from "./SunBeams";
 import { Teacup } from "./Teacup";
+import { Worm } from "./Worm";
 
 //
 //
@@ -29,7 +30,7 @@ import { Teacup } from "./Teacup";
 //   fence; at night moths
 //   around the bulbs, and eyes in the woods
 // - day and night: a ladybug on the table, a steaming cup of tea, a snail
-//   on a table leg
+//   on a table leg, and now and then a worm peeking out of the earth
 // Mounted only with garden life on (the settings; off in low power)
 
 type ModeTokens = (typeof tokens)[Mode];
@@ -152,6 +153,12 @@ export function GardenLife({
         shell={scene.snail.shell}
         body={scene.snail.body}
         dark={scene.insect}
+        reducedMotion={reducedMotion}
+      />
+      <Worm
+        body={scene.worm.body}
+        band={scene.worm.band}
+        hole={scene.worm.hole}
         reducedMotion={reducedMotion}
       />
     </>
