@@ -161,7 +161,9 @@ export function Ants({
         if (dt > 0 && random() < dt * 0.15) ant.rest = 0.3 + random() * 0.9;
       }
       // At the mushrooms it picks up a crumb, at the nest it drops it
-      if (ant.along >= 1 || ant.along <= 0) {
+      // (only when still heading out of the trail: an ant resting at the
+      // end is clamped there and must not turn again every frame)
+      if ((ant.way > 0 && ant.along >= 1) || (ant.way < 0 && ant.along <= 0)) {
         ant.along = THREE.MathUtils.clamp(ant.along, 0, 1);
         ant.way = -ant.way;
         ant.carrying = ant.way < 0;
