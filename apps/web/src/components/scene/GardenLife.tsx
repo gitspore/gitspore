@@ -150,6 +150,15 @@ export function GardenLife({
         wingOpacity={t.opacity.scene.wing}
         reducedMotion={reducedMotion}
       />
+      <Ladybug
+        red={scene.ladybug}
+        dark={scene.insect}
+        wingOpacity={t.opacity.scene.wing}
+        reducedMotion={reducedMotion}
+        seed={73}
+        start={[1.2, 0.6]}
+        heading={-2.2}
+      />
       <Teacup
         cup={scene.teacup}
         tea={scene.tea}
