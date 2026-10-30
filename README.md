@@ -44,6 +44,12 @@ Alle Skripte werden im Repo-Root ausgeführt:
 
 Einzelne Workspaces: `npm run <skript> --workspace @gitspore/<name>`.
 
+**Den Dev-Server aus einem normalen Terminal starten**, nicht aus einer Claude-Code-Sitzung heraus (Bash-Tool, Hintergrund-Task). Sonst erben die Agenten Claudes Sitzungsvariablen, speichern ihr Gespräch nicht, und nach einem Neustart des Daemons lässt sich ihr Terminal nicht mehr fortsetzen: Es zeigt `No conversation found to continue` und endet mit Code 1 (#198). Muss es doch aus Claude heraus sein:
+
+```bash
+env -u CLAUDECODE -u CLAUDE_CODE_CHILD_SESSION -u CLAUDE_CODE_SESSION_ID npm run dev
+```
+
 ### Daemon-Sicherheit
 
 Der Daemon bindet nur an `127.0.0.1`. Beim ersten Start erzeugt er einen zufälligen Session-Token und legt ihn in `~/.gitspore/session-token` ab; spätere Starts lesen ihn von dort. Im Log steht ein Link mit dem Token (`Open GitSpore: http://localhost:3000/?token=…`). Ein Klick darauf reicht: Der Web-Client nimmt den Token aus der URL, merkt ihn sich im `localStorage` und schickt ihn als `auth.token` im Socket.io-Handshake. Ein Neustart des Daemons und neue Tabs brauchen keinen neuen Link. Wer die Datei löscht, bekommt beim nächsten Start einen neuen Token; der alte gilt dann nicht mehr. Verbindungen ohne gültigen Token, mit unbekanntem `Origin` oder mit einem `Host`, der nicht `localhost`, `127.0.0.1` oder `[::1]` ist, werden abgelehnt.
