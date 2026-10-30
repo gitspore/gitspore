@@ -6,6 +6,7 @@ import { Ants } from "./Ants";
 import { Bluebird } from "./Bluebird";
 import { Bumblebee } from "./Bumblebee";
 import { Butterflies } from "./Butterflies";
+import { Caterpillar } from "./Caterpillar";
 import { Dragonfly } from "./Dragonfly";
 import { Eyes } from "./Eyes";
 import { Ladybug } from "./Ladybug";
@@ -31,7 +32,8 @@ import { Worm } from "./Worm";
 //   fence, and a trail of ants left of the table; at night moths
 //   around the bulbs, and eyes in the woods
 // - day and night: a ladybug on the table, a steaming cup of tea, a snail
-//   on a table leg, and now and then a worm peeking out of the earth
+//   on a table leg, now and then a worm peeking out of the earth, and a
+//   caterpillar crawling on the ground in front of the table
 // Mounted only with garden life on (the settings; off in low power)
 
 type ModeTokens = (typeof tokens)[Mode];
@@ -183,6 +185,13 @@ export function GardenLife({
         body={scene.worm.body}
         band={scene.worm.band}
         hole={scene.worm.hole}
+        reducedMotion={reducedMotion}
+      />
+      <Caterpillar
+        body={scene.caterpillar.body}
+        band={scene.caterpillar.band}
+        head={scene.caterpillar.head}
+        dark={scene.insect}
         reducedMotion={reducedMotion}
       />
     </>

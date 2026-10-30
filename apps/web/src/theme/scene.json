@@ -319,6 +319,23 @@
             "$description": "the little hole in the earth it comes out of"
           }
         },
+        "caterpillar": {
+          "body": {
+            "$value": "#9ccf3f",
+            "$type": "color",
+            "$description": "the small caterpillar crawling on the ground in front of the table"
+          },
+          "band": {
+            "$value": "#d6e06a",
+            "$type": "color",
+            "$description": "its lighter segments, every other one"
+          },
+          "head": {
+            "$value": "#e0a23a",
+            "$type": "color",
+            "$description": "its head"
+          }
+        },
         "teacup": {
           "$value": "#f1e6d2",
           "$type": "color",
