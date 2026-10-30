@@ -336,6 +336,11 @@ export const tokens = {
           band: "#c4736f",
           hole: "#5a4030",
         },
+        caterpillar: {
+          body: "#9ccf3f",
+          band: "#d6e06a",
+          head: "#e0a23a",
+        },
         teacup: "#f1e6d2",
         tea: "#6e4122",
         steam: "#fdf8ee",
@@ -782,6 +787,11 @@ export const tokens = {
           body: "#d9908a",
           band: "#c4736f",
           hole: "#5a4030",
+        },
+        caterpillar: {
+          body: "#9ccf3f",
+          band: "#d6e06a",
+          head: "#e0a23a",
         },
         teacup: "#f1e6d2",
         tea: "#6e4122",
