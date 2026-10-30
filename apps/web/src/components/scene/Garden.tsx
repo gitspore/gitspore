@@ -88,6 +88,45 @@ function makeTufts(random: () => number) {
   return tufts;
 }
 
+// A little static grass for the ground, in every mode: short blades that
+// never move, one draw call. Kept off the table's footprint and the trodden
+// ground right around it, so the pots and the animals' paths stay readable
+const STATIC_BLADES = 2600;
+const STATIC_CLEAR = 0.8;
+
+function staticGrassInstances(random: () => number, colors: GardenColors) {
+  const tip = new THREE.Color(colors.grassTip);
+  const base = new THREE.Color(colors.grassBase);
+  const matrices: number[] = [];
+  const tints: number[] = [];
+  const matrix = new THREE.Matrix4();
+  const place = new THREE.Vector3();
+  const turn = new THREE.Quaternion();
+  const size = new THREE.Vector3();
+  const tint = new THREE.Color();
+  while (tints.length < STATIC_BLADES * 3) {
+    const x = (random() * 2 - 1) * AREA_X;
+    const z = AREA_BACK + random() * (AREA_FRONT - AREA_BACK);
+    const outX = Math.max(Math.abs(x) - TABLE_HALF_WIDTH, 0);
+    const outZ = Math.max(TABLE_BACK - z, z - TABLE_FRONT, 0);
+    if (Math.hypot(outX, outZ) < STATIC_CLEAR) continue;
+    place.set(x, FLOOR_Y, z);
+    turn.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, random() * Math.PI);
+    const height = 0.12 + random() * 0.14;
+    const width = 1 + random() * 0.8;
+    size.set(width, height, width);
+    matrix.compose(place, turn, size);
+    matrices.push(...matrix.elements);
+    tint.copy(base).lerp(tip, 0.4 + random() * 0.6);
+    tint.offsetHSL((random() - 0.5) * 0.04, 0, (random() - 0.5) * 0.08);
+    tints.push(tint.r, tint.g, tint.b);
+  }
+  return {
+    matrices: new Float32Array(matrices),
+    tints: new Float32Array(tints),
+  };
+}
+
 function bladeGeometry() {
   const positions: number[] = [];
   const indices: number[] = [];
@@ -407,6 +446,31 @@ function floorTexture(tufts: Tuft[], colors: GardenColors, far: THREE.Color) {
     );
   }
 
+  // Leaf litter and moss flecks: small angular patches (low-poly) in
+  // shades of the floor, some darker, some lighter, some warmer
+  const base = new THREE.Color(colors.floor);
+  const shades = [
+    base.clone().offsetHSL(0, 0.05, -0.08),
+    base.clone().offsetHSL(0, 0.05, 0.07),
+    base.clone().offsetHSL(-0.06, 0.1, -0.03),
+    base.clone().offsetHSL(0.03, -0.05, 0.03),
+  ].map((c) => `#${c.getHexString()}`);
+  for (let i = 0; i < 1400; i++) {
+    const cx = random() * FLOOR_TEXTURE;
+    const cy = random() * FLOOR_TEXTURE;
+    const size = (0.06 + random() * 0.16) * perUnit;
+    const turn = random() * Math.PI * 2;
+    paint.globalAlpha = 0.35 + random() * 0.3;
+    paint.fillStyle = shades[Math.floor(random() * shades.length)];
+    paint.beginPath();
+    for (let k = 0; k < 5; k++) {
+      const angle = turn + (k / 5) * Math.PI * 2;
+      const reach = size * (0.6 + random() * 0.6);
+      paint.lineTo(cx + Math.cos(angle) * reach, cy + Math.sin(angle) * reach);
+    }
+    paint.fill();
+  }
+
   // The lawn: the meadow's share at each spot as moss, painted on a small
   // canvas and stretched smoothly over the floor, so the meadow's patches
   // read as green ground and the trodden earth stays bare. No tufts (the
@@ -505,6 +569,14 @@ export function Garden({
     () => floorTexture(tufts, colors, far),
     [tufts, colors, far],
   );
+  const staticGrass = useMemo(
+    () => staticGrassInstances(seeded(21), colors),
+    [colors],
+  );
+  const staticLook = useMemo(
+    () => new THREE.MeshLambertMaterial({ side: THREE.DoubleSide }),
+    [],
+  );
   const pebbles = useMemo(() => pebbleSpots(seeded(PEBBLE_SEED)), []);
 
   useEffect(() => {
@@ -535,6 +607,7 @@ export function Garden({
     },
     [blade, flower, grassLook, flowerLook],
   );
+  useEffect(() => () => staticLook.dispose(), [staticLook]);
   useEffect(() => () => floorMap?.dispose(), [floorMap]);
 
   // The floor receives the shadows; grass and flowers only take them (the
@@ -554,6 +627,22 @@ export function Garden({
         <circleGeometry args={[FAR_SIZE, 48]} />
         <meshStandardMaterial color={far} roughness={1} />
       </mesh>
+
+      <instancedMesh
+        key={`static-${staticGrass.tints.length}`}
+        args={[blade, staticLook, staticGrass.tints.length / 3]}
+        receiveShadow
+        frustumCulled={false}
+      >
+        <instancedBufferAttribute
+          attach="instanceMatrix"
+          args={[staticGrass.matrices, 16]}
+        />
+        <instancedBufferAttribute
+          attach="instanceColor"
+          args={[staticGrass.tints, 3]}
+        />
+      </instancedMesh>
 
       {grow && (
         <>
