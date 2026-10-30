@@ -32,6 +32,7 @@ import { useSeedDrag } from "./seedDrag";
 import { Burst, type BurstKind } from "./Burst";
 import { useReducedMotion } from "./life";
 import { WateringCan } from "./WateringCan";
+import { SpeechBubble } from "./SpeechBubble";
 
 //
 //
@@ -213,6 +214,15 @@ const Pot = memo(function Pot({
             touched={hovered}
           />
         </group>
+      )}
+
+      {!test && stage && (
+        <SpeechBubble
+          soilY={SOIL_Y}
+          stage={stage}
+          colors={tag}
+          reducedMotion={reducedMotion}
+        />
       )}
 
       {agent?.status === "working" && (
