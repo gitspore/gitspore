@@ -145,6 +145,23 @@ export function BranchesTab() {
                   style={{ stroke: chainColour(layout.chains[edge.chain]) }}
                 />
               ))}
+              {layout.rows.map((row, i) => {
+                const colour = chainColour(layout.chains[row.chain]);
+                return (
+                  <circle
+                    key={row.commit.sha}
+                    cx={x(layout.chains[row.chain].lane)}
+                    cy={y(i)}
+                    r={row.merge ? 5 : 4}
+                    strokeWidth={2}
+                    className={cn(dimmed(row.chain) && "opacity-35")}
+                    style={{
+                      stroke: colour,
+                      fill: row.head ? colour : "var(--color-panel)",
+                    }}
+                  />
+                );
+              })}
               {layout.markers.map(({ chain, row }) => {
                 const { agent, lane } = layout.chains[chain];
                 return (
