@@ -312,8 +312,8 @@ export const tokens = {
           body: "#4a7fb5",
           belly: "#f1e4cf",
         },
-        redbird: {
-          body: "#c93a35",
+        greenbird: {
+          body: "#4f9a52",
           belly: "#f7f2ea",
         },
         rabbit: {
@@ -759,8 +759,8 @@ export const tokens = {
           body: "#4a7fb5",
           belly: "#f1e4cf",
         },
-        redbird: {
-          body: "#c93a35",
+        greenbird: {
+          body: "#4f9a52",
           belly: "#f7f2ea",
         },
         rabbit: {
